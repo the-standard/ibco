@@ -3,22 +3,36 @@ pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "contracts/SEuro.sol";
 
 contract IBCO is Ownable {
-    event Swap();
+    address private seuro;
 
-    // mapping(string => address) tokens; //
+    event Swap();
+    event TokenLog(uint hello);
+
+    mapping(bytes32 => Token) tokens;
     // Token[] tokens;
 
     struct Token {
-        string name;
-    }
-
-    constructor() {
+        address addr;
 
     }
 
-    function swap(bytes32 _token, uint _amount) public {
+    constructor(address _seuro) {
+        seuro = _seuro;
+        addAcceptedTokens();
+    }
+
+    function addAcceptedTokens() private {
+        tokens[bytes32("WETH")] = Token(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    }
+
+    function swap(bytes32 _token, uint256 _amount) public returns (bool) {
+        Token memory token = tokens[_token];
+        IERC20 tokenContract = IERC20(token.addr);
+        tokenContract.transferFrom(msg.sender, address(this), _amount);
+        SEuro(seuro).mint(msg.sender, 2800);
         // check given token
         // transferFrom(msg.sender, _amount)
         // chainlink:
@@ -34,9 +48,9 @@ contract IBCO is Ownable {
         // call swap()
     }
 
-    function getAcceptedTokens() public view returns (Token[] memory tokens) {
-        // show all the tokens
-    }
+    // function getAcceptedTokens() public view returns (Token[] memory acceptedTokens) {
+    //     // show all the tokens
+    // }
 
     function addAcceptedToken(address _token, bytes32 _name) public onlyOwner {
         // blah

@@ -11,11 +11,12 @@ describe('IBCO', async () => {
 
     beforeEach(async () => {
         [owner, user, benefactor] = await ethers.getSigners();
-        const IBCOContract = await ethers.getContractFactory('IBCO');
-        IBCO = await IBCOContract.deploy();
         const SEuroContract = await ethers.getContractFactory('SEuro');
-        SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
+        const IBCOContract = await ethers.getContractFactory('IBCO');
         WETH = await ethers.getContractAt('WETH', WETH_ADDRESS);
+        SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
+        IBCO = await IBCOContract.deploy(SEuro.address);
+        await SEuro.connect(owner).grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), IBCO.address)
     });
 
     describe('swap', async () => {
@@ -23,8 +24,9 @@ describe('IBCO', async () => {
             const toSwap = await ethers.utils.parseEther('1');
             const wethBytes = await ethers.utils.formatBytes32String('WETH');
             await buyWETH(user, toSwap);
+            await WETH.connect(user).approve(IBCO.address, toSwap);
 
-            await IBCO.swap(wethBytes, toSwap);
+            await IBCO.connect(user).swap(wethBytes, toSwap);
 
             const userSEuroBalance = await SEuro.balanceOf(user.address);
             expect(userSEuroBalance.toString()).to.equal('2800');

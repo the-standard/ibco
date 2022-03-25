@@ -15,6 +15,7 @@ contract SEuro is ERC20, AccessControl {
     ) ERC20(name, symbol) {
         _setupRole(MINTER_ROLE, msg.sender);
         _setupRole(BURNER_ROLE, msg.sender);
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         for (uint8 i = 0; i < _admins.length; i++) {
             _setupRole(MINTER_ROLE, _admins[i]);
