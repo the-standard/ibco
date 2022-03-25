@@ -3,14 +3,14 @@ const { expect } = require('chai');
 
 describe('IBCO', async () => {
     const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
-    let IBCO, SEuro, WETH, owner, user, benefactor;
+    let IBCO, SEuro, WETH, owner, user, user2;
 
     async function buyWETH(signer, amount) {
         await WETH.connect(signer).deposit({value: amount});
     }
 
     beforeEach(async () => {
-        [owner, user, benefactor] = await ethers.getSigners();
+        [owner, user] = await ethers.getSigners();
         const SEuroContract = await ethers.getContractFactory('SEuro');
         const IBCOContract = await ethers.getContractFactory('IBCO');
         WETH = await ethers.getContractAt('WETH', WETH_ADDRESS);
@@ -42,6 +42,19 @@ describe('IBCO', async () => {
             const swap = IBCO.connect(user).swap(wethBytes, toSwap);
 
             await expect(swap).to.be.revertedWith("transfer allowance not approved")
+            const userSEuroBalance = await SEuro.balanceOf(user.address);
+            expect(userSEuroBalance.toString()).to.equal('0');
+        });
+
+        it('will not swap without balance of token', async () => {
+            const toSwap = await ethers.utils.parseEther('1');
+            const wethBytes = await ethers.utils.formatBytes32String('WETH');
+            await WETH.connect(user).withdraw(await WETH.balanceOf(user.address));
+            await WETH.connect(user).approve(IBCO.address, toSwap);
+
+            const swap = IBCO.connect(user).swap(wethBytes, toSwap);
+
+            await expect(swap).to.be.revertedWith("token balance too low")
             const userSEuroBalance = await SEuro.balanceOf(user.address);
             expect(userSEuroBalance.toString()).to.equal('0');
         });

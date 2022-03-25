@@ -33,6 +33,10 @@ contract IBCO is Ownable {
 
     function swap(bytes32 _token, uint256 _amount) public {
         IERC20 token = IERC20(tokens[_token].addr);
+        // these two requirements are slightly unnecessary
+        // because function will revert on the transfer anyway
+        // but it does give more visible errors 🤷🏻‍♂️
+        require(token.balanceOf(msg.sender) >= _amount, "token balance too low");
         require(token.allowance(msg.sender, address(this)) >= _amount, "transfer allowance not approved");
         token.transferFrom(msg.sender, address(this), _amount);
         SEuro(seuro).mint(msg.sender, 2800);
