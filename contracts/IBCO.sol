@@ -3,9 +3,12 @@ pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "contracts/interfaces/WETH.sol";
 import "contracts/SEuro.sol";
 
 contract IBCO is Ownable {
+    address public constant WETH_ADDRESS = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    
     address private seuro;
 
     event Swap();
@@ -25,13 +28,12 @@ contract IBCO is Ownable {
     }
 
     function addAcceptedTokens() private {
-        tokens[bytes32("WETH")] = Token(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+        tokens[bytes32("WETH")] = Token(WETH_ADDRESS);
     }
 
     function swap(bytes32 _token, uint256 _amount) public returns (bool) {
-        Token memory token = tokens[_token];
-        IERC20 tokenContract = IERC20(token.addr);
-        tokenContract.transferFrom(msg.sender, address(this), _amount);
+        IERC20 token = IERC20(tokens[_token].addr);
+        token.transferFrom(msg.sender, address(this), _amount);
         SEuro(seuro).mint(msg.sender, 2800);
         // check given token
         // transferFrom(msg.sender, _amount)
@@ -44,8 +46,9 @@ contract IBCO is Ownable {
     }
 
     function swapETH() external payable {
-        // convert given eth to weth
-        // call swap()
+        WETH weth = WETH(WETH_ADDRESS);
+        weth.deposit{value: msg.value};
+        SEuro(seuro).mint(msg.sender, 2800);
     }
 
     // function getAcceptedTokens() public view returns (Token[] memory acceptedTokens) {

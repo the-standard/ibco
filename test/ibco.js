@@ -32,4 +32,15 @@ describe('IBCO', async () => {
             expect(userSEuroBalance.toString()).to.equal('2800');
         });
     });
+
+    describe('swapETH', async() => {
+        it('swaps for eth', async () => {
+            const toSwap = await ethers.utils.parseEther('1');
+            
+            await IBCO.connect(user).swapETH({value: toSwap});
+
+            const userSEuroBalance = await SEuro.balanceOf(user.address);
+            expect(userSEuroBalance.toString()).to.equal('2800');
+        })
+    });
 });
