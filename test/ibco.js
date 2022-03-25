@@ -20,16 +20,30 @@ describe('IBCO', async () => {
     });
 
     describe('swap', async () => {
+        
         it('swaps for given token', async () => {
             const toSwap = await ethers.utils.parseEther('1');
             const wethBytes = await ethers.utils.formatBytes32String('WETH');
             await buyWETH(user, toSwap);
             await WETH.connect(user).approve(IBCO.address, toSwap);
 
-            await IBCO.connect(user).swap(wethBytes, toSwap);
+            const swap = await IBCO.connect(user).swap(wethBytes, toSwap);
 
+            expect(swap).to.emit(IBCO, "Swap").withArgs(wethBytes, toSwap, '2800');
             const userSEuroBalance = await SEuro.balanceOf(user.address);
             expect(userSEuroBalance.toString()).to.equal('2800');
+        });
+
+        it('will not swap without preapproval', async () => {
+            const toSwap = await ethers.utils.parseEther('1');
+            const wethBytes = await ethers.utils.formatBytes32String('WETH');
+            await buyWETH(user, toSwap);
+
+            const swap = IBCO.connect(user).swap(wethBytes, toSwap);
+
+            await expect(swap).to.be.revertedWith("transfer allowance not approved")
+            const userSEuroBalance = await SEuro.balanceOf(user.address);
+            expect(userSEuroBalance.toString()).to.equal('0');
         });
     });
 
