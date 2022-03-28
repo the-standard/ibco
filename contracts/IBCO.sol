@@ -53,6 +53,7 @@ contract IBCO is Ownable {
         token.transferFrom(msg.sender, address(this), _amount);
         uint256 euros = _amount * getEuroRate(_token) / 1 ether;
         SEuro(tokens[bytes32("EUR")].addr).mint(msg.sender, euros);
+        emit Swap(_token, _amount, euros);
         // apply token & discount rate
         // mint euros to msg.sender
         // emit swap event

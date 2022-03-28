@@ -37,10 +37,11 @@ describe('IBCO', async () => {
             await buyWETH(user, toSwap);
             await WETH.connect(user).approve(IBCO.address, toSwap);
 
-            const swap = await IBCO.connect(user).swap(wethBytes, toSwap);
+            const swap = IBCO.connect(user).swap(wethBytes, toSwap);
 
-            const userSEuroBalance = await SEuro.balanceOf(user.address);
             const expectedEuros = Math.floor(ether * (await getEthEuroRate()));
+            await expect(swap).to.emit(IBCO, 'Swap').withArgs(wethBytes, toSwap, expectedEuros);
+            const userSEuroBalance = await SEuro.balanceOf(user.address);
             expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
         });
 
