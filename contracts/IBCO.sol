@@ -61,7 +61,6 @@ contract IBCO is Ownable {
         uint256 euros = _amount * getEuroRate(_token) / getDiscountRate() * 100 / 1 ether;
         SEuro(tokens[bytes32("EUR")].addr).mint(msg.sender, euros);
         emit Swap(_token, _amount, euros);
-        // apply token & discount rate
     }
 
     function swapETH() external payable {
@@ -70,7 +69,6 @@ contract IBCO is Ownable {
         uint256 euros = msg.value * getEuroRate(bytes32("WETH")) / getDiscountRate() * 100 / 1 ether;
         SEuro(tokens[bytes32("EUR")].addr).mint(msg.sender, euros);
         emit Swap(bytes32("ETH"), msg.value, euros);
-        // apply token & discount rate
     }
 
     // function getAcceptedTokens() public view returns (Token[] memory acceptedTokens) {
