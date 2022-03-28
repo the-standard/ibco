@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "contracts/interfaces/Chainlink.sol";
 import "contracts/interfaces/WETH.sol";
+import "contracts/BondingCurve.sol";
 import "contracts/SEuro.sol";
 
 contract IBCO is Ownable {
@@ -14,6 +15,7 @@ contract IBCO is Ownable {
     address public constant EUR_USD_CHAINLINK = 0xb49f677943BC038e9857d61E7d053CaA2C1734C1;
 
     address private seuro;
+    address private bondingCurve;
 
     event Swap(bytes32 _token, uint256 amountIn, uint256 amountOut);
 
@@ -25,8 +27,9 @@ contract IBCO is Ownable {
         uint8 chainlinkDec;
     }
 
-    constructor(address _seuro) {
+    constructor(address _seuro, address _bondingCurve) {
         seuro = _seuro;
+        bondingCurve = _bondingCurve;
         tokens[bytes32("EUR")] = Token(_seuro, EUR_USD_CHAINLINK, 8);
         addAcceptedTokens();
     }
@@ -43,6 +46,10 @@ contract IBCO is Ownable {
         rate = uint256(tokUsd) / uint256(eurUsd) / 10 ** (token.chainlinkDec - euro.chainlinkDec);
     }
 
+    function getDiscountRate() private view returns (uint256) {
+        return BondingCurve(bondingCurve).getDiscount();
+    }
+
     function swap(bytes32 _token, uint256 _amount) public {
         IERC20 token = IERC20(tokens[_token].addr);
         // these two requirements are slightly unnecessary
@@ -51,7 +58,7 @@ contract IBCO is Ownable {
         require(token.balanceOf(msg.sender) >= _amount, "token balance too low");
         require(token.allowance(msg.sender, address(this)) >= _amount, "transfer allowance not approved");
         token.transferFrom(msg.sender, address(this), _amount);
-        uint256 euros = _amount * getEuroRate(_token) / 1 ether;
+        uint256 euros = _amount * getEuroRate(_token) / getDiscountRate() * 100 / 1 ether;
         SEuro(tokens[bytes32("EUR")].addr).mint(msg.sender, euros);
         emit Swap(_token, _amount, euros);
         // apply token & discount rate
@@ -60,8 +67,9 @@ contract IBCO is Ownable {
     function swapETH() external payable {
         WETH weth = WETH(WETH_ADDRESS);
         weth.deposit{value: msg.value};
-        SEuro(tokens[bytes32("EUR")].addr).mint(msg.sender, 2800);
-        emit Swap(bytes32("ETH"), msg.value, 2800);
+        uint256 euros = msg.value * getEuroRate(bytes32("WETH")) / getDiscountRate() * 100 / 1 ether;
+        SEuro(tokens[bytes32("EUR")].addr).mint(msg.sender, euros);
+        emit Swap(bytes32("ETH"), msg.value, euros);
         // apply token & discount rate
     }
 
