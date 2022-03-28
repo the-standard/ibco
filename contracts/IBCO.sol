@@ -55,14 +55,14 @@ contract IBCO is Ownable {
         SEuro(tokens[bytes32("EUR")].addr).mint(msg.sender, euros);
         emit Swap(_token, _amount, euros);
         // apply token & discount rate
-        // mint euros to msg.sender
-        // emit swap event
     }
 
     function swapETH() external payable {
         WETH weth = WETH(WETH_ADDRESS);
         weth.deposit{value: msg.value};
         SEuro(tokens[bytes32("EUR")].addr).mint(msg.sender, 2800);
+        emit Swap(bytes32("ETH"), msg.value, 2800);
+        // apply token & discount rate
     }
 
     // function getAcceptedTokens() public view returns (Token[] memory acceptedTokens) {

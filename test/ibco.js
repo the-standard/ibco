@@ -74,9 +74,11 @@ describe('IBCO', async () => {
     describe('swapETH', async() => {
         it('swaps for eth', async () => {
             const toSwap = await ethers.utils.parseEther('1');
+            const ethBytes = await ethers.utils.formatBytes32String('ETH');
             
-            await IBCO.connect(user).swapETH({value: toSwap});
+            const swap = IBCO.connect(user).swapETH({value: toSwap});
 
+            await expect(swap).to.emit(IBCO, 'Swap').withArgs(ethBytes, toSwap, '2800');
             const userSEuroBalance = await SEuro.balanceOf(user.address);
             expect(userSEuroBalance.toString()).to.equal('2800');
         })
