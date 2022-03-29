@@ -84,8 +84,20 @@ contract IBCO is Ownable {
         tokenNames.push(_name);
     }
 
+    function deleteTokenName(uint256 index) private {
+        for (uint256 i = index; i < tokenNames.length - 1; i++) {
+            tokenNames[i] = tokenNames[i+1];
+        }
+        tokenNames.pop();
+    }
+
     function removeAcceptedToken(bytes32 _name) public onlyOwner {
-        // blah
+        for (uint256 i = 0; i < tokenNames.length; i++) {
+            if (tokenNames[i] == _name) {
+                deleteTokenName(i);
+            }
+        }
+        delete tokens[_name];
     }
 
     function chainlink(bytes32 _token) private returns (uint256 rate) {
