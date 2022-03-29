@@ -16,10 +16,10 @@ contract IBCO is Ownable {
 
     address private seuro;
     address private bondingCurve;
+    mapping(bytes32 => Token) private tokens;
+    bytes32[] tokenNames;
 
     event Swap(bytes32 _token, uint256 amountIn, uint256 amountOut);
-
-    mapping(bytes32 => Token) tokens;
 
     struct Token {
         address addr;
@@ -35,7 +35,7 @@ contract IBCO is Ownable {
     }
 
     function addAcceptedTokens() private {
-        tokens[bytes32("WETH")] = Token(WETH_ADDRESS, ETH_USD_CHAINLINK, 8);
+        addAcceptedToken(bytes32("WETH"), WETH_ADDRESS, ETH_USD_CHAINLINK, 8);
     }
 
     function getEuroRate(bytes32 _token) private view returns (uint256 rate) {
@@ -75,12 +75,13 @@ contract IBCO is Ownable {
         emit Swap(bytes32("ETH"), msg.value, euros);
     }
 
-    // function getAcceptedTokens() public view returns (Token[] memory acceptedTokens) {
-    //     // show all the tokens
-    // }
+    function getAcceptedTokens() public view returns (bytes32[] memory) {
+        return tokenNames;
+    }
 
-    function addAcceptedToken(address _token, bytes32 _name) public onlyOwner {
-        // blah
+    function addAcceptedToken(bytes32 _name, address _addr, address _chainlinkAddr, uint8 _chainlinkDec) public onlyOwner {
+        tokens[_name] = Token(_addr, _chainlinkAddr, _chainlinkDec);
+        tokenNames.push(_name);
     }
 
     function removeAcceptedToken(bytes32 _name) public onlyOwner {

@@ -94,4 +94,13 @@ describe('IBCO', async () => {
             expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
         })
     });
+
+    describe('accepted tokens', async () => {
+        it('gets list of accepted tokens', async () => {
+            const tokens = [await ethers.utils.formatBytes32String('WETH')];
+            const acceptedTokens = await IBCO.getAcceptedTokens();
+
+            expect(acceptedTokens).to.eql(tokens);
+        });
+    });
 });
