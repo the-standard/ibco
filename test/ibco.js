@@ -1,4 +1,4 @@
-const { ethers, network } = require('hardhat');
+const { ethers } = require('hardhat');
 const { expect } = require('chai');
 
 describe('IBCO', async () => {
