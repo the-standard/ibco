@@ -50,6 +50,10 @@ contract IBCO is Ownable {
         return BondingCurve(bondingCurve).getDiscount();
     }
 
+    function getEuros(uint256 _amount, bytes32 _token) private view returns (uint256) {
+        return _amount * getEuroRate(_token) / getDiscountRate() * 100 / 1 ether;
+    }
+
     function swap(bytes32 _token, uint256 _amount) public {
         IERC20 token = IERC20(tokens[_token].addr);
         // these two requirements are slightly unnecessary
@@ -66,7 +70,7 @@ contract IBCO is Ownable {
     function swapETH() external payable {
         WETH weth = WETH(WETH_ADDRESS);
         weth.deposit{value: msg.value};
-        uint256 euros = msg.value * getEuroRate(bytes32("WETH")) / getDiscountRate() * 100 / 1 ether;
+        uint256 euros = getEuros(msg.value, bytes32("WETH"));
         SEuro(tokens[bytes32("EUR")].addr).mint(msg.sender, euros);
         emit Swap(bytes32("ETH"), msg.value, euros);
     }
