@@ -8,7 +8,7 @@ describe('IBCO', async () => {
     let IBCO, SEuro, BondingCurve, WETH, owner, user;
 
     async function buyWETH(signer, amount) {
-        await WETH.connect(signer).deposit({value: amount});
+        await WETH.connect(signer).deposit({ value: amount });
     }
 
     async function getEthEuroRate() {
@@ -17,7 +17,7 @@ describe('IBCO', async () => {
         return (await ETH_USD_CL.latestRoundData()).answer /
             (await EUR_USD_CL.latestRoundData()).answer;
     }
-    
+
     async function getDiscountRate() {
         return await BondingCurve.getDiscount() / 100;
     }
@@ -38,7 +38,7 @@ describe('IBCO', async () => {
     });
 
     describe('swap', async () => {
-        
+
         it('swaps for given token', async () => {
             const ether = 1;
             const toSwap = await ethers.utils.parseEther(ether.toString());
@@ -80,13 +80,13 @@ describe('IBCO', async () => {
         });
     });
 
-    describe('swapETH', async() => {
+    describe('swapETH', async () => {
         it('swaps for eth', async () => {
             const ether = 1;
             const toSwap = await ethers.utils.parseEther(ether.toString());
             const ethBytes = await ethers.utils.formatBytes32String('ETH');
-            
-            const swap = IBCO.connect(user).swapETH({value: toSwap});
+
+            const swap = IBCO.connect(user).swapETH({ value: toSwap });
 
             const expectedEuros = Math.floor(ether * (await getEthEuroRate()) / (await getDiscountRate()));
             await expect(swap).to.emit(IBCO, 'Swap').withArgs(ethBytes, toSwap, expectedEuros);
@@ -97,10 +97,34 @@ describe('IBCO', async () => {
 
     describe('accepted tokens', async () => {
         it('gets list of accepted tokens', async () => {
-            const tokens = [await ethers.utils.formatBytes32String('WETH')];
             const acceptedTokens = await IBCO.getAcceptedTokens();
 
+            const tokens = [await ethers.utils.formatBytes32String('WETH')];
             expect(acceptedTokens).to.eql(tokens);
+        });
+
+        describe('adding tokens', async () => {
+            const DAI = ethers.utils.formatBytes32String('DAI');
+            const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f';
+            const DAI_USD_CL = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
+            const DAI_CL_DEC = 8;
+
+            it('allows owner to add new token', async () => {
+                await IBCO.addAcceptedToken(DAI, DAI_ADDRESS, DAI_USD_CL, DAI_CL_DEC);
+                const acceptedTokens = await IBCO.getAcceptedTokens();
+
+                const tokens = [ethers.utils.formatBytes32String('WETH'), DAI];
+                expect(acceptedTokens).to.eql(tokens);
+            });
+
+            it('does not allow non-owner to add token', async () => {
+                const addAcceptedToken = IBCO.connect(user).addAcceptedToken(DAI, DAI_ADDRESS, DAI_USD_CL, DAI_CL_DEC);
+                await expect(addAcceptedToken).to.be.revertedWith('Ownable: caller is not the owner');
+
+                const acceptedTokens = await IBCO.getAcceptedTokens();
+                const tokens = [ethers.utils.formatBytes32String('WETH')];
+                expect(acceptedTokens).to.eql(tokens);
+            });
         });
     });
 });
