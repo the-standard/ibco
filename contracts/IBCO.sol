@@ -62,7 +62,7 @@ contract IBCO is Ownable {
         require(token.balanceOf(msg.sender) >= _amount, "token balance too low");
         require(token.allowance(msg.sender, address(this)) >= _amount, "transfer allowance not approved");
         token.transferFrom(msg.sender, address(this), _amount);
-        uint256 euros = _amount * getEuroRate(_token) / getDiscountRate() * 100 / 1 ether;
+        uint256 euros = getEuros(_amount, _token);
         SEuro(tokens[bytes32("EUR")].addr).mint(msg.sender, euros);
         emit Swap(_token, _amount, euros);
     }
