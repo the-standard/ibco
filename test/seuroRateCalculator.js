@@ -1,28 +1,33 @@
-// const { ethers } = require('hardhat');
-// const { expect } = require('chai');
+const { ethers } = require('hardhat');
+const { expect } = require('chai');
 
-// describe('SEuroRateCalculator', async () => {
-//     beforeEach(async () => {
-//         const SEuroContract = await ethers.getContractFactory('SEuro');
-//         const SEuro = await SEuroContract.deploy('SEuro', 'SEUR', []);
-//         const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
-//         const BondingCurve = await BondingCurveContract.deploy(SEuro.address);
-//         const SEuroRateCalculatorContract = await ethers.getContractFactory('SEuroRateCalculator');
-//         const SEuroRateCalculator = await SEuroRateCalculatorContract.deploy(BondingCurve.address);
-//     });
+describe('SEuroRateCalculator', async () => {
+    const CL_ETH_USD = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
+    const CL_ETH_USD_DEC = 8;
+    const CL_EUR_USD = '0xb49f677943BC038e9857d61E7d053CaA2C1734C1';
+    let SEuroRateCalculator, BondingCurve;
 
-//     async function getBaseEurRate(token) {
-//         const tokUsdRate = (await (await ethers.getContractAt(CL_TOK_USD)).latestRoundData()).answer;
-//         const eurUsdRate = (await (await ethers.getContractAt(CL_EUR_USD)).latestRoundData()).answer;
-//     }
+    beforeEach(async () => {
+        const SEuroContract = await ethers.getContractFactory('SEuro');
+        const SEuro = await SEuroContract.deploy('SEuro', 'SEUR', []);
+        const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
+        BondingCurve = await BondingCurveContract.deploy(SEuro.address);
+        const SEuroRateCalculatorContract = await ethers.getContractFactory('SEuroRateCalculator');
+        SEuroRateCalculator = await SEuroRateCalculatorContract.deploy(BondingCurve.address);
+    });
 
-//     async function expectedRate(token) {
-//         return (await getBaseEurRate(token)) * (await BondingCurve.getDiscount());
-//     }
+    async function getBaseEurRate(clTokUsd) {
+        const tokUsdRate = (await (await ethers.getContractAt('Chainlink', clTokUsd)).latestRoundData()).answer;
+        const eurUsdRate = (await (await ethers.getContractAt('Chainlink', CL_EUR_USD)).latestRoundData()).answer;
+        return tokUsdRate / eurUsdRate;
+    }
 
-//     it('calculates the rate', async () => {
-//         const rate = await SEuroRateCalculator.calculate(amount, token);
+    async function expectedRate(clTokUsd) {
+        return Math.floor((await getBaseEurRate(clTokUsd)) * 100 / (await BondingCurve.getDiscount()));
+    }
 
-//         expect(rate).to.equal(await expectedRate(amount, token));
-//     });
-// });
+    it('calculates the rate for weth', async () => {
+        const rate = await SEuroRateCalculator.calculate(CL_ETH_USD, CL_ETH_USD_DEC);
+        expect(rate).to.equal(await expectedRate(CL_ETH_USD));
+    });
+});
