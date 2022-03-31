@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 
-describe("SEuro", async () => {
+describe('SEuro', async () => {
     let owner, admin, user, SEuro;
 
     beforeEach(async () => {
