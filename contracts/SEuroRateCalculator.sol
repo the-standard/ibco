@@ -10,19 +10,20 @@ contract SEuroRateCalculator {
 
     address private bondingCurve;
 
-    event Log(uint256);
+    event Log(uint256,uint256,uint256);
         
     constructor(address _bondingCurve) {
         bondingCurve = _bondingCurve;
     }
 
-    function calculateBaseRate(address _tokUsdCl, uint8 _tokUsdDec) private view returns (uint256) {
+    function calculateBaseRate(address _tokUsdCl, uint8 _tokUsdDec) private returns (uint256) {
         (,int256 tokUsd,,,) = Chainlink(_tokUsdCl).latestRoundData();
         (,int256 eurUsd,,,) = Chainlink(EUR_USD_CL).latestRoundData();
+        emit Log(uint256(tokUsd),uint256(eurUsd),uint256(tokUsd) / uint256(eurUsd));
         return uint256(tokUsd) / uint256(eurUsd) / 10 ** (_tokUsdDec - EUR_USD_CL_DEC);
     }
 
-    function calculate(address _tokUsdCl, uint8 _tokUsdDec) external view returns (uint256) {
+    function calculate(address _tokUsdCl, uint8 _tokUsdDec) external returns (uint256) {
         return calculateBaseRate(_tokUsdCl, _tokUsdDec) * 100 / BondingCurve(bondingCurve).getDiscount();
     }
 }
