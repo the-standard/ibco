@@ -16,9 +16,10 @@ describe('TokenManager', async () => {
     });
 
     it('gets list of accepted tokens', async () => {
+        await TokenManager.connect(owner).addAcceptedToken(DAI, DAI_ADDRESS, DAI_USD_CL, DAI_CL_DEC);
         const acceptedTokens = await TokenManager.getAcceptedTokens();
 
-        const tokens = [WETH_BYTES];
+        const tokens = [WETH_BYTES, DAI];
         expect(acceptedTokens).to.eql(tokens);
     });
 
