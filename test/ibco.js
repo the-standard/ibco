@@ -1,20 +1,31 @@
-const { ethers } = require('hardhat');
+const { ethers, artifacts } = require('hardhat');
 const { expect } = require('chai');
 
 describe('IBCO', async () => {
+    const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
     const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+    const DAI = ethers.utils.formatBytes32String('DAI');
+    const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f';
+    const DAI_USD_CL = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
+    const DAI_CL_DEC = 8;
     const CL_ETH_USD = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
     const CL_EUR_USD = '0xb49f677943BC038e9857d61E7d053CaA2C1734C1';
-    const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
+    const ROUTER_ADDRESS = '0xf164fC0Ec4E93095b804a4795bBe1e041497b92a';
     let IBCO, SEuro, BondingCurve, WETH, owner, user;
 
     async function buyWETH(signer, amount) {
         await WETH.connect(signer).deposit({ value: amount });
     }
 
+    async function buyToken(signer, token, amount) {
+        const UniswapRouter = await ethers.getContractAt('IUniswapV2Router01', ROUTER_ADDRESS)
+        const deadline = Math.floor(Date.now() / 1000) + 60;
+        return await UniswapRouter.connect(signer).swapExactETHForTokens(1, [WETH_ADDRESS, token], signer.address, deadline, { value: amount });
+    }
+
     async function getEthEuroRate() {
-        const ETH_USD_CL = await ethers.getContractAt('Chainlink', CL_ETH_USD, owner);
-        const EUR_USD_CL = await ethers.getContractAt('Chainlink', CL_EUR_USD, owner);
+        const ETH_USD_CL = await ethers.getContractAt('Chainlink', CL_ETH_USD);
+        const EUR_USD_CL = await ethers.getContractAt('Chainlink', CL_EUR_USD);
         return (await ETH_USD_CL.latestRoundData()).answer /
             (await EUR_USD_CL.latestRoundData()).answer;
     }
@@ -60,7 +71,7 @@ describe('IBCO', async () => {
 
             const swap = IBCO.connect(user).swap(WETH_BYTES, toSwap);
 
-            await expect(swap).to.be.revertedWith("transfer allowance not approved")
+            await expect(swap).to.be.revertedWith('err-tok-allow')
             const userSEuroBalance = await SEuro.balanceOf(user.address);
             expect(userSEuroBalance.toString()).to.equal('0');
         });
@@ -72,10 +83,28 @@ describe('IBCO', async () => {
 
             const swap = IBCO.connect(user).swap(WETH_BYTES, toSwap);
 
-            await expect(swap).to.be.revertedWith("token balance too low")
+            await expect(swap).to.be.revertedWith('err-tok-bal')
             const userSEuroBalance = await SEuro.balanceOf(user.address);
             expect(userSEuroBalance.toString()).to.equal('0');
         });
+
+        // it.only('will swap for any accepted token', async () => {
+        //     const ether = 1;
+        //     const toSwap = ethers.utils.parseEther(ether.toString());
+        //     const daiBytes = ethers.utils.formatBytes32String('DAI');
+        //     await IBCO.connect(owner).addAcceptedToken(daiBytes, DAI_ADDRESS, DAI_USD_CL, DAI_CL_DEC);
+
+        //     await buyToken(user, DAI_ADDRESS, toSwap);
+        //     const Dai = await ethers.getContractAt("IERC20", DAI_ADDRESS);
+        //     const userTokens = await Dai.balanceOf(user.address);
+        //     await Dai.connect(user).approve(IBCO.address, userTokens);
+            
+        //     const expectedEuros = Math.floor(ether * (await getEthEuroRate()) / (await getDiscountRate()));
+        //     const swap = IBCO.connect(user).swap(daiBytes, userTokens);
+        //     await expect(swap).to.emit(IBCO, 'Swap').withArgs(daiBytes, userTokens, expectedEuros);
+        //     const userSEuroBalance = await SEuro.balanceOf(user.address);
+        //     expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
+        // });
     });
 
     describe('swapETH', async () => {
@@ -126,10 +155,6 @@ describe('IBCO', async () => {
         });
 
         describe('removing tokens', async () => {
-            const DAI = ethers.utils.formatBytes32String('DAI');
-            const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f';
-            const DAI_USD_CL = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
-            const DAI_CL_DEC = 8;
 
             it('allows owner to remove new token', async () => {
                 await IBCO.connect(owner).addAcceptedToken(DAI, DAI_ADDRESS, DAI_USD_CL, DAI_CL_DEC);

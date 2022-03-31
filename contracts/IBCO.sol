@@ -3,7 +3,6 @@ pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "contracts/interfaces/Chainlink.sol";
 import "contracts/interfaces/WETH.sol";
 import "contracts/BondingCurve.sol";
@@ -54,13 +53,13 @@ contract IBCO is Ownable {
         return _amount * getEuroRate(_token) / getDiscountRate() * 100 / 1 ether;
     }
 
-    function swap(bytes32 _token, uint256 _amount) public {
+    function swap(bytes32 _token, uint256 _amount) external {
         IERC20 token = IERC20(tokens[_token].addr);
         // these two requirements are slightly unnecessary
         // because function will revert on the transfer anyway
         // but it does give more visible errors 🤷🏻‍♂️
-        require(token.balanceOf(msg.sender) >= _amount, "token balance too low");
-        require(token.allowance(msg.sender, address(this)) >= _amount, "transfer allowance not approved");
+        require(token.balanceOf(msg.sender) >= _amount, "err-tok-bal");
+        require(token.allowance(msg.sender, address(this)) >= _amount, "err-tok-allow");
         token.transferFrom(msg.sender, address(this), _amount);
         uint256 euros = getEuros(_amount, _token);
         SEuro(tokens[bytes32("EUR")].addr).mint(msg.sender, euros);
