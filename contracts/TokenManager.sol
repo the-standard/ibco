@@ -21,6 +21,11 @@ contract TokenManager is Ownable {
         addAcceptedTokens();
     }
 
+    function get(bytes32 _name) external view returns(address, address, uint8) {
+        Token memory token = tokens[_name];
+        return (token.addr, token.chainlinkAddr, token.chainlinkDec);
+    }
+
     function addAcceptedTokens() private {
         addAcceptedToken(bytes32("WETH"), WETH_ADDRESS, ETH_USD_CHAINLINK, 8);
     }
