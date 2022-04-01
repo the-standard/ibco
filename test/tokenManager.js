@@ -23,6 +23,14 @@ describe('TokenManager', async () => {
         expect(acceptedTokens).to.eql(tokens);
     });
 
+    it('gets token details by name', async () => {
+        const acceptedTokens = await TokenManager.get(WETH_BYTES);
+
+        expect(acceptedTokens.addr).to.equal('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2');
+        expect(acceptedTokens.chainlinkAddr).to.equal('0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419');
+        expect(acceptedTokens.chainlinkDec).to.equal(8);
+    });
+
     describe('adding tokens', async () => {
         const DAI = ethers.utils.formatBytes32String('DAI');
         const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f';

@@ -24,10 +24,9 @@ contract IBCO is Ownable {
         tokenManager = _tokenManager;
     }
 
-    function getEuros(uint256 _amount, bytes32 _token, address _chainlinkAddr, uint8 _chainlinkDec) private view returns (uint256) {
+    function getEuros(uint256 _amount, address _chainlinkAddr, uint8 _chainlinkDec) private view returns (uint256) {
         SEuroRateCalculator calculator = SEuroRateCalculator(sEuroRateCalculator);
-        TokenManager manager = TokenManager(tokenManager);
-        return _amount * calculator.calculate(_chainlinkAddr, _chainlinkDec) / 10 ** calculator.MULTIPLIER() / 1 ether;
+        return _amount * calculator.calculate(_chainlinkAddr, _chainlinkDec) / 10 ** calculator.MULTIPLIER();
     }
 
     function swap(bytes32 _token, uint256 _amount) external {
@@ -36,17 +35,16 @@ contract IBCO is Ownable {
         require(token.balanceOf(msg.sender) >= _amount, "err-tok-bal");
         require(token.allowance(msg.sender, address(this)) >= _amount, "err-tok-allow");
         token.transferFrom(msg.sender, address(this), _amount);
-        uint256 euros = getEuros(_amount, _token, chainlinkAddr, chainlinkDec);
+        uint256 euros = getEuros(_amount, chainlinkAddr, chainlinkDec);
         SEuro(seuro).mint(msg.sender, euros);
         emit Swap(_token, _amount, euros);
     }
 
     function swapETH() external payable {
-        bytes32 wethBytes = bytes32("WETH");
-       (address addr, address chainlinkAddr, uint8 chainlinkDec) = TokenManager(tokenManager).get(wethBytes);
+       (address addr, address chainlinkAddr, uint8 chainlinkDec) = TokenManager(tokenManager).get(bytes32("WETH"));
         WETH weth = WETH(addr);
         weth.deposit{value: msg.value};
-        uint256 euros = getEuros(msg.value, wethBytes, chainlinkAddr, chainlinkDec);
+        uint256 euros = getEuros(msg.value, chainlinkAddr, chainlinkDec);
         SEuro(seuro).mint(msg.sender, euros);
         emit Swap(bytes32("ETH"), msg.value, euros);
     }

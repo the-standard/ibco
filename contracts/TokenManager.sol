@@ -21,7 +21,7 @@ contract TokenManager is Ownable {
         addAcceptedTokens();
     }
 
-    function get(bytes32 _name) external view returns(address, address, uint8) {
+    function get(bytes32 _name) external view returns(address addr, address chainlinkAddr, uint8 chainlinkDec) {
         Token memory token = tokens[_name];
         return (token.addr, token.chainlinkAddr, token.chainlinkDec);
     }
@@ -30,7 +30,7 @@ contract TokenManager is Ownable {
         addAcceptedToken(bytes32("WETH"), WETH_ADDRESS, ETH_USD_CHAINLINK, 8);
     }
 
-    function getAcceptedTokens() public view returns (bytes32[] memory) {
+    function getAcceptedTokens() external view returns (bytes32[] memory) {
         return tokenNames;
     }
 
