@@ -8,6 +8,7 @@ describe('SEuroRateCalculator', async () => {
     const CL_DAI_USD_DEC = 8;
     const CL_EUR_USD = '0xb49f677943BC038e9857d61E7d053CaA2C1734C1';
     const MULTIPLIER = 5;
+    const TEN = ethers.BigNumber.from(10);
     let SEuroRateCalculator, BondingCurve;
 
     beforeEach(async () => {
@@ -22,15 +23,13 @@ describe('SEuroRateCalculator', async () => {
     async function getBaseEurRate(clTokUsd) {
         const tokUsdRate = (await (await ethers.getContractAt('Chainlink', clTokUsd)).latestRoundData()).answer;
         const eurUsdRate = (await (await ethers.getContractAt('Chainlink', CL_EUR_USD)).latestRoundData()).answer;
-        return 10 ** MULTIPLIER * tokUsdRate / eurUsdRate;
-    }
-
-    async function getDiscountRate() {
-        return 10 ** (await BondingCurve.MULTIPLIER()) / (await BondingCurve.getDiscount())
+        return TEN.pow(MULTIPLIER).mul(tokUsdRate).div(eurUsdRate);
     }
 
     async function expectedRate(clTokUsd) {
-        return Math.floor((await getBaseEurRate(clTokUsd)) * (await getDiscountRate()));
+        return (await getBaseEurRate(clTokUsd))
+            .mul(TEN.pow(await BondingCurve.MULTIPLIER()))
+            .div(await BondingCurve.getDiscount());
     }
 
     it('calculates the rate for weth', async () => {
