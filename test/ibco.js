@@ -54,76 +54,105 @@ describe('IBCO', async () => {
 
     describe('swap', async () => {
 
-        it('swaps for given token', async () => {
-            const toSwap = await ethers.utils.parseEther('1');
-            await buyWETH(user, toSwap);
-            await WETH.connect(user).approve(IBCO.address, toSwap);
-
-            const swap = IBCO.connect(user).swap(WETH_BYTES, toSwap);
-            
-            const expectedEuros = toSwap.mul(await getEthEuroRate()).div(await getDiscountRate());
-            await expect(swap).to.emit(IBCO, 'Swap').withArgs(WETH_BYTES, toSwap, expectedEuros);
-            const userSEuroBalance = await SEuro.balanceOf(user.address);
-            expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
-        });
-
-        it('will not swap without preapproval', async () => {
-            const toSwap = await ethers.utils.parseEther('1');
-            await buyWETH(user, toSwap);
-
-            const swap = IBCO.connect(user).swap(WETH_BYTES, toSwap);
-
-            await expect(swap).to.be.revertedWith('err-tok-allow')
-            const userSEuroBalance = await SEuro.balanceOf(user.address);
-            expect(userSEuroBalance.toString()).to.equal('0');
-        });
-
-        it('will not swap without balance of token', async () => {
-            const toSwap = await ethers.utils.parseEther('1');
-            await WETH.connect(user).withdraw(await WETH.balanceOf(user.address));
-            await WETH.connect(user).approve(IBCO.address, toSwap);
-
-            const swap = IBCO.connect(user).swap(WETH_BYTES, toSwap);
-
-            await expect(swap).to.be.revertedWith('err-tok-bal')
-            const userSEuroBalance = await SEuro.balanceOf(user.address);
-            expect(userSEuroBalance.toString()).to.equal('0');
-        });
-
-        it('will swap for any accepted token', async () => {
-            const toSwap = ethers.utils.parseEther('1');
-            const daiBytes = ethers.utils.formatBytes32String('DAI');
-            const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f';
-            await TokenManager.connect(owner).addAcceptedToken(daiBytes, DAI_ADDRESS, DAI_USD_CL, DAI_CL_DEC);
-
-            await buyToken(user, DAI_ADDRESS, toSwap);
-            const Dai = await ethers.getContractAt('IERC20', DAI_ADDRESS);
-            const userTokens = await Dai.balanceOf(user.address);
-            await Dai.connect(user).approve(IBCO.address, userTokens);
-
-            const expectedEuros = userTokens.mul(await getDaiEuroRate()).div(await getDiscountRate());
-            const swap = IBCO.connect(user).swap(daiBytes, userTokens);
-            await expect(swap).to.emit(IBCO, 'Swap').withArgs(daiBytes, userTokens, expectedEuros);
-            const userSEuroBalance = await SEuro.balanceOf(user.address);
-            expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
-        });
-    });
-
-    describe('swapETH', async () => {
-        it('swaps for eth', async () => {
+        it('will not swap for eth if ibco not active', async () => {
             const toSwap = await ethers.utils.parseEther('1');
             const ethBytes = ethers.utils.formatBytes32String('ETH');
 
             const swap = IBCO.connect(user).swapETH({ value: toSwap });
 
-            const expectedEuros = toSwap.mul(await getEthEuroRate()).div(await getDiscountRate());
-            await expect(swap).to.emit(IBCO, 'Swap').withArgs(ethBytes, toSwap, expectedEuros);
+            await expect(swap).to.be.revertedWith('err-ibco-inactive')
             const userSEuroBalance = await SEuro.balanceOf(user.address);
-            expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
-        })
+            expect(userSEuroBalance).to.eq(0);
+        });
+
+        it('will not swap for token if ibco not active', async () => {
+            const toSwap = await ethers.utils.parseEther('1');
+            await buyWETH(user, toSwap);
+            await WETH.connect(user).approve(IBCO.address, toSwap);
+
+            const swap = IBCO.connect(user).swap(WETH_BYTES, toSwap);
+
+            await expect(swap).to.be.revertedWith('err-ibco-inactive')
+            const userSEuroBalance = await SEuro.balanceOf(user.address);
+            expect(userSEuroBalance).to.eq(0);
+        });
+
+        describe('activated', async () => {
+            beforeEach(async () => {
+                await IBCO.connect(owner).activate();
+            });
+
+            it('swaps for given token', async () => {
+                const toSwap = await ethers.utils.parseEther('1');
+                await buyWETH(user, toSwap);
+                await WETH.connect(user).approve(IBCO.address, toSwap);
+    
+                const swap = IBCO.connect(user).swap(WETH_BYTES, toSwap);
+                
+                const expectedEuros = toSwap.mul(await getEthEuroRate()).div(await getDiscountRate());
+                await expect(swap).to.emit(IBCO, 'Swap').withArgs(WETH_BYTES, toSwap, expectedEuros);
+                const userSEuroBalance = await SEuro.balanceOf(user.address);
+                expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
+            });
+    
+            it('will not swap without preapproval', async () => {
+                const toSwap = await ethers.utils.parseEther('1');
+                await buyWETH(user, toSwap);
+    
+                const swap = IBCO.connect(user).swap(WETH_BYTES, toSwap);
+    
+                await expect(swap).to.be.revertedWith('err-tok-allow')
+                const userSEuroBalance = await SEuro.balanceOf(user.address);
+                expect(userSEuroBalance.toString()).to.equal('0');
+            });
+    
+            it('will not swap without balance of token', async () => {
+                const toSwap = await ethers.utils.parseEther('1');
+                await WETH.connect(user).withdraw(await WETH.balanceOf(user.address));
+                await WETH.connect(user).approve(IBCO.address, toSwap);
+    
+                const swap = IBCO.connect(user).swap(WETH_BYTES, toSwap);
+    
+                await expect(swap).to.be.revertedWith('err-tok-bal')
+                const userSEuroBalance = await SEuro.balanceOf(user.address);
+                expect(userSEuroBalance.toString()).to.equal('0');
+            });
+    
+            it('will swap for any accepted token', async () => {
+                const toSwap = ethers.utils.parseEther('1');
+                const daiBytes = ethers.utils.formatBytes32String('DAI');
+                const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f';
+                await TokenManager.connect(owner).addAcceptedToken(daiBytes, DAI_ADDRESS, DAI_USD_CL, DAI_CL_DEC);
+    
+                await buyToken(user, DAI_ADDRESS, toSwap);
+                const Dai = await ethers.getContractAt('IERC20', DAI_ADDRESS);
+                const userTokens = await Dai.balanceOf(user.address);
+                await Dai.connect(user).approve(IBCO.address, userTokens);
+    
+                const expectedEuros = userTokens.mul(await getDaiEuroRate()).div(await getDiscountRate());
+                const swap = IBCO.connect(user).swap(daiBytes, userTokens);
+                await expect(swap).to.emit(IBCO, 'Swap').withArgs(daiBytes, userTokens, expectedEuros);
+                const userSEuroBalance = await SEuro.balanceOf(user.address);
+                expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
+            });
+
+            describe('swapETH', async () => {
+                it('swaps for eth', async () => {
+                    const toSwap = await ethers.utils.parseEther('1');
+                    const ethBytes = ethers.utils.formatBytes32String('ETH');
+        
+                    const swap = IBCO.connect(user).swapETH({ value: toSwap });
+        
+                    const expectedEuros = toSwap.mul(await getEthEuroRate()).div(await getDiscountRate());
+                    await expect(swap).to.emit(IBCO, 'Swap').withArgs(ethBytes, toSwap, expectedEuros);
+                    const userSEuroBalance = await SEuro.balanceOf(user.address);
+                    expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
+                })
+            });
+        });
     });
 
-    describe('active', async () => {
+    describe('activate', async () => {
         it('is inactive by default', async () => {
             const status = await IBCO.getStatus();
             expect(status._active).to.equal(false);

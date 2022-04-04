@@ -32,7 +32,21 @@ contract IBCO is Ownable {
         return _amount * calculator.calculate(_chainlinkAddr, _chainlinkDec) / 10 ** calculator.MULTIPLIER();
     }
 
-    function swap(bytes32 _token, uint256 _amount) external {
+    function activated() private view returns (bool) {
+        return active == true && start > 0;
+    }
+
+    function notEnded() private view returns (bool) {
+        return stop == 0 || stop > block.timestamp;
+    }
+
+    modifier ifActive() {
+        bool isActive = activated() && notEnded();
+        require(isActive, "err-ibco-inactive");
+        _;
+    }
+
+    function swap(bytes32 _token, uint256 _amount) external ifActive {
        (address addr, address chainlinkAddr, uint8 chainlinkDec) = TokenManager(tokenManager).get(_token);
         IERC20 token = IERC20(addr);
         require(token.balanceOf(msg.sender) >= _amount, "err-tok-bal");
@@ -43,7 +57,7 @@ contract IBCO is Ownable {
         emit Swap(_token, _amount, euros);
     }
 
-    function swapETH() external payable {
+    function swapETH() external payable ifActive {
        (address addr, address chainlinkAddr, uint8 chainlinkDec) = TokenManager(tokenManager).get(bytes32("WETH"));
         WETH weth = WETH(addr);
         weth.deposit{value: msg.value};
