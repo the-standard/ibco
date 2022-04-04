@@ -12,6 +12,7 @@ import "contracts/TokenManager.sol";
 contract IBCO is Ownable {
     address public constant WETH_ADDRESS =  0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
+    bool public active;
     address private seuro;
     address private sEuroRateCalculator;    
     address private tokenManager;
@@ -47,5 +48,9 @@ contract IBCO is Ownable {
         uint256 euros = getEuros(msg.value, chainlinkAddr, chainlinkDec);
         SEuro(seuro).mint(msg.sender, euros);
         emit Swap(bytes32("ETH"), msg.value, euros);
+    }
+
+    function activate() external onlyOwner {
+        active = true;
     }
 }

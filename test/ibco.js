@@ -8,7 +8,6 @@ describe('IBCO', async () => {
     const CL_ETH_USD_DEC = 8;
     const DAI_USD_CL = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
     const DAI_CL_DEC = 8;
-    const CL_EUR_USD = '0xb49f677943BC038e9857d61E7d053CaA2C1734C1';
     const ROUTER_ADDRESS = '0xf164fC0Ec4E93095b804a4795bBe1e041497b92a';
     let IBCO, SEuro, BondingCurve, SEuroRateCalculator, TokenManager, WETH, owner, user;
 
@@ -122,5 +121,24 @@ describe('IBCO', async () => {
             const userSEuroBalance = await SEuro.balanceOf(user.address);
             expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
         })
+    });
+
+    describe('active', async () => {
+        it('is inactive by default', async () => {
+            expect(await IBCO.active()).to.equal(false);
+        });
+
+        it('can be activated by owner', async () => {
+            await IBCO.connect(owner).activate();
+
+            expect(await IBCO.active()).to.equal(true);
+        });
+
+        it('cannot be activated by non-owner', async () => {
+            const activate = IBCO.connect(user).activate();
+
+            await expect(activate).to.be.revertedWith('Ownable: caller is not the owner');
+            expect(await IBCO.active()).to.equal(false);
+        });
     });
 });
