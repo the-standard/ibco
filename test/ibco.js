@@ -125,20 +125,29 @@ describe('IBCO', async () => {
 
     describe('active', async () => {
         it('is inactive by default', async () => {
-            expect(await IBCO.active()).to.equal(false);
+            const status = await IBCO.getStatus();
+            expect(status._active).to.equal(false);
+            expect(status._start).to.equal(0);
+            expect(status._stop).to.equal(0);
         });
 
         it('can be activated by owner', async () => {
             await IBCO.connect(owner).activate();
 
-            expect(await IBCO.active()).to.equal(true);
+            const status = await IBCO.getStatus();
+            expect(status._active).to.equal(true);
+            expect(status._start).to.be.gt(0);
+            expect(status._stop).to.equal(0);
         });
 
         it('cannot be activated by non-owner', async () => {
             const activate = IBCO.connect(user).activate();
 
             await expect(activate).to.be.revertedWith('Ownable: caller is not the owner');
-            expect(await IBCO.active()).to.equal(false);
+            const status = await IBCO.getStatus();
+            expect(status._active).to.equal(false);
+            expect(status._start).to.equal(0);
+            expect(status._stop).to.equal(0);
         });
     });
 });

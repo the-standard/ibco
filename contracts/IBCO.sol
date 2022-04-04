@@ -12,7 +12,9 @@ import "contracts/TokenManager.sol";
 contract IBCO is Ownable {
     address public constant WETH_ADDRESS =  0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    bool public active;
+    bool private active;
+    uint256 private start;
+    uint256 private stop;
     address private seuro;
     address private sEuroRateCalculator;    
     address private tokenManager;
@@ -52,5 +54,10 @@ contract IBCO is Ownable {
 
     function activate() external onlyOwner {
         active = true;
+        start = block.timestamp;
+    }
+
+    function getStatus() public view returns (bool _active, uint256 _start, uint256 _stop) {
+        return (active, start, stop);
     }
 }
