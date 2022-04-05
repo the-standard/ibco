@@ -179,4 +179,28 @@ describe('IBCO', async () => {
             expect(status._stop).to.equal(0);
         });
     });
+
+    describe('complete', async () => {
+        it('can be completed by owner', async () => {
+            await IBCO.connect(owner).activate();
+            await IBCO.connect(owner).complete();
+
+            const status = await IBCO.getStatus();
+            expect(status._active).to.equal(false);
+            expect(status._start).to.be.gt(0);
+            expect(status._stop).to.be.gt(0);
+            expect(status._stop).to.be.gt(status._start);
+        });
+
+        it('cannot be completed by non-owner', async () => {
+            await IBCO.connect(owner).activate();
+            const complete = IBCO.connect(user).complete();
+
+            await expect(complete).to.be.revertedWith('Ownable: caller is not the owner');
+            const status = await IBCO.getStatus();
+            expect(status._active).to.equal(true);
+            expect(status._start).to.be.gt(0);
+            expect(status._stop).to.equal(0);
+        });
+    });
 });
