@@ -129,7 +129,6 @@ The bonding curve discount is included in the rate.
 Represented as fractional rate * 10^`MULTIPLIER` e.g. if rate is 0.6, and calculator `MULTIPLIER` is 5, `rate`
 
 - `_tokUsdCl`: address of the Chainlink exchange datafeed for given token -> USD
-  - e.g. `0x5745544800000000000000000000000000000000000000000000000000000000` for `WETH`
 - `_tokUsdDec`: the dec index of the Chainlink exchange datafeed for given token -> USD
 - `rate`: exchange rate of given token to SEuro
   - represented as fractional rate * 10^`MULTIPLIER`
