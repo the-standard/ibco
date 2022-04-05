@@ -66,7 +66,7 @@ contract IBCO is Ownable {
         emit Swap(bytes32("ETH"), msg.value, euros);
     }
 
-    function getStatus() public view returns (bool _active, uint256 _start, uint256 _stop) {
+    function getStatus() external view returns (bool _active, uint256 _start, uint256 _stop) {
         return (active, start, stop);
     }
 
