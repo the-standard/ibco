@@ -5,7 +5,6 @@ import "contracts/BondingCurve.sol";
 import "contracts/interfaces/Chainlink.sol";
 
 contract SEuroRateCalculator {
-    uint8 public constant MULTIPLIER = 5;
     uint256 public constant FIXED_POINT = 1 ether;
     address public constant EUR_USD_CL = 0x73366Fe0AA0Ded304479862808e02506FE556a98;
     uint8 public constant EUR_USD_CL_DEC = 8;
