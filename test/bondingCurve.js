@@ -5,7 +5,7 @@ describe('BondingCurve', async () => {
     describe('discount rate', async () => {
         async function expectedDiscount() {
             // shouldn't be constant obvs
-            return 0.8 * 10 ** (await BondingCurve.MULTIPLIER())
+            return ethers.BigNumber.from(0.8 * (await BondingCurve.FIXED_POINT));
         }
 
         it('gets the current discount rate', async () => {

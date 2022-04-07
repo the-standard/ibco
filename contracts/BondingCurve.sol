@@ -2,7 +2,7 @@
 pragma solidity ^0.8.10;
 
 contract BondingCurve {
-    uint8 public constant MULTIPLIER = 5;
+    uint256 public constant FIXED_POINT = 1 ether;
     address private seuro;
         
     constructor(address _seuro) {
@@ -10,6 +10,6 @@ contract BondingCurve {
     }
 
     function getDiscount() public pure returns (uint256) {
-        return 80 * 10 ** (MULTIPLIER - 2);
+        return 80 * FIXED_POINT / 100;
     }
 }

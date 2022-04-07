@@ -126,23 +126,23 @@ Gets the rate of token -> SEuro for the given token.
 
 The bonding curve discount is included in the rate.
 
-Represented as fractional rate * 10^`MULTIPLIER` e.g. if rate is 0.6, and `MULTIPLIER` is 5, `rate` is 60,000
+Represented as fractional rate * `FIXED_POINT` e.g. if fractional rate is 0.6, and `FIXED_POINT` is 1,000,000,000,000,000,000, `rate` is 600,000,000,000,000,000
 
 - `_tokUsdCl`: address of the Chainlink exchange datafeed for given token -> USD
 - `_tokUsdDec`: the dec index of the Chainlink exchange datafeed for given token -> USD
 - `rate`: exchange rate of given token to SEuro
-  - represented as fractional rate * 10^`MULTIPLIER`
-  - e.g. if rate is 0.6, and calculator `MULTIPLIER` is 5, `rate` = 60,000
+  - represented as fractional rate * `FIXED_POINT`
+  - e.g. if rate is 0.6, and calculator `FIXED_POINT` is 1,000,000,000,000,000,000, `rate` = 600,000,000,000,000,000
 
-### MULTIPLIER
+### FIXED_POINT
 ```
-function MULTIPLIER() external view returns (uint8 MULTIPLIER)
+function FIXED_POINT() external view returns (uint256 FIXED_POINT)
 ```
-Gives the base multiplier for rate
+Gives the fixed point for fractions in rate
 
-- `MULTIPLIER`: the base used for the fractional rate
-  - fractional rate muliplied by 10^`MULTIPLIER` before returned by `calculate`
-  - e.g. if `rate` given by `calculate` is 60,000, and `MULTIPLIER` is 5, fractional rate is 0.6
+- `FIXED_POINT`: the fixed point used for the fractional rate
+  - fractional rate muliplied by `FIXED_POINT` before returned by `calculate`
+  - e.g. if `rate` given by `calculate` is 600,000,000,000,000,000, and `FIXED_POINT` is 1,000,000,000,000,000,000, fractional rate is 0.6
 
 ---
 
@@ -158,14 +158,14 @@ function getDiscount() public view returns (uint256)
 ```
 Gets the current discount rate of SEuro, according to the total supply and the bonding curve
 
-Represented as fractional rate * 10^`MULTIPLIER` e.g. if discount is 0.9, and `MULTIPLIER` is 5, `rate` is 90,000
+Represented as fractional rate * `FIXED_POINT` e.g. if discount is 0.9, and `FIXED_POINT` is 1,000,000,000,000,000,000, `rate` is 900,000,000,000,000,000
 
-### MULTIPLIER
+### FIXED_POINT
 ```
-function MULTIPLIER() external view returns (uint8 MULTIPLIER)
+function FIXED_POINT() external view returns (uint256 FIXED_POINT)
 ```
-Gives the base multiplier for rate
+Gives the fixed point for fractions in rate
 
-- `MULTIPLIER`: the base used for the fractional rate
-  - fractional rate muliplied by 10^`MULTIPLIER` before returned by `getDiscount`
-  - e.g. if discount given by `getDiscount` is 90,000, and `MULTIPLIER` is 5, fractional discount rate is 0.9
+- `FIXED_POINT`: the fixed point used for the fractional rate
+  - fractional rate muliplied by `FIXED_POINT` before returned by `getDiscount`
+  - e.g. if discount given by `getDiscount` is 900,000,000,000,000,000, and `FIXED_POINT` is 1,000,000,000,000,000,000, fractional discount rate is 0.9

@@ -10,8 +10,6 @@ import "contracts/SEuroRateCalculator.sol";
 import "contracts/TokenManager.sol";
 
 contract IBCO is Ownable {
-    address public constant WETH_ADDRESS =  0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-
     bool private active;
     uint256 private start;
     uint256 private stop;
@@ -29,7 +27,7 @@ contract IBCO is Ownable {
 
     function getEuros(uint256 _amount, address _chainlinkAddr, uint8 _chainlinkDec) private view returns (uint256) {
         SEuroRateCalculator calculator = SEuroRateCalculator(sEuroRateCalculator);
-        return _amount * calculator.calculate(_chainlinkAddr, _chainlinkDec) / 10 ** calculator.MULTIPLIER();
+        return _amount * calculator.calculate(_chainlinkAddr, _chainlinkDec) / calculator.FIXED_POINT();
     }
 
     function activated() private view returns (bool) {

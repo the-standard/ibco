@@ -1,14 +1,13 @@
 const { ethers } = require('hardhat');
+const { BigNumber } = ethers;
 const { expect } = require('chai');
 
 describe('SEuroRateCalculator', async () => {
-    const CL_ETH_USD = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
+    const CL_ETH_USD = '0xF9680D99D6C9589e2a93a78A04A279e509205945';
     const CL_ETH_USD_DEC = 8;
-    const CL_DAI_USD = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
+    const CL_DAI_USD = '0x4746DeC9e833A82EC7C2C1356372CcF2cfcD2F3D';
     const CL_DAI_USD_DEC = 8;
-    const CL_EUR_USD = '0xb49f677943BC038e9857d61E7d053CaA2C1734C1';
-    const MULTIPLIER = 5;
-    const TEN = ethers.BigNumber.from(10);
+    const CALCULATOR_FIXED_POINT = BigNumber.from(10).pow(BigNumber.from(18));
     let SEuroRateCalculator, BondingCurve;
 
     beforeEach(async () => {
@@ -21,14 +20,15 @@ describe('SEuroRateCalculator', async () => {
     });
 
     async function getBaseEurRate(clTokUsd) {
+        const eurUsdCl = await SEuroRateCalculator.EUR_USD_CL();
         const tokUsdRate = (await (await ethers.getContractAt('Chainlink', clTokUsd)).latestRoundData()).answer;
-        const eurUsdRate = (await (await ethers.getContractAt('Chainlink', CL_EUR_USD)).latestRoundData()).answer;
-        return TEN.pow(MULTIPLIER).mul(tokUsdRate).div(eurUsdRate);
+        const eurUsdRate = (await (await ethers.getContractAt('Chainlink', eurUsdCl)).latestRoundData()).answer;
+        return CALCULATOR_FIXED_POINT.mul(tokUsdRate).div(eurUsdRate);
     }
 
     async function expectedRate(clTokUsd) {
         return (await getBaseEurRate(clTokUsd))
-            .mul(TEN.pow(await BondingCurve.MULTIPLIER()))
+            .mul(await BondingCurve.FIXED_POINT())
             .div(await BondingCurve.getDiscount());
     }
 
