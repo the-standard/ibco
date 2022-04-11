@@ -29,7 +29,7 @@ describe('SEuroRateCalculator', async () => {
     async function expectedRate(clTokUsd) {
         return (await getBaseEurRate(clTokUsd))
             .mul(await BondingCurve.FIXED_POINT())
-            .div(await BondingCurve.getDiscount());
+            .div(await BondingCurve.pricePerEuro());
     }
 
     it('calculates the rate for weth', async () => {

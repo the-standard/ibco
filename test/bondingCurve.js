@@ -19,7 +19,7 @@ describe('BondingCurve', async () => {
         }
 
         it('gets the current discount rate', async () => {
-            const discountRate = await BondingCurve.getDiscount();
+            const discountRate = await BondingCurve.pricePerEuro();
 
             expect(discountRate).to.equal(await expectedDiscount());
         });

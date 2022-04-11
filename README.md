@@ -152,9 +152,9 @@ Deployed at `0x7dsf78r634hf938u2j394` _(insert the real address when deployed)_ 
 
 ## Read-only functions
 
-### getDiscount
+### pricePerEuro
 ```
-function getDiscount() public view returns (uint256)
+function pricePerEuro() public view returns (uint256)
 ```
 Gets the current discount rate of SEuro, according to the total supply and the bonding curve
 
@@ -167,5 +167,5 @@ function FIXED_POINT() external view returns (uint256 FIXED_POINT)
 Gives the fixed point for fractions in rate
 
 - `FIXED_POINT`: the fixed point used for the fractional rate
-  - fractional rate muliplied by `FIXED_POINT` before returned by `getDiscount`
-  - e.g. if discount given by `getDiscount` is 900,000,000,000,000,000, and `FIXED_POINT` is 1,000,000,000,000,000,000, fractional discount rate is 0.9
+  - fractional rate muliplied by `FIXED_POINT` before returned by `pricePerEuro`
+  - e.g. if discount given by `pricePerEuro` is 900,000,000,000,000,000, and `FIXED_POINT` is 1,000,000,000,000,000,000, fractional discount rate is 0.9

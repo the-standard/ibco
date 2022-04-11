@@ -9,7 +9,7 @@ contract BondingCurve {
         seuro = _seuro;
     }
 
-    function getDiscount() public pure returns (uint256) {
+    function pricePerEuro() public pure returns (uint256) {
         return 80 * FIXED_POINT / 100;
     }
 }

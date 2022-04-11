@@ -23,11 +23,11 @@ contract SEuroRateCalculator {
 
     function calculateDiscountRate() private view returns (uint256) {
         BondingCurve curve = BondingCurve(bondingCurve);
-        return curve.FIXED_POINT() / curve.getDiscount();
+        return curve.FIXED_POINT() / curve.pricePerEuro();
     }
 
     function calculate(address _tokUsdCl, uint8 _tokUsdDec) external view returns (uint256 rate) {
         BondingCurve curve = BondingCurve(bondingCurve);
-        return calculateBaseRate(_tokUsdCl, _tokUsdDec) * curve.FIXED_POINT() / curve.getDiscount();
+        return calculateBaseRate(_tokUsdCl, _tokUsdDec) * curve.FIXED_POINT() / curve.pricePerEuro();
     }
 }
