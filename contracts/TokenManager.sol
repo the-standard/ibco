@@ -4,8 +4,8 @@ pragma solidity ^0.8.10;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract TokenManager is Ownable {
-    address public constant WETH_ADDRESS =  0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619;
-    address public constant ETH_USD_CHAINLINK = 0x4746DeC9e833A82EC7C2C1356372CcF2cfcD2F3D;
+    address public constant WETH_ADDRESS =  0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant ETH_USD_CHAINLINK = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     uint8 public constant ETH_USD_DEC = 8;
 
     mapping(bytes32 => Token) private tokens;

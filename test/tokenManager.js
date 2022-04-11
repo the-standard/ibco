@@ -3,12 +3,12 @@ const { expect } = require('chai');
 
 describe('TokenManager', async () => {
     const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
-    const WETH_ADDRESS = '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619';
-    const WETH_USD_CL = '0x4746DeC9e833A82EC7C2C1356372CcF2cfcD2F3D';
+    const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+    const WETH_USD_CL = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
     const WETH_CL_DEC = 8;
     const DAI = ethers.utils.formatBytes32String('DAI');
-    const DAI_ADDRESS = '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063';
-    const DAI_USD_CL = '0x4746DeC9e833A82EC7C2C1356372CcF2cfcD2F3D';
+    const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
+    const DAI_USD_CL = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
     const DAI_CL_DEC = 8;
     let TokenManager, owner, user;
 

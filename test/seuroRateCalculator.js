@@ -3,9 +3,9 @@ const { BigNumber } = ethers;
 const { expect } = require('chai');
 
 describe('SEuroRateCalculator', async () => {
-    const CL_ETH_USD = '0xF9680D99D6C9589e2a93a78A04A279e509205945';
+    const CL_ETH_USD = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
     const CL_ETH_USD_DEC = 8;
-    const CL_DAI_USD = '0x4746DeC9e833A82EC7C2C1356372CcF2cfcD2F3D';
+    const CL_DAI_USD = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
     const CL_DAI_USD_DEC = 8;
     const CALCULATOR_FIXED_POINT = BigNumber.from(10).pow(BigNumber.from(18));
     let SEuroRateCalculator, BondingCurve;

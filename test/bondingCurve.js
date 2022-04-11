@@ -1,19 +1,24 @@
 const { ethers } = require('hardhat');
+const { BigNumber } = ethers;
 const { expect } = require('chai');
 
 describe('BondingCurve', async () => {
+    let BondingCurve;
+
+    beforeEach(async () => {
+        const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
+        const SEuroContract = await ethers.getContractFactory('SEuro');
+        const SEuro = await SEuroContract.deploy('SEuro', 'SEUR', []);
+        BondingCurve = await BondingCurveContract.deploy(SEuro.address);
+    });
+
     describe('discount rate', async () => {
         async function expectedDiscount() {
             // shouldn't be constant obvs
-            return ethers.BigNumber.from(0.8 * (await BondingCurve.FIXED_POINT));
+            return BigNumber.from(80).mul(await BondingCurve.FIXED_POINT()).div(100);
         }
 
         it('gets the current discount rate', async () => {
-            BondingCurveContract = await ethers.getContractFactory('BondingCurve');
-            SEuroContract = await ethers.getContractFactory('SEuro');
-            const SEuro = await SEuroContract.deploy('SEuro', 'SEUR', []);
-            BondingCurve = await BondingCurveContract.deploy(SEuro.address);
-
             const discountRate = await BondingCurve.getDiscount();
 
             expect(discountRate).to.equal(await expectedDiscount());

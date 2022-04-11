@@ -1,7 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require('dotenv').config();
 
-const { MATIC_API_KEY } = process.env;
+const { INFURA_API_KEY } = process.env;
 
 module.exports = {
   defaultNetwork: 'hardhat',
@@ -9,11 +9,9 @@ module.exports = {
   networks: {
     hardhat: {
       forking: {
-        url: `https://rpc-mainnet.maticvigil.com/v1/${MATIC_API_KEY}`
-      }
-    },
-    matic: {
-      url: `https://rpc-mainnet.maticvigil.com/v1/${MATIC_API_KEY}`,
+        url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
+      },
+      chainId: 1559
     }
   }
 };

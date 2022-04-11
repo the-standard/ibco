@@ -3,12 +3,12 @@ const { expect } = require('chai');
 
 describe('IBCO', async () => {
     const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
-    const WETH_ADDRESS = '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619';
-    const CL_ETH_USD = '0xF9680D99D6C9589e2a93a78A04A279e509205945';
+    const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+    const CL_ETH_USD = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
     const CL_ETH_USD_DEC = 8;
-    const DAI_USD_CL = '0x4746DeC9e833A82EC7C2C1356372CcF2cfcD2F3D';
+    const DAI_USD_CL = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
     const DAI_CL_DEC = 8;
-    const ROUTER_ADDRESS = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
+    const ROUTER_ADDRESS = '0xf164fC0Ec4E93095b804a4795bBe1e041497b92a';
     let IBCO, SEuro, BondingCurve, SEuroRateCalculator, TokenManager, WETH, owner, user;
 
     async function buyWETH(signer, amount) {
@@ -27,10 +27,6 @@ describe('IBCO', async () => {
 
     async function getDaiEuroRate() {
         return await SEuroRateCalculator.calculate(DAI_USD_CL, DAI_CL_DEC);
-    }
-
-    async function getDiscountRate() {
-        return await SEuroRateCalculator.FIXED_POINT();
     }
 
     beforeEach(async () => {
@@ -81,7 +77,7 @@ describe('IBCO', async () => {
                 await IBCO.connect(owner).activate();
             });
 
-            it.only('swaps for given token', async () => {
+            it('swaps for given token', async () => {
                 const toSwap = await ethers.utils.parseEther('1');
                 await buyWETH(user, toSwap);
                 await WETH.connect(user).approve(IBCO.address, toSwap);
@@ -120,7 +116,7 @@ describe('IBCO', async () => {
             it('will swap for any accepted token', async () => {
                 const toSwap = ethers.utils.parseEther('1');
                 const daiBytes = ethers.utils.formatBytes32String('DAI');
-                const DAI_ADDRESS = '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063';
+                const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
                 await TokenManager.connect(owner).addAcceptedToken(daiBytes, DAI_ADDRESS, DAI_USD_CL, DAI_CL_DEC);
     
                 await buyToken(user, DAI_ADDRESS, toSwap);
