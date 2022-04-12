@@ -1,27 +1,34 @@
 const { ethers } = require('hardhat');
-const { BigNumber } = ethers;
+const { BigNumber, utils } = ethers;
 const { expect } = require('chai');
 
 describe('BondingCurve', async () => {
-    let BondingCurve;
+    let BondingCurve, SEuro;
 
     beforeEach(async () => {
+        [owner] = await ethers.getSigners();
+
         const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
         const SEuroContract = await ethers.getContractFactory('SEuro');
-        const SEuro = await SEuroContract.deploy('SEuro', 'SEUR', []);
+        SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
         BondingCurve = await BondingCurveContract.deploy(SEuro.address);
     });
 
-    describe('discount rate', async () => {
-        async function expectedDiscount() {
-            // shouldn't be constant obvs
-            return BigNumber.from(80).mul(await BondingCurve.FIXED_POINT()).div(100);
-        }
+    describe.only('discount rate', async () => {
 
-        it('gets the current discount rate', async () => {
+        it('initialises with given initial price', async () => {
+            const initialPrice = utils.parseEther('0.7');
             const discountRate = await BondingCurve.pricePerEuro();
 
-            expect(discountRate).to.equal(await expectedDiscount());
+            expect(discountRate).to.equal(initialPrice);
+        });
+
+        it('gets more expensive as supply increases', async () => {
+            const initialPrice = await BondingCurve.pricePerEuro();
+            await SEuro.connect(owner).mint(owner.address, 100_000)
+            const latestPrice = await BondingCurve.pricePerEuro();
+
+            expect(latestPrice).to.be.gt(initialPrice);
         });
     });
 });
