@@ -1,6 +1,4 @@
-const hre = require('hardhat');
-console.log(hre.network);
-const { ethers } = hre;
+const { ethers } = require('hardhat');
 
 describe('a test test', async () => {
     it('deploys a contract', async () => {
