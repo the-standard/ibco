@@ -14,7 +14,7 @@ describe('BondingCurve', async () => {
         BondingCurve = await BondingCurveContract.deploy(SEuro.address);
     });
 
-    describe.only('discount rate', async () => {
+    describe('discount rate', async () => {
 
         it('initialises with given initial price', async () => {
             const initialPrice = utils.parseEther('0.7');
