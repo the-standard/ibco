@@ -17,9 +17,13 @@ contract BondingCurve {
         seuro = _seuro;
     }
 
+    // do we care about the price per euro, or do we need a function that returns the area under the curve for the amount purchased?
+    // do we need both? to give the current discount
+    // if we need area under the curve, we need to find integral of function, which is probably even worse to calculate in solidity
     function pricePerEuro() public view returns (uint256) {
         uint256 supply = SEuro(seuro).totalSupply();
         // yeah what are we gonna do about this
+        // 
         // return K * (supply / MAX_SUPPLY - MIN_SUPPLY / MAX_SUPPLY) ^ (1 / 5) + INITIAL_PRICE;
         return INITIAL_PRICE;
     }
