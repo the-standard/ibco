@@ -40,7 +40,9 @@ describe('IBCO', async () => {
 
         WETH = await ethers.getContractAt('WETH', WETH_ADDRESS);
         SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
-        BondingCurve = await BondingCurveContract.deploy(SEuro.address);
+        const INITIAL_PRICE = ethers.utils.parseEther('0.7');
+        const MAX_SUPPLY = 200_000_000;
+        BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY);
         SEuroRateCalculator = await SEuroRateCalculatorContract.deploy(BondingCurve.address);
         TokenManager = await TokenManagerContract.deploy();
         IBCO = await IBCOContract.deploy(SEuro.address, SEuroRateCalculator.address, TokenManager.address);

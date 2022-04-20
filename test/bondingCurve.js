@@ -11,7 +11,9 @@ describe('BondingCurve', async () => {
         const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
         const SEuroContract = await ethers.getContractFactory('SEuro');
         SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
-        BondingCurve = await BondingCurveContract.deploy(SEuro.address);
+        const INITIAL_PRICE = ethers.utils.parseEther('0.7');
+        const MAX_SUPPLY = 200_000_000;
+        BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY);
     });
 
     describe('discount rate', async () => {
