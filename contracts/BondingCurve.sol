@@ -3,10 +3,9 @@ pragma solidity ^0.8.10;
 
 import "contracts/SEuro.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
-import "hardhat/console.sol";
 
 contract BondingCurve {
-    uint256 public constant FIXED_POINT = 1 ether;
+    uint256 public constant FIXED_POINT = 1_000_000_000_000_000_000;
     uint256 constant INITIAL_PRICE = 700_000_000_000_000_000;
     uint128 constant MIN_SUPPLY = 1;
     uint128 constant MAX_SUPPLY = 200_000_000;
