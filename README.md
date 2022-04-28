@@ -22,6 +22,8 @@ Swaps the given amount of ERC20 token for SEuro, which is minted to `msg.sender`
 
 Requires `msg.sender` to already have approved allowance of IBCO address.
 
+Requires the given ERC20 token to be an accepted token
+
 Can only be performed if IBCO is active.
 
 - `_token`: the symbol of the token that you'd like to swap for SEuro, represented as 32-byte hex string
