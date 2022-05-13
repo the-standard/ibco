@@ -84,9 +84,9 @@ describe('IBCO', async () => {
                 await buyWETH(user, toSwap);
                 await WETH.connect(user).approve(IBCO.address, toSwap);
     
-                const swap = IBCO.connect(user).swap(WETH_BYTES, toSwap);
                 
                 const expectedEuros = toSwap.mul(await getEthEuroRate()).div(await SEuroRateCalculator.FIXED_POINT());
+                const swap = IBCO.connect(user).swap(WETH_BYTES, toSwap);
                 await expect(swap).to.emit(IBCO, 'Swap').withArgs(WETH_BYTES, toSwap, expectedEuros);
                 const userSEuroBalance = await SEuro.balanceOf(user.address);
                 expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
@@ -137,10 +137,9 @@ describe('IBCO', async () => {
                 it('swaps for eth', async () => {
                     const toSwap = await ethers.utils.parseEther('1');
                     const ethBytes = ethers.utils.formatBytes32String('ETH');
-        
-                    const swap = IBCO.connect(user).swapETH({ value: toSwap });
-        
+                    
                     const expectedEuros = toSwap.mul(await getEthEuroRate()).div(await SEuroRateCalculator.FIXED_POINT());
+                    const swap = IBCO.connect(user).swapETH({ value: toSwap });
                     await expect(swap).to.emit(IBCO, 'Swap').withArgs(ethBytes, toSwap, expectedEuros);
                     const userSEuroBalance = await SEuro.balanceOf(user.address);
                     expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
