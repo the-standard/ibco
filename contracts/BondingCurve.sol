@@ -7,9 +7,9 @@ import "abdk-libraries-solidity/ABDKMath64x64.sol";
 contract BondingCurve {
     uint256 public constant FIXED_POINT = 1_000_000_000_000_000_000;
     uint256 private constant FINAL_PRICE = 1_000_000_000_000_000_000;
-    uint128 private constant l = 1;
-    uint128 private constant jNumerator = 1;
-    uint128 private constant jDenominator = 5;
+    uint8 private constant l = 1;
+    uint8 private constant jNumerator = 1;
+    uint8 private constant jDenominator = 5;
 
     uint256 private immutable i;
     uint256 private immutable m;
