@@ -6,36 +6,36 @@ import "abdk-libraries-solidity/ABDKMath64x64.sol";
 
 contract BondingCurve {
     uint256 public constant FIXED_POINT = 1_000_000_000_000_000_000;
-    uint256 public constant FINAL_PRICE = 1_000_000_000_000_000_000;
-    uint128 constant MIN_SUPPLY = 1;
+    uint256 private constant FINAL_PRICE = 1_000_000_000_000_000_000;
+    uint128 private constant l = 1;
+    uint128 private constant jNumerator = 1;
+    uint128 private constant jDenominator = 5;
 
-    uint256 private immutable initialPrice;
-    uint256 private immutable maxSupply;
+    uint256 private immutable i;
+    uint256 private immutable m;
     uint256 private immutable k;
-    int128 private immutable minSupplyMaxSupply;
-    int128 private immutable y;
+    int128 private immutable j;
     address private immutable seuro;
 
     constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply) {
         seuro = _seuro;
-        initialPrice = _initialPrice;
-        maxSupply = _maxSupply;
-        k = FINAL_PRICE - initialPrice;
-        minSupplyMaxSupply = ABDKMath64x64.divu(MIN_SUPPLY, maxSupply);
-        y = ABDKMath64x64.divu(301, 1000);
+        i = _initialPrice;
+        m = _maxSupply;
+        k = FINAL_PRICE - i;
+        j = ABDKMath64x64.divu(jNumerator, jDenominator);
     }
-
+    
     function pricePerEuro() public view returns (uint256) {
-        uint256 supply = SEuro(seuro).totalSupply();
-        if (supply == 0) {
-            return initialPrice;
+        uint256 x = SEuro(seuro).totalSupply();
+        if (x == 0) {
+            return i;
         }
-        int128 supplyMaxSupply = ABDKMath64x64.divu(supply, maxSupply);
-        int128 x = ABDKMath64x64.sub(supplyMaxSupply, minSupplyMaxSupply);
-        int128 log2_x = ABDKMath64x64.log_2(x);
-        int128 y_log2_x = ABDKMath64x64.mul(y, log2_x);
-        int128 baseCurve = ABDKMath64x64.exp_2(y_log2_x);
-        uint256 kBaseCurve = ABDKMath64x64.mulu(baseCurve, k);
-        return kBaseCurve + initialPrice;
+        uint256 xMinusL = x - l;
+        int128 xMinusLOverM = ABDKMath64x64.divu(xMinusL, m);
+        int128 log2XMinusLOverM = ABDKMath64x64.log_2(xMinusLOverM);
+        int128 jLog2XMinusLOverM = ABDKMath64x64.mul(j, log2XMinusLOverM);
+        int128 exp2JLog2XMinusLOverM = ABDKMath64x64.exp_2(jLog2XMinusLOverM);
+        uint256 kExp2JLog2XMinusLOverM = ABDKMath64x64.mulu(exp2JLog2XMinusLOverM, k);
+        return kExp2JLog2XMinusLOverM + i;
     }
 }
