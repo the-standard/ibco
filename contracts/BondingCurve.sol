@@ -27,14 +27,16 @@ contract BondingCurve {
     
     function pricePerEuro() public view returns (uint256) {
         uint256 supply = SEuro(seuro).totalSupply();
-        if (supply == 0) {
+        if (supply < INITIAL_SUPPLY) {
             return initalPrice;
         }
-        uint256 mintedSupply = supply - INITIAL_SUPPLY;
-        int128 supplyCompletion = ABDKMath64x64.divu(mintedSupply, maxSupply);
-        int128 log2SupplyCompletion = ABDKMath64x64.log_2(supplyCompletion);
-        int128 jlog2SupplyCompletion = ABDKMath64x64.mul(j, log2SupplyCompletion);
-        int128 baseCurve = ABDKMath64x64.exp_2(jlog2SupplyCompletion);
+        if (supply >= maxSupply) {
+            return FINAL_PRICE;
+        }
+        int128 supplyRatio = ABDKMath64x64.divu(supply, maxSupply);
+        int128 log2SupplyRatio = ABDKMath64x64.log_2(supplyRatio);
+        int128 jlog2SupplyRatio = ABDKMath64x64.mul(j, log2SupplyRatio);
+        int128 baseCurve = ABDKMath64x64.exp_2(jlog2SupplyRatio);
         uint256 curve = ABDKMath64x64.mulu(baseCurve, k);
         return curve + initalPrice;
     }
