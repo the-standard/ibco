@@ -16,9 +16,9 @@ describe('IBCO', async () => {
     }
 
     async function buyToken(signer, token, amount) {
-        const UniswapRouter = await ethers.getContractAt('IUniswapV2Router01', ROUTER_ADDRESS)
-        const deadline = Math.floor(Date.now() / 1000) + 60;
-        return await UniswapRouter.connect(signer).swapExactETHForTokens(1, [WETH_ADDRESS, token], signer.address, deadline, { value: amount });
+        const SwapManagerContract = await ethers.getContractFactory('SwapManager');
+        const SwapManager = await SwapManagerContract.deploy();
+        await SwapManager.connect(signer).swapEthForToken(token, {value: amount});
     }
 
     async function getEthEuroRate() {
