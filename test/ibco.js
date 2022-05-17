@@ -8,7 +8,6 @@ describe('IBCO', async () => {
     const CL_ETH_USD_DEC = 8;
     const DAI_USD_CL = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
     const DAI_CL_DEC = 8;
-    const ROUTER_ADDRESS = '0xf164fC0Ec4E93095b804a4795bBe1e041497b92a';
     let IBCO, SEuro, BondingCurve, SEuroRateCalculator, TokenManager, WETH, owner, user;
 
     async function buyWETH(signer, amount) {

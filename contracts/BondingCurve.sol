@@ -11,7 +11,7 @@ contract BondingCurve {
     uint8 private constant J_NUMERATOR = 1;
     uint8 private constant J_DENOMINATOR = 5;
 
-    uint256 private immutable initalPrice;
+    uint256 private immutable initialPrice;
     uint256 private immutable maxSupply;
     uint256 private immutable k;
     int128 private immutable j;
@@ -19,16 +19,16 @@ contract BondingCurve {
 
     constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply) {
         seuro = _seuro;
-        initalPrice = _initialPrice;
+        initialPrice = _initialPrice;
         maxSupply = _maxSupply;
-        k = FINAL_PRICE - initalPrice;
+        k = FINAL_PRICE - initialPrice;
         j = ABDKMath64x64.divu(J_NUMERATOR, J_DENOMINATOR);
     }
     
     function pricePerEuro() public view returns (uint256) {
         uint256 supply = SEuro(seuro).totalSupply();
         if (supply < INITIAL_SUPPLY) {
-            return initalPrice;
+            return initialPrice;
         }
         if (supply >= maxSupply) {
             return FINAL_PRICE;
@@ -38,6 +38,6 @@ contract BondingCurve {
         int128 jlog2SupplyRatio = ABDKMath64x64.mul(j, log2SupplyRatio);
         int128 baseCurve = ABDKMath64x64.exp_2(jlog2SupplyRatio);
         uint256 curve = ABDKMath64x64.mulu(baseCurve, k);
-        return curve + initalPrice;
+        return curve + initialPrice;
     }
 }
