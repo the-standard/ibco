@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.10;
+pragma solidity ^0.8.0;
 
 import "contracts/SEuro.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
@@ -11,7 +11,7 @@ contract BondingCurve {
     uint8 private constant J_NUMERATOR = 1;
     uint8 private constant J_DENOMINATOR = 5;
 
-    uint256 private immutable initialPrice;
+    uint256 private initialPrice;
     uint256 private immutable maxSupply;
     uint256 private immutable k;
     int128 private immutable j;

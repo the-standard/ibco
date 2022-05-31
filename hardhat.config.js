@@ -4,8 +4,8 @@ require('dotenv').config();
 const { INFURA_API_KEY } = process.env;
 
 module.exports = {
+  solidity: "0.8.14",
   defaultNetwork: 'hardhat',
-  solidity: "0.8.10",
   networks: {
     hardhat: {
       forking: {
@@ -13,5 +13,5 @@ module.exports = {
       },
       chainId: 1559
     }
-  }
+  },
 };
