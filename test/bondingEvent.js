@@ -64,7 +64,7 @@ describe('SEuro', async () => {
       });
 
       it('stores the tick spacing for the pool', async () => {
-        const price = encodePriceSqrt(100,93);
+        const price = encodePriceSqrt(100, 93);
         await BondingEvent.initialisePool(price, MOST_STABLE_FEE);
         expect(await BondingEvent.tickSpacing()).to.be.gt(0);
       });
