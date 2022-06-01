@@ -45,7 +45,7 @@ contract IBCO is Ownable {
     }
 
     function swap(bytes32 _token, uint256 _amount) external ifActive {
-       (address addr, address chainlinkAddr, uint8 chainlinkDec) = TokenManager(tokenManager).get(_token);
+        (address addr, address chainlinkAddr, uint8 chainlinkDec) = TokenManager(tokenManager).get(_token);
         IERC20 token = IERC20(addr);
         require(token.balanceOf(msg.sender) >= _amount, "err-tok-bal");
         require(token.allowance(msg.sender, address(this)) >= _amount, "err-tok-allow");
@@ -56,7 +56,7 @@ contract IBCO is Ownable {
     }
 
     function swapETH() external payable ifActive {
-       (address addr, address chainlinkAddr, uint8 chainlinkDec) = TokenManager(tokenManager).get(bytes32("WETH"));
+        (address addr, address chainlinkAddr, uint8 chainlinkDec) = TokenManager(tokenManager).get(bytes32("WETH"));
         WETH weth = WETH(addr);
         weth.deposit{value: msg.value};
         uint256 euros = getEuros(msg.value, chainlinkAddr, chainlinkDec);

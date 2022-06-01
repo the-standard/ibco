@@ -10,7 +10,7 @@ contract SEuroRateCalculator {
     uint8 public constant EUR_USD_CL_DEC = 8;
 
     address private bondingCurve;
-        
+
     constructor(address _bondingCurve) {
         bondingCurve = _bondingCurve;
     }
