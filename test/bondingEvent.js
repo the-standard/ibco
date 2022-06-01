@@ -18,7 +18,7 @@ const encodePriceSqrt = (reserve1, reserve0) => {
 
 const getToken = async (token, signer, amount) => {
   const SwapManager = await (await ethers.getContractFactory('SwapManager')).deploy();
-  await SwapManager.connect(signer).swapEthForToken(token, {value: amount});
+  // await SwapManager.connect(signer).swapEthForToken(token, {value: amount});
 }
 
 let owner, customer, SEuro, USDT;
@@ -30,9 +30,9 @@ const MOST_STABLE_FEE = 500;
 beforeEach(async () => {
   [owner, customer] = await ethers.getSigners();
   const SEuroContract = await ethers.getContractFactory('SEuro');
-  const ERC20Contract = await ethers.getContractFactory('ERC20');
+  const ERC20Contract = await ethers.getContractFactory('DUMMY');
   SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
-  USDT = await ERC20Contract.deploy('USDT', 'USDT');
+  USDT = await ERC20Contract.deploy('USDT', 'USDT', ethers.utils.parseEther('100000000'));
   USDT_ADDRESS = USDT.address;
 });
 
@@ -84,11 +84,13 @@ describe('SEuro', async () => {
           const amountSeuro = ethers.utils.parseEther('1000');
           const amountUsdt = amountSeuro.mul(2).div(ethers.BigNumber.from(10).pow(12));
           await SEuro.connect(owner).mint(customer.address, amountSeuro);
-          await getToken(USDT_ADDRESS, customer, ethers.utils.parseEther('100'));
+
+          // transfer USDT to customer
+          await USDT.transfer(customer.address, ethers.utils.parseEther('100'));
           const usdtBalance = await USDT.balanceOf(customer.address);
 
           await SEuro.connect(customer).approve(BondingEvent.address, amountSeuro);
-          await USDT.connect(customer).approve(BondingEvent.address, maountUsdt);
+          await USDT.connect(customer).approve(BondingEvent.address, amountUsdt);
           await BondingEvent.connect(customer).bond(amountSeuro, amountUsdt); 
 
           expect(await SEuro.balanceOf(customer.address)).to.equal(0);
