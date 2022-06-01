@@ -16,10 +16,10 @@ const encodePriceSqrt = (reserve1, reserve0) => {
   )
 }
 
-const getToken = async (token, signer, amount) => {
-  const SwapManager = await (await ethers.getContractFactory('SwapManager')).deploy();
-  // await SwapManager.connect(signer).swapEthForToken(token, {value: amount});
-}
+// const getToken = async (token, signer, amount) => {
+//   const SwapManager = await (await ethers.getContractFactory('SwapManager')).deploy();
+//   // await SwapManager.connect(signer).swapEthForToken(token, {value: amount});
+// }
 
 let owner, customer, SEuro, USDT;
 let USDT_ADDRESS;
