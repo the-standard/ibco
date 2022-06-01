@@ -33,7 +33,8 @@ describe('SEuro', async () => {
 		const SEuroContract = await ethers.getContractFactory('SEuro');
 		SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
 		BondingEventContract = await ethers.getContractFactory('BondingEvent');
-		USDT = await ethers.getContractAt('ERC20', USDT_ADDRESS);
+                // USDT = await ethers.getContractAt('@openzeppelin/contracts/token/ERC20/IERC20.sol', USDT_ADDRESS);
+		USDT = await SEuroContract.deploy('USDT', 'USDT', [owner.address]);
 	});
 
 	describe('initialise bonding event', async () => {
