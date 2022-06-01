@@ -24,7 +24,7 @@ contract BondingCurve {
         k = FINAL_PRICE - initialPrice;
         j = ABDKMath64x64.divu(J_NUMERATOR, J_DENOMINATOR);
     }
-    
+
     function pricePerEuro() public view returns (uint256) {
         uint256 supply = SEuro(seuro).totalSupply();
         if (supply < INITIAL_SUPPLY) {
