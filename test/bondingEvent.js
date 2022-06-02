@@ -59,13 +59,13 @@ describe('BondingEvent', async () => {
     describe('initialise pool', async () => {
       it('initialises the uniswap pool with one currency pair', async () => {
         const price = encodePriceSqrt(100,93);
-        await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
+        await BondingEvent.initialisePool("USDT", USDT_ADDRESS, price, MOST_STABLE_FEE);
         expect(await BondingEvent.amountCurrencyPairs()).not.to.equal(0);
       });
 
       it('stores the tick spacing for the pool', async () => {
         const price = encodePriceSqrt(100, 93);
-        await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
+        await BondingEvent.initialisePool("USDT", USDT_ADDRESS, price, MOST_STABLE_FEE);
         expect(await BondingEvent.tickSpacing()).to.be.gt(0);
       });
     });
@@ -77,7 +77,7 @@ describe('BondingEvent', async () => {
           const price = SEuro.address < USDT.address ?
             encodePriceSqrt(100, SeurosPerUsdt) :
             encodePriceSqrt(SeurosPerUsdt, 100);
-          await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
+          await BondingEvent.initialisePool("USDT", USDT_ADDRESS, price, MOST_STABLE_FEE);
         });
 
         it('bonds given sEURO amount with required USDT', async () => {

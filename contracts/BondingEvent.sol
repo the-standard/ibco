@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "contracts/uniswap/INonfungiblePositionManager.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
+import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract BondingEvent is AccessControl {
@@ -11,8 +12,15 @@ contract BondingEvent is AccessControl {
 	address public immutable standardEuroToken;
 	// other legs which has to be erc20 comptabile
 	address[] public erc20Tokens;
-	// allow quick lookup to see if token is in whitelist instead of iterating over array
-	mapping(address => bool) private whitelistedTokens;
+
+	struct TokenMetaData {
+		bool initialised;
+		address pool;
+		string shortName;
+	}
+
+	// allow quick lookup to see if a token has been added
+	mapping(address => TokenMetaData) private tokenData;
 	// liquidity pool for a currency pair (sEURO : someToken)
 	address[] public liquidityPools;
 	// minimum currency amount
@@ -39,12 +47,13 @@ contract BondingEvent is AccessControl {
 	}
 
 	// Adds a new ERC20-token to the list of allowed currency legs
-	function appendErc20compatible(address _token) private {
+	function appendErc20compatible(address _token, string memory _name) private {
 		require(hasRole(WHITELIST_GUARD, msg.sender), 'invalid-whitelist-guard');
-		require(whitelistedTokens[_token] == false, 'token-already-added');
+		require(tokenData[_token].initialised == false, 'token-already-added');
 
 		erc20Tokens.push(_token);
-		whitelistedTokens[_token] = true;
+		tokenData[_token].initialised = true;
+		tokenData[_token].shortName = _name;
 	}
 
 
@@ -60,10 +69,11 @@ contract BondingEvent is AccessControl {
 		return liquidityPools.length;
 	}
 
-	/// @notice Parameter `_price` is in sqrtPriceX96 format
-	function initialisePool(address _otherToken, uint160 _price, uint24 _fee) external {
-		appendErc20compatible(_otherToken);
-		(address token0, address token1) = getAscendingPair(_otherToken);
+	// Initialises a pool with another token (address) and stores it in the array of pools.
+	// Note that the price is in sqrtPriceX96 format.
+	function initialisePool(string memory _otherName, address _otherAddress, uint160 _price, uint24 _fee) external {
+		appendErc20compatible(_otherAddress, _otherName);
+		(address token0, address token1) = getAscendingPair(_otherAddress);
 		fee = _fee;
 		address pool = manager.createAndInitializePoolIfNecessary(
 			token0,
@@ -73,14 +83,29 @@ contract BondingEvent is AccessControl {
 		);
 		tickSpacing = IUniswapV3Pool(pool).tickSpacing();
 		liquidityPools.push(pool);
+		tokenData[_otherAddress].pool = pool;
 	}
 
 	function validTicks() private view returns (bool) {
 		return TICK_LOWER % tickSpacing == 0 && TICK_UPPER % tickSpacing == 0;
 	}
 
+	// Returns the amount of tokens received for an amount of sEURO
+	// Note that this calls non-view functions and reverts to display results
+	function getQuote(address _otherToken, uint256 _amountSeuro, uint160 _sqrtPriceLimitX96) external returns (uint256 amountIn) {
+		address poolAddress = tokenData[_otherToken].pool;
+		IQuoter quoter = IQuoter(poolAddress);
+		return quoter.quoteExactInputSingle(
+			standardEuroToken,
+			_otherToken,
+			fee,
+			_amountSeuro,
+			_sqrtPriceLimitX96
+		);
+	}
+
 	function bond(uint256 _amountSeuro, address _otherToken, uint256 _amountOther) public {
-		require(whitelistedTokens[_otherToken] == true, 'invalid-token-bond');
+		require(tokenData[_otherToken].initialised == true, 'invalid-token-bond');
 
 		TransferHelper.safeTransferFrom(standardEuroToken, msg.sender, address(this), _amountSeuro);
 		TransferHelper.safeTransferFrom(_otherToken, msg.sender, address(this), _amountOther);
