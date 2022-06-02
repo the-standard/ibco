@@ -6,29 +6,37 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 
 contract BondingEvent {
-	INonfungiblePositionManager private immutable manager;
+	// sEUR: the main leg of the currency pair
 	address public immutable standardEuroContract;
-	address public immutable tetherContract;
+	// the other leg which has to be erc20 comptabile
+	address public immutable erc20compatible;
+	// the address of the liquidity pool
 	address public pool;
-	uint256 public immutable MIN_USDT = 0;
-	int24 public tickSpacing;
+	// minimum currency amount
+	uint256 public immutable MIN_VAL = 0;
 
+	// uniswap: creates bond
+	INonfungiblePositionManager private immutable manager;
+	// https://docs.uniswap.org/protocol/reference/core/libraries/Tick
+	int24 public tickSpacing;
 	int24 private constant TICK_LOWER = -887270;
 	int24 private constant TICK_UPPER = 887270;
 	uint24 private fee; // should the fee really be private?
+
+	// store array of liquidity token IDs (received after successful bond)
 	uint256[] private positionIDs;
 
-	constructor(address _sEuro, address _Usdt, address _manager) {
+	constructor(address _sEuro, address _otherToken, address _manager) {
 		standardEuroContract = _sEuro;
-		tetherContract = _Usdt;
+		erc20compatible = _otherToken;
 		manager = INonfungiblePositionManager(_manager);
 	}
 
 	/// TODO SIMON
 	function getLowestFirst() private view returns (address token0, address token1) {
-		(token0, token1) = standardEuroContract < tetherContract
-			? (standardEuroContract, tetherContract)
-			: (tetherContract, standardEuroContract);
+		(token0, token1) = standardEuroContract < erc20compatible
+			? (standardEuroContract, erc20compatible)
+			: (erc20compatible, standardEuroContract);
 	}
 
 	/// @notice Parameter `_price` is in sqrtPriceX96 format
@@ -48,19 +56,19 @@ contract BondingEvent {
 		return TICK_LOWER % tickSpacing == 0 && TICK_UPPER % tickSpacing == 0;
 	}
 
-	function bond(uint256 _amountSeuro, uint256 _amountUsdt) public {
+	function bond(uint256 _amountSeuro, uint256 _amountOther) public {
 		TransferHelper.safeTransferFrom(standardEuroContract, msg.sender, address(this), _amountSeuro);
-		TransferHelper.safeTransferFrom(tetherContract, msg.sender, address(this), _amountUsdt);
+		TransferHelper.safeTransferFrom(erc20compatible, msg.sender, address(this), _amountOther);
 		TransferHelper.safeApprove(standardEuroContract, address(manager), _amountSeuro);
-		TransferHelper.safeApprove(tetherContract, address(manager), _amountUsdt);
+		TransferHelper.safeApprove(erc20compatible, address(manager), _amountOther);
 
 		(address token0, address token1) = getLowestFirst();
 		// not sure why the full amount of seuro can't be added
 		uint256 minSeuro = _amountSeuro - 1 ether;
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
 			token0 == standardEuroContract ?
-			(_amountSeuro, _amountUsdt, minSeuro, MIN_USDT) :
-			(_amountUsdt, _amountSeuro, MIN_USDT, minSeuro);
+			(_amountSeuro, _amountOther, minSeuro, MIN_VAL) :
+			(_amountOther, _amountSeuro, MIN_VAL, minSeuro);
 
 		require(validTicks(), 'err-inv-tick');
 
@@ -83,12 +91,12 @@ contract BondingEvent {
 		positionIDs.push(tokenID);
 
 		TransferHelper.safeApprove(standardEuroContract, address(manager), 0);
-		TransferHelper.safeApprove(tetherContract, address(manager), 0);
+		TransferHelper.safeApprove(erc20compatible, address(manager), 0);
 
-		uint256 refundUsdt = token0 == tetherContract ?
-			_amountUsdt - amount0 :
-			_amountUsdt - amount1;
+		uint256 refundUsdt = token0 == erc20compatible ?
+			_amountOther - amount0 :
+			_amountOther - amount1;
 
-		TransferHelper.safeTransfer(tetherContract, msg.sender, refundUsdt);
+		TransferHelper.safeTransfer(erc20compatible, msg.sender, refundUsdt);
 	}
 }
