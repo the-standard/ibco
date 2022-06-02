@@ -4,12 +4,15 @@ pragma solidity ^0.8.0;
 import "contracts/uniswap/INonfungiblePositionManager.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract BondingEvent {
+contract BondingEvent is AccessControl {
 	// sEUR: the main leg of the currency pair
-	address public immutable standardEuroContract;
-	// the other leg which has to be erc20 comptabile
-	address public immutable erc20compatible;
+	address public immutable standardEuroToken;
+	// other legs which has to be erc20 comptabile
+	address[] public erc20Tokens;
+	// allow quick lookup to see if token is in whitelist instead of iterating over array
+	mapping(address => bool) private whitelistedTokens;
 	// the address of the liquidity pool
 	address public pool;
 	// minimum currency amount
@@ -26,22 +29,34 @@ contract BondingEvent {
 	// store array of liquidity token IDs (received after successful bond)
 	uint256[] private positionIDs;
 
-	constructor(address _sEuro, address _otherToken, address _manager) {
-		standardEuroContract = _sEuro;
-		erc20compatible = _otherToken;
+	// only contract owner can add and remove tokens from the white list `erc20Tokens`
+	bytes32 public constant WHITELIST_GUARD = keccak256("WHITELIST_GUARD");
+
+	constructor(address _sEuro, address _manager) {
+		_setupRole(WHITELIST_GUARD, msg.sender);
+		standardEuroToken = _sEuro;
 		manager = INonfungiblePositionManager(_manager);
 	}
 
-	/// TODO SIMON
-	function getLowestFirst() private view returns (address token0, address token1) {
-		(token0, token1) = standardEuroContract < erc20compatible
-			? (standardEuroContract, erc20compatible)
-			: (erc20compatible, standardEuroContract);
+	// Adds a new ERC20-token to the list of allowed currency legs
+	function appendErc20compatible(address _token) private {
+		require(hasRole(WHITELIST_GUARD, msg.sender), 'invalid-whitelist-guard');
+		require(whitelistedTokens[_token] == false, 'token-already-added');
+		erc20Tokens.push(_token);
+		whitelistedTokens[_token] = true;
+	}
+
+
+	// Compares a token `_otherToken` to the Standard Euro token and returns them in ascending order
+	function getAscendingPair(address _otherToken) private view returns (address token0, address token1) {
+		(token0, token1) = standardEuroToken < _otherToken
+			? (standardEuroToken, _otherToken)
+			: (_otherToken, standardEuroToken);
 	}
 
 	/// @notice Parameter `_price` is in sqrtPriceX96 format
-	function initialisePool(uint160 _price, uint24 _fee) external {
-		(address token0, address token1) = getLowestFirst();
+	function initialisePool(address _otherToken, uint160 _price, uint24 _fee) external {
+		(address token0, address token1) = getAscendingPair(_otherToken);
 		fee = _fee;
 		pool = manager.createAndInitializePoolIfNecessary(
 			token0,
@@ -56,17 +71,19 @@ contract BondingEvent {
 		return TICK_LOWER % tickSpacing == 0 && TICK_UPPER % tickSpacing == 0;
 	}
 
-	function bond(uint256 _amountSeuro, uint256 _amountOther) public {
-		TransferHelper.safeTransferFrom(standardEuroContract, msg.sender, address(this), _amountSeuro);
-		TransferHelper.safeTransferFrom(erc20compatible, msg.sender, address(this), _amountOther);
-		TransferHelper.safeApprove(standardEuroContract, address(manager), _amountSeuro);
-		TransferHelper.safeApprove(erc20compatible, address(manager), _amountOther);
+	function bond(uint256 _amountSeuro, address _otherToken, uint256 _amountOther) public {
+		require(whitelistedTokens[_otherToken] == true, 'invalid-token-bond');
 
-		(address token0, address token1) = getLowestFirst();
+		TransferHelper.safeTransferFrom(standardEuroToken, msg.sender, address(this), _amountSeuro);
+		TransferHelper.safeTransferFrom(_otherToken, msg.sender, address(this), _amountOther);
+		TransferHelper.safeApprove(standardEuroToken, address(manager), _amountSeuro);
+		TransferHelper.safeApprove(_otherToken, address(manager), _amountOther);
+
+		(address token0, address token1) = getAscendingPair(_otherToken);
 		// not sure why the full amount of seuro can't be added
 		uint256 minSeuro = _amountSeuro - 1 ether;
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
-			token0 == standardEuroContract ?
+			token0 == standardEuroToken ?
 			(_amountSeuro, _amountOther, minSeuro, MIN_VAL) :
 			(_amountOther, _amountSeuro, MIN_VAL, minSeuro);
 
@@ -90,13 +107,13 @@ contract BondingEvent {
 		(uint256 tokenID, /* liquidity */ , uint256 amount0, uint256 amount1) = manager.mint(params);
 		positionIDs.push(tokenID);
 
-		TransferHelper.safeApprove(standardEuroContract, address(manager), 0);
-		TransferHelper.safeApprove(erc20compatible, address(manager), 0);
+		TransferHelper.safeApprove(standardEuroToken, address(manager), 0);
+		TransferHelper.safeApprove(_otherToken, address(manager), 0);
 
-		uint256 refundUsdt = token0 == erc20compatible ?
+		uint256 refund = token0 == _otherToken ?
 			_amountOther - amount0 :
 			_amountOther - amount1;
 
-		TransferHelper.safeTransfer(erc20compatible, msg.sender, refundUsdt);
+		TransferHelper.safeTransfer(_otherToken, msg.sender, refund);
 	}
 }
