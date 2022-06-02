@@ -36,7 +36,7 @@ beforeEach(async () => {
   USDT_ADDRESS = USDT.address;
 });
 
-describe('SEuro', async () => {
+describe('BondingEvent', async () => {
 
   let BondingEventContract, BondingEvent;
 
@@ -46,26 +46,26 @@ describe('SEuro', async () => {
 
   describe('initialise bonding event', async () => {
     it('has not initialised pool', async () => {
-      BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS);
-      expect(await BondingEvent.pool()).to.equal(ZERO_ADDRESS);
+      BondingEvent = await BondingEventContract.deploy(SEuro.address, POSITION_MANAGER_ADDRESS);
+      expect(await BondingEvent.amountCurrencyPairs()).to.equal(0);
     });
   });
 
   context('bonding event deployed', async () => {
     beforeEach(async () => {
-      BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS);
+      BondingEvent = await BondingEventContract.deploy(SEuro.address, POSITION_MANAGER_ADDRESS);
     });
 
     describe('initialise pool', async () => {
-      it('initialises the uniswap pool with given price', async () => {
+      it('initialises the uniswap pool with one currency pair', async () => {
         const price = encodePriceSqrt(100,93);
-        await BondingEvent.initialisePool(price, MOST_STABLE_FEE);
-        expect(await BondingEvent.pool()).not.to.equal(ZERO_ADDRESS);
+        await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
+        expect(await BondingEvent.amountCurrencyPairs()).not.to.equal(0);
       });
 
       it('stores the tick spacing for the pool', async () => {
         const price = encodePriceSqrt(100, 93);
-        await BondingEvent.initialisePool(price, MOST_STABLE_FEE);
+        await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
         expect(await BondingEvent.tickSpacing()).to.be.gt(0);
       });
     });
@@ -77,7 +77,7 @@ describe('SEuro', async () => {
           const price = SEuro.address < USDT.address ?
             encodePriceSqrt(100, SeurosPerUsdt) :
             encodePriceSqrt(SeurosPerUsdt, 100);
-          await BondingEvent.initialisePool(price, MOST_STABLE_FEE);
+          await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
         });
 
         it('bonds given sEURO amount with required USDT', async () => {
@@ -91,7 +91,7 @@ describe('SEuro', async () => {
 
           await SEuro.connect(customer).approve(BondingEvent.address, amountSeuro);
           await USDT.connect(customer).approve(BondingEvent.address, amountUsdt);
-          await BondingEvent.connect(customer).bond(amountSeuro, amountUsdt); 
+          await BondingEvent.connect(customer).bond(amountSeuro, USDT_ADDRESS, amountUsdt); 
 
           expect(await SEuro.balanceOf(customer.address)).to.equal(0);
           expect(await USDT.balanceOf(customer.address)).to.be.lt(usdtBalance);
