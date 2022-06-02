@@ -13,8 +13,8 @@ contract BondingEvent is AccessControl {
 	address[] public erc20Tokens;
 	// allow quick lookup to see if token is in whitelist instead of iterating over array
 	mapping(address => bool) private whitelistedTokens;
-	// the address of the liquidity pool
-	address public pool;
+	// liquidity pool for a currency pair (sEURO : someToken)
+	address[] public liquidityPools;
 	// minimum currency amount
 	uint256 public immutable MIN_VAL = 0;
 
@@ -42,6 +42,7 @@ contract BondingEvent is AccessControl {
 	function appendErc20compatible(address _token) private {
 		require(hasRole(WHITELIST_GUARD, msg.sender), 'invalid-whitelist-guard');
 		require(whitelistedTokens[_token] == false, 'token-already-added');
+
 		erc20Tokens.push(_token);
 		whitelistedTokens[_token] = true;
 	}
@@ -54,17 +55,24 @@ contract BondingEvent is AccessControl {
 			: (_otherToken, standardEuroToken);
 	}
 
+	// Returns the amount of currency pairs on-ramped
+	function amountCurrencyPairs() external view returns (uint256) {
+		return liquidityPools.length;
+	}
+
 	/// @notice Parameter `_price` is in sqrtPriceX96 format
 	function initialisePool(address _otherToken, uint160 _price, uint24 _fee) external {
+		appendErc20compatible(_otherToken);
 		(address token0, address token1) = getAscendingPair(_otherToken);
 		fee = _fee;
-		pool = manager.createAndInitializePoolIfNecessary(
+		address pool = manager.createAndInitializePoolIfNecessary(
 			token0,
 			token1,
 			_fee,
 			_price
 		);
 		tickSpacing = IUniswapV3Pool(pool).tickSpacing();
+		liquidityPools.push(pool);
 	}
 
 	function validTicks() private view returns (bool) {
