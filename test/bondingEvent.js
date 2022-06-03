@@ -88,13 +88,19 @@ describe('BondingEvent', async () => {
 		  // transfer USDT to customer
 		  await USDT.transfer(customer.address, ethers.utils.parseEther('100'));
 		  const usdtBalance = await USDT.balanceOf(customer.address);
+		  const seuroBalance = await SEuro.balanceOf(customer.address);
 
 		  await SEuro.connect(customer).approve(BondingEvent.address, amountSeuro);
 		  await USDT.connect(customer).approve(BondingEvent.address, amountUsdt);
 		  await BondingEvent.connect(customer).bond(amountSeuro, USDT_ADDRESS, amountUsdt);
 
-		  expect(await SEuro.balanceOf(customer.address)).to.equal(0);
-		  expect(await USDT.balanceOf(customer.address)).to.be.lt(usdtBalance);
+		  let expectedSeuro = seuroBalance.sub(amountSeuro);
+		  let expectedUsdt = usdtBalance.sub(amountUsdt);
+		  let actualSeuroBal = await SEuro.balanceOf(customer.address);
+		  let actualUsdtBal = await USDT.balanceOf(customer.address);
+
+		  expect(actualSeuroBal).to.equal(expectedSeuro);
+		  expect(actualUsdtBal).to.equal(expectedUsdt);
 		});
 	  });
 	});
