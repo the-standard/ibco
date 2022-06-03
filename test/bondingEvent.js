@@ -46,21 +46,21 @@ describe('BondingEvent', async () => {
 
   describe('initialise bonding event', async () => {
 	it('has not initialised pool', async () => {
-	  BondingEvent = await BondingEventContract.deploy(SEuro.address, POSITION_MANAGER_ADDRESS);
-	  expect(await BondingEvent.amountCurrencyPairs()).to.equal(0);
+	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS);
+	  expect(await BondingEvent.getPoolAmount()).to.equal(0);
 	});
   });
 
   context('bonding event deployed', async () => {
 	beforeEach(async () => {
-	  BondingEvent = await BondingEventContract.deploy(SEuro.address, POSITION_MANAGER_ADDRESS);
+	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS);
 	});
 
 	describe('initialise pool', async () => {
 	  it('initialises the uniswap pool with one currency pair', async () => {
 		const price = encodePriceSqrt(100,93);
 		await BondingEvent.initialisePool("USDT", USDT_ADDRESS, price, MOST_STABLE_FEE);
-		expect(await BondingEvent.amountCurrencyPairs()).not.to.equal(0);
+		expect(await BondingEvent.getPoolAmount()).not.to.equal(0);
 	  });
 
 	  it('stores the tick spacing for the pool', async () => {

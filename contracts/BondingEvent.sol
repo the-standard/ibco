@@ -10,18 +10,18 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract BondingEvent is AccessControl {
 	// sEUR: the main leg of the currency pair
 	address public immutable sEuroToken;
-	// other legs which has to be erc20 comptabile
-	address[] public erc20Tokens;
+	// other: the other generic erc20 compatible token
+	address public immutable otherToken;
 
 	struct TokenMetaData {
 		bool initialised;
-		address pool;
+		address pool; //TODO: clarify relation between pool address and tokenId (NFT)
 		string shortName;
 		PositionMetaData[] positions; // store the data received after each successful bond
 	}
 
-	// allow quick lookup to see if a token has been added at least once to a liquidity pool
-	mapping(address => TokenMetaData) private tokenData;
+	// allow quick lookup to see liquidity provided by users
+	mapping(address => TokenMetaData) private userData;
 	// liquidity pool for a currency pair (sEURO : someToken)
 	address[] public liquidityPools;
 	// minimum currency amount
@@ -37,24 +37,24 @@ contract BondingEvent is AccessControl {
 	int24 private constant TICK_UPPER = 887270;
 	uint24 private fee; // should the fee really be private?
 
-	// only contract owner can add and remove tokens from the white list `erc20Tokens`
+	// only contract owner can add the other currency leg
 	bytes32 public constant WHITELIST_GUARD = keccak256("WHITELIST_GUARD");
 
-	constructor(address _sEuro, address _manager) {
+	constructor(address _sEuro, address _otherToken, address _manager) {
 		_setupRole(WHITELIST_GUARD, msg.sender);
 		sEuroToken = _sEuro;
+		otherToken = _otherToken;
 		manager = INonfungiblePositionManager(_manager);
 	}
 
 	// Adds a new ERC20-token to the list of allowed currency legs
 	function newAllowedErc20(address _token, string memory _name, address _poolAddress) private {
 		require(hasRole(WHITELIST_GUARD, msg.sender), 'invalid-whitelist-guard');
-		require(tokenData[_token].initialised == false, 'token-already-added');
+		require(userData[_token].initialised == false, 'token-already-added');
 
-		erc20Tokens.push(_token);
-		tokenData[_token].initialised = true;
-		tokenData[_token].shortName = _name;
-		tokenData[_token].pool = _poolAddress;
+		userData[_token].initialised = true;
+		userData[_token].shortName = _name;
+		userData[_token].pool = _poolAddress;
 	}
 
 
@@ -65,8 +65,8 @@ contract BondingEvent is AccessControl {
 			: (_otherToken, sEuroToken);
 	}
 
-	// Returns the amount of currency pairs on-ramped
-	function amountCurrencyPairs() external view returns (uint256) {
+	// Returns the amount of pools created
+	function getPoolAmount() external view returns (uint256) {
 		return liquidityPools.length;
 	}
 
@@ -88,21 +88,6 @@ contract BondingEvent is AccessControl {
 
 	function validTicks() private view returns (bool) {
 		return TICK_LOWER % tickSpacing == 0 && TICK_UPPER % tickSpacing == 0;
-	}
-
-	// Returns the amount of tokens received for an amount of sEURO
-	// Note that this calls non-view functions and reverts to display results
-	function getQuote(address _otherToken, uint256 _amountSeuro) public returns (uint256) {
-		require(tokenData[_otherToken].initialised == true, "pool-not-init");
-
-		uint160 sqrtPriceLimitX96 = 0;
-		return quoter.quoteExactInputSingle(
-			sEuroToken,
-			_otherToken,
-			fee,
-			_amountSeuro,
-			sqrtPriceLimitX96
-		);
 	}
 
 	struct PositionMetaData {
@@ -152,11 +137,11 @@ contract BondingEvent is AccessControl {
 		(uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = manager.mint(params);
 		PositionMetaData memory pos = PositionMetaData(tokenId, liquidity, amount0, amount1);
 		address tkn = _otherToken;
-		tokenData[tkn].positions.push(pos);
+		userData[tkn].positions.push(pos);
 	}
 
 	function bond(uint256 _amountSeuro, address _otherToken, uint256 _amountOther) public {
-		require(tokenData[_otherToken].initialised == true, 'invalid-token-bond');
+		require(userData[_otherToken].initialised == true, 'invalid-token-bond');
 		require(validTicks(), 'err-inv-tick');
 
 		addLiquidity(_amountSeuro, _amountOther, _otherToken);
