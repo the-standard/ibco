@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract BondingEvent is AccessControl {
 	// sEUR: the main leg of the currency pair
-	address public immutable standardEuroToken;
+	address public immutable sEuroToken;
 	// other legs which has to be erc20 comptabile
 	address[] public erc20Tokens;
 
@@ -17,9 +17,10 @@ contract BondingEvent is AccessControl {
 		bool initialised;
 		address pool;
 		string shortName;
+		PositionMetaData[] positions; // store the data received after each successful bond
 	}
 
-	// allow quick lookup to see if a token has been added
+	// allow quick lookup to see if a token has been added at least once to a liquidity pool
 	mapping(address => TokenMetaData) private tokenData;
 	// liquidity pool for a currency pair (sEURO : someToken)
 	address[] public liquidityPools;
@@ -28,40 +29,40 @@ contract BondingEvent is AccessControl {
 
 	// uniswap: creates bond
 	INonfungiblePositionManager private immutable manager;
+	IQuoter public constant quoter = IQuoter(0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6);
+
 	// https://docs.uniswap.org/protocol/reference/core/libraries/Tick
 	int24 public tickSpacing;
 	int24 private constant TICK_LOWER = -887270;
 	int24 private constant TICK_UPPER = 887270;
 	uint24 private fee; // should the fee really be private?
 
-	// store array of liquidity token IDs (received after successful bond)
-	uint256[] private positionIDs;
-
 	// only contract owner can add and remove tokens from the white list `erc20Tokens`
 	bytes32 public constant WHITELIST_GUARD = keccak256("WHITELIST_GUARD");
 
 	constructor(address _sEuro, address _manager) {
 		_setupRole(WHITELIST_GUARD, msg.sender);
-		standardEuroToken = _sEuro;
+		sEuroToken = _sEuro;
 		manager = INonfungiblePositionManager(_manager);
 	}
 
 	// Adds a new ERC20-token to the list of allowed currency legs
-	function appendErc20compatible(address _token, string memory _name) private {
+	function newAllowedErc20(address _token, string memory _name, address _poolAddress) private {
 		require(hasRole(WHITELIST_GUARD, msg.sender), 'invalid-whitelist-guard');
 		require(tokenData[_token].initialised == false, 'token-already-added');
 
 		erc20Tokens.push(_token);
 		tokenData[_token].initialised = true;
 		tokenData[_token].shortName = _name;
+		tokenData[_token].pool = _poolAddress;
 	}
 
 
-	// Compares a token `_otherToken` to the Standard Euro token and returns them in ascending order
+	// Compares the Standard Euro token to another token and returns them in ascending order
 	function getAscendingPair(address _otherToken) private view returns (address token0, address token1) {
-		(token0, token1) = standardEuroToken < _otherToken
-			? (standardEuroToken, _otherToken)
-			: (_otherToken, standardEuroToken);
+		(token0, token1) = sEuroToken < _otherToken
+			? (sEuroToken, _otherToken)
+			: (_otherToken, sEuroToken);
 	}
 
 	// Returns the amount of currency pairs on-ramped
@@ -72,7 +73,6 @@ contract BondingEvent is AccessControl {
 	// Initialises a pool with another token (address) and stores it in the array of pools.
 	// Note that the price is in sqrtPriceX96 format.
 	function initialisePool(string memory _otherName, address _otherAddress, uint160 _price, uint24 _fee) external {
-		appendErc20compatible(_otherAddress, _otherName);
 		(address token0, address token1) = getAscendingPair(_otherAddress);
 		fee = _fee;
 		address pool = manager.createAndInitializePoolIfNecessary(
@@ -83,7 +83,7 @@ contract BondingEvent is AccessControl {
 		);
 		tickSpacing = IUniswapV3Pool(pool).tickSpacing();
 		liquidityPools.push(pool);
-		tokenData[_otherAddress].pool = pool;
+		newAllowedErc20(_otherAddress, _otherName, pool);
 	}
 
 	function validTicks() private view returns (bool) {
@@ -92,35 +92,46 @@ contract BondingEvent is AccessControl {
 
 	// Returns the amount of tokens received for an amount of sEURO
 	// Note that this calls non-view functions and reverts to display results
-	function getQuote(address _otherToken, uint256 _amountSeuro, uint160 _sqrtPriceLimitX96) external returns (uint256 amountIn) {
-		address poolAddress = tokenData[_otherToken].pool;
-		IQuoter quoter = IQuoter(poolAddress);
+	function getQuote(address _otherToken, uint256 _amountSeuro) public returns (uint256) {
+		require(tokenData[_otherToken].initialised == true, "pool-not-init");
+
+		uint160 sqrtPriceLimitX96 = 0;
 		return quoter.quoteExactInputSingle(
-			standardEuroToken,
+			sEuroToken,
 			_otherToken,
 			fee,
 			_amountSeuro,
-			_sqrtPriceLimitX96
+			sqrtPriceLimitX96
 		);
 	}
 
-	function bond(uint256 _amountSeuro, address _otherToken, uint256 _amountOther) public {
-		require(tokenData[_otherToken].initialised == true, 'invalid-token-bond');
+	struct PositionMetaData {
+		uint256 tokenId;
+		uint128 liquidity;
+		uint256 amount0;
+		uint256 amount1;
+	}
 
-		TransferHelper.safeTransferFrom(standardEuroToken, msg.sender, address(this), _amountSeuro);
+	function addLiquidity(uint256 _amountSeuro, uint256 _amountOther, address _otherToken) private {
+		// send sEURO tokens from the sender's account to the contract account
+		TransferHelper.safeTransferFrom(sEuroToken, msg.sender, address(this), _amountSeuro);
+		// send other erc20 tokens from the sender's account to the contract account
 		TransferHelper.safeTransferFrom(_otherToken, msg.sender, address(this), _amountOther);
-		TransferHelper.safeApprove(standardEuroToken, address(manager), _amountSeuro);
+		// approve the contract to send sEURO tokens to manager
+		TransferHelper.safeApprove(sEuroToken, address(manager), _amountSeuro);
+		// approve the contract to send other erc20 tokens to manager
 		TransferHelper.safeApprove(_otherToken, address(manager), _amountOther);
 
 		(address token0, address token1) = getAscendingPair(_otherToken);
+
 		// not sure why the full amount of seuro can't be added
-		uint256 minSeuro = _amountSeuro - 1 ether;
+		// possible explanation: the price moves so we need some margin, see link below:
+		// https://github.com/Uniswap/v3-periphery/blob/main/contracts/NonfungiblePositionManager.sol#L273-L275=
+		uint256 minSeuro = _amountSeuro - 0.05 ether;
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
-			token0 == standardEuroToken ?
+			token0 == sEuroToken ?
 			(_amountSeuro, _amountOther, minSeuro, MIN_VAL) :
 			(_amountOther, _amountSeuro, MIN_VAL, minSeuro);
-
-		require(validTicks(), 'err-inv-tick');
 
 		INonfungiblePositionManager.MintParams memory params =
 			INonfungiblePositionManager.MintParams({
@@ -137,16 +148,19 @@ contract BondingEvent is AccessControl {
 			deadline: block.timestamp
 		});
 
-		(uint256 tokenID, /* liquidity */ , uint256 amount0, uint256 amount1) = manager.mint(params);
-		positionIDs.push(tokenID);
+		// provide liquidity to the pool
+		(uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = manager.mint(params);
+		PositionMetaData memory pos = PositionMetaData(tokenId, liquidity, amount0, amount1);
+		address tkn = _otherToken;
+		tokenData[tkn].positions.push(pos);
+	}
 
-		TransferHelper.safeApprove(standardEuroToken, address(manager), 0);
-		TransferHelper.safeApprove(_otherToken, address(manager), 0);
+	function bond(uint256 _amountSeuro, address _otherToken, uint256 _amountOther) public {
+		require(tokenData[_otherToken].initialised == true, 'invalid-token-bond');
+		require(validTicks(), 'err-inv-tick');
 
-		uint256 refund = token0 == _otherToken ?
-			_amountOther - amount0 :
-			_amountOther - amount1;
+		addLiquidity(_amountSeuro, _amountOther, _otherToken);
 
-		TransferHelper.safeTransfer(_otherToken, msg.sender, refund);
+		//TODO: look into the refund mechanism again if needed, seems to work fine as of now.
 	}
 }
