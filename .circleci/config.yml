@@ -14,7 +14,8 @@ jobs:
       - run:
           command: npx hardhat test
           name: Run tests
-      - run:
-          name: Run tests
-          command: echo 'can you put the tests back pls.......'
-          # command: npm test
+
+workflows:
+  btd:
+    jobs:
+      - build-and-test
