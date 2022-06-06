@@ -9,13 +9,16 @@ jobs:
       - image: cimg/node:18.0
     steps:
       - checkout
-      - node/install-packages:
-          pkg-manager: npm
+      # - node/install-packages:
+      #     pkg-manager: npm
+      - run:
+          command: npm install
+          name: Install packages
       - run:
           command: npx hardhat test
           name: Run tests
 
 workflows:
-  btd:
+  build-test-dont-deploy:
     jobs:
       - build-and-test
