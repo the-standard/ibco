@@ -1,0 +1,20 @@
+version: 2.1
+
+orbs:
+  node: circleci/node@5.0.2
+
+jobs:
+  build-and-test:
+    docker:
+      - image: cimg/node:18.0
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - run:
+          command: npx hardhat test
+          name: Run tests
+      - run:
+          name: Run tests
+          command: echo 'can you put the tests back pls.......'
+          # command: npm test
