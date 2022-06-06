@@ -2,22 +2,22 @@
 pragma solidity ^0.8.0;
 
 import "contracts/uniswap/INonfungiblePositionManager.sol";
+import "contracts/BondStorage.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract BondingEvent is AccessControl {
+contract BondingEvent is AccessControl, BondStorage {
 	// sEUR: the main leg of the currency pair
 	address public immutable sEuroToken;
-	// other: the other generic erc20 compatible token
+	// other: the other ERC-20 token
 	address public immutable otherToken;
 
 	struct TokenMetaData {
 		bool initialised;
 		address pool; //TODO: clarify relation between pool address and tokenId (NFT)
 		string shortName;
-		PositionMetaData[] positions; // store the data received after each successful bond
 	}
 
 	// allow quick lookup to see liquidity provided by users
@@ -29,7 +29,6 @@ contract BondingEvent is AccessControl {
 
 	// uniswap: creates bond
 	INonfungiblePositionManager private immutable manager;
-	IQuoter public constant quoter = IQuoter(0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6);
 
 	// https://docs.uniswap.org/protocol/reference/core/libraries/Tick
 	int24 public tickSpacing;
@@ -38,10 +37,10 @@ contract BondingEvent is AccessControl {
 	uint24 private fee; // should the fee really be private?
 
 	// only contract owner can add the other currency leg
-	bytes32 public constant WHITELIST_GUARD = keccak256("WHITELIST_GUARD");
+	bytes32 public constant WHITELIST_BONDING_EVENT = keccak256("WHITELIST_BONDING_EVENT");
 
 	constructor(address _sEuro, address _otherToken, address _manager) {
-		_setupRole(WHITELIST_GUARD, msg.sender);
+		_setupRole(WHITELIST_BONDING_EVENT, msg.sender);
 		sEuroToken = _sEuro;
 		otherToken = _otherToken;
 		manager = INonfungiblePositionManager(_manager);
@@ -49,7 +48,7 @@ contract BondingEvent is AccessControl {
 
 	// Adds a new ERC20-token to the list of allowed currency legs
 	function newAllowedErc20(address _token, string memory _name, address _poolAddress) private {
-		require(hasRole(WHITELIST_GUARD, msg.sender), 'invalid-whitelist-guard');
+		require(hasRole(WHITELIST_BONDING_EVENT, msg.sender), 'invalid-whitelist-guard');
 		require(userData[_token].initialised == false, 'token-already-added');
 
 		userData[_token].initialised = true;
@@ -90,14 +89,8 @@ contract BondingEvent is AccessControl {
 		return TICK_LOWER % tickSpacing == 0 && TICK_UPPER % tickSpacing == 0;
 	}
 
-	struct PositionMetaData {
-		uint256 tokenId;
-		uint128 liquidity;
-		uint256 amount0;
-		uint256 amount1;
-	}
 
-	function addLiquidity(uint256 _amountSeuro, uint256 _amountOther, address _otherToken) private {
+	function addLiquidity(uint256 _amountSeuro, uint256 _amountOther, address _otherToken) private returns (PositionMetaData memory) {
 		// send sEURO tokens from the sender's account to the contract account
 		TransferHelper.safeTransferFrom(sEuroToken, msg.sender, address(this), _amountSeuro);
 		// send other erc20 tokens from the sender's account to the contract account
@@ -135,17 +128,40 @@ contract BondingEvent is AccessControl {
 
 		// provide liquidity to the pool
 		(uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = manager.mint(params);
-		PositionMetaData memory pos = PositionMetaData(tokenId, liquidity, amount0, amount1);
-		address tkn = _otherToken;
-		userData[tkn].positions.push(pos);
+		
+		// How can we know which one of the the two tokens is the sEURO?
+		// We know that the other amount does not change.
+		// So we check if the other amount matches some of the two amounts. If it does, the other is sEURO.
+		// We simply do a swap if amount0 contains the foreign token to keep sEURO first.
+		if (amount0 == _amountOther) (amount0, amount1) = (amount1, amount0);
+		PositionMetaData memory pos = PositionMetaData(tokenId, liquidity, /*sEURO field */ amount0, /* other field */ amount1);
+		return pos;
+
+		//TODO: look into the refund mechanism again if needed, create tests to make sure nothing is "lost"
 	}
 
-	function bond(uint256 _amountSeuro, address _otherToken, uint256 _amountOther) public {
+	// We assume that there is a higher layer solution which helps to fetch the latest price as a quote.
+	// This quote is being used to supply the two amounts to the function.
+	// The reason for this is because of the explicit discouragement of doing this on-chain
+	// due to the high gas costs (see https://docs.uniswap.org/protocol/reference/periphery/lens/Quoter).
+	/// @param _amountSeuro The amount of sEURO token to bond
+	/// @param _amountOther The amount of the other token to bond
+	/// @param _otherToken The address of the other token
+	/// @param _maturityInMonths The amount of months a bond is active.
+	///                          At the end of maturity, the principal + accrued interest is paid out all at once in TST.
+	/// @param _rate The rate is represented as a 10,000-factor of each basis point so the most stable fee is 500 (= 0.05 pc)
+	function bond(
+		uint256 _amountSeuro,
+		uint256 _amountOther,
+		address _otherToken,
+		uint8 _maturityInMonths,
+		uint24 _rate
+	) public {
 		require(userData[_otherToken].initialised == true, 'invalid-token-bond');
 		require(validTicks(), 'err-inv-tick');
 
-		addLiquidity(_amountSeuro, _amountOther, _otherToken);
-
-		//TODO: look into the refund mechanism again if needed, seems to work fine as of now.
+		PositionMetaData memory position = addLiquidity(_amountSeuro, _amountOther, _otherToken);
+		
+		//TODO
 	}
 }
