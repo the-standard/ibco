@@ -97,7 +97,7 @@ contract BondStorage is AccessControl {
 	// If the user adds a bond for the first time, it is both initialised and active.
 	// If the user has no bond that has passed its maturity, nothing changes.
 	// If the user has at least one bond that has passed maturity, the amountBondsActive is
-	// subtracted with the appropriate amount and credit counter is increased with the
+	// subtracted with the appropriate amount and the claim counter is increased with the
 	// principal(s) and the accrued interest.
 	// If the user has no bonds active, the isActive will be switched to false.
 	function refreshBond(address _user) public {
