@@ -9,6 +9,7 @@ contract BondStorage is AccessControl {
 
 	constructor() {
 		_setupRole(WHITELIST_BOND_STORAGE, msg.sender);
+		setInitialised(address(this));
 	}
 
 	modifier onlyOwner {
@@ -114,7 +115,7 @@ contract BondStorage is AccessControl {
 		return issuedBonds[_user].amountBondsActive;
 	}
 
-	function getUserBonds(address _user) private view returns (Bond[] memory) {
+	function getUserBonds(address _user) public view returns (Bond[] memory) {
 		return issuedBonds[_user].bonds;
 	}
 
@@ -164,14 +165,15 @@ contract BondStorage is AccessControl {
 		int128 _rate,
 		uint256 _maturityInWeeks,
 		PositionMetaData memory _data
-	) public onlyOwner {
+	) public {
 		uint256 maturityDate = maturityDateAfterWeeks(_maturityInWeeks);
-		Bond memory bond = Bond(_principal, _rate, maturityDate, _data);
 
 		if (!isInitialised(_user)) {
 			setActive(_user);
 			setInitialised(_user);
 		}
+
+		Bond memory bond = Bond(_principal, _rate, maturityDate, _data);
 		addBond(_user, bond);
 		incrementActiveBonds(_user);
 	}
