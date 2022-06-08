@@ -7,6 +7,7 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "abdk-libraries-solidity/ABDKMath64x64.sol";
 
 contract BondingEvent is AccessControl, BondStorage {
 	// sEUR: the main leg of the currency pair
@@ -89,35 +90,33 @@ contract BondingEvent is AccessControl, BondStorage {
 		return TICK_LOWER % tickSpacing == 0 && TICK_UPPER % tickSpacing == 0;
 	}
 
-
-	function addLiquidity(int128 _amountSeuro, int128 _amountOther, address _otherToken) private returns (PositionMetaData memory) {
+	struct LiquidityPair {
 		uint256 amountSeuro;
 		uint256 amountOther;
-		uint256 dummyS;
-		uint256 dummyO;
-		amountSeuro = dummyS + uint128(_amountSeuro);
-		amountOther = dummyO + uint128(_amountOther);
+		address other;
+	}
 
+	function addLiquidity(LiquidityPair memory pair) private returns (PositionMetaData memory) {
 
 		// send sEURO tokens from the sender's account to the contract account
-		TransferHelper.safeTransferFrom(sEuroToken, msg.sender, address(this), amountSeuro);
+		TransferHelper.safeTransferFrom(sEuroToken, msg.sender, address(this), pair.amountSeuro);
 		// send other erc20 tokens from the sender's account to the contract account
-		TransferHelper.safeTransferFrom(_otherToken, msg.sender, address(this), amountOther);
+		TransferHelper.safeTransferFrom(pair.other, msg.sender, address(this), pair.amountOther);
 		// approve the contract to send sEURO tokens to manager
-		TransferHelper.safeApprove(sEuroToken, address(manager), amountSeuro);
+		TransferHelper.safeApprove(sEuroToken, address(manager), pair.amountSeuro);
 		// approve the contract to send other erc20 tokens to manager
-		TransferHelper.safeApprove(_otherToken, address(manager), amountOther);
+		TransferHelper.safeApprove(pair.other, address(manager), pair.amountOther);
 
-		(address token0, address token1) = getAscendingPair(_otherToken);
+		(address token0, address token1) = getAscendingPair(pair.other);
 
 		// not sure why the full amount of seuro can't be added
 		// possible explanation: the price moves so we need some margin, see link below:
 		// https://github.com/Uniswap/v3-periphery/blob/main/contracts/NonfungiblePositionManager.sol#L273-L275=
-		uint256 minSeuro = amountSeuro - 0.05 ether;
+		uint256 minSeuro = pair.amountSeuro - 0.05 ether;
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
 			token0 == sEuroToken ?
-			(amountSeuro, amountOther, minSeuro, MIN_VAL) :
-			(amountOther, amountSeuro, MIN_VAL, minSeuro);
+			(pair.amountSeuro, pair.amountOther, minSeuro, MIN_VAL) :
+			(pair.amountOther, pair.amountSeuro, MIN_VAL, minSeuro);
 
 		INonfungiblePositionManager.MintParams memory params =
 			INonfungiblePositionManager.MintParams({
@@ -141,7 +140,7 @@ contract BondingEvent is AccessControl, BondStorage {
 		// We know that the other amount does not change.
 		// So we check if the other amount matches some of the two amounts. If it does, the other is sEURO.
 		// We simply do a swap if amount0 contains the foreign token to keep sEURO first.
-		if (amount0 == amountOther) (amount0, amount1) = (amount1, amount0);
+		if (amount0 == pair.amountOther) (amount0, amount1) = (amount1, amount0);
 		PositionMetaData memory pos = PositionMetaData(tokenId, liquidity, /*sEURO field */ amount0, /* other field */ amount1);
 		return pos;
 
@@ -168,8 +167,14 @@ contract BondingEvent is AccessControl, BondStorage {
 		require(userData[_otherToken].initialised == true, 'invalid-token-bond');
 		require(validTicks(), 'err-inv-tick');
 
+		uint256 seuro = uint256(ABDKMath64x64.to128x128(_amountSeuro));
+		uint256 sother = uint256(ABDKMath64x64.to128x128(_amountOther));
+
+		// to avoid stack to deep in AddLiquidity
+		LiquidityPair memory pair = LiquidityPair(seuro, sother, _otherToken);
+
 		// information about the liquidity position after it has been successfully added
-		PositionMetaData memory position = addLiquidity(_amountSeuro, _amountOther, _otherToken);
+		PositionMetaData memory position = addLiquidity(pair);
 		// begin bonding event
 		startBond(msg.sender, _amountSeuro, _rate, _maturityInWeeks, position);
 	}
