@@ -158,7 +158,7 @@ contract BondStorage is AccessControl {
 	}
 
 
-	function addRecord(
+	function startBond(
 		address _user,
 		int128 _principal,
 		int128 _rate,

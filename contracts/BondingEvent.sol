@@ -154,14 +154,15 @@ contract BondingEvent is AccessControl, BondStorage {
 		uint256 _amountSeuro,
 		uint256 _amountOther,
 		address _otherToken,
-		uint8 _maturityInMonths,
+		uint8 _maturityInWeeks,
 		uint24 _rate
 	) public {
 		require(userData[_otherToken].initialised == true, 'invalid-token-bond');
 		require(validTicks(), 'err-inv-tick');
 
+		// information about the liquidity position after it has been successfully added
 		PositionMetaData memory position = addLiquidity(_amountSeuro, _amountOther, _otherToken);
-		
-		//TODO
+		// begin bonding event
+		startBond(msg.sender, _amountSeuro, _rate, _maturityInWeeks, position);
 	}
 }
