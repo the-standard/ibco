@@ -91,32 +91,36 @@ contract BondingEvent is AccessControl, BondStorage {
 	}
 
 	struct LiquidityPair {
-		uint256 amountSeuro;
-		uint256 amountOther;
+		uint256 amountSeuroU256;
+		uint256 amountOtherU256;
+		int128 amountSeuro128;
+		int128 amountOther128;
 		address other;
 	}
 
 	function addLiquidity(LiquidityPair memory pair) private returns (PositionMetaData memory) {
 
 		// send sEURO tokens from the sender's account to the contract account
-		TransferHelper.safeTransferFrom(sEuroToken, msg.sender, address(this), pair.amountSeuro);
+		TransferHelper.safeTransferFrom(sEuroToken, msg.sender, address(this), pair.amountSeuroU256);
 		// send other erc20 tokens from the sender's account to the contract account
-		TransferHelper.safeTransferFrom(pair.other, msg.sender, address(this), pair.amountOther);
+		TransferHelper.safeTransferFrom(pair.other, msg.sender, address(this), pair.amountOtherU256);
 		// approve the contract to send sEURO tokens to manager
-		TransferHelper.safeApprove(sEuroToken, address(manager), pair.amountSeuro);
+		TransferHelper.safeApprove(sEuroToken, address(manager), pair.amountSeuroU256);
 		// approve the contract to send other erc20 tokens to manager
-		TransferHelper.safeApprove(pair.other, address(manager), pair.amountOther);
+		TransferHelper.safeApprove(pair.other, address(manager), pair.amountOtherU256);
 
 		(address token0, address token1) = getAscendingPair(pair.other);
 
 		// not sure why the full amount of seuro can't be added
 		// possible explanation: the price moves so we need some margin, see link below:
 		// https://github.com/Uniswap/v3-periphery/blob/main/contracts/NonfungiblePositionManager.sol#L273-L275=
-		uint256 minSeuro = pair.amountSeuro - 0.05 ether;
+		int128 seuroMin128 = ABDKMath64x64.sub(pair.amountSeuro128, ABDKMath64x64.div(1, 2));
+		uint256 minSeuro = uint256(ABDKMath64x64.toUInt(seuroMin128));
+
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
 			token0 == sEuroToken ?
-			(pair.amountSeuro, pair.amountOther, minSeuro, MIN_VAL) :
-			(pair.amountOther, pair.amountSeuro, MIN_VAL, minSeuro);
+			(pair.amountSeuroU256, pair.amountOtherU256, minSeuro, MIN_VAL) :
+			(pair.amountOtherU256, pair.amountSeuroU256, MIN_VAL, minSeuro);
 
 		INonfungiblePositionManager.MintParams memory params =
 			INonfungiblePositionManager.MintParams({
@@ -140,7 +144,7 @@ contract BondingEvent is AccessControl, BondStorage {
 		// We know that the other amount does not change.
 		// So we check if the other amount matches some of the two amounts. If it does, the other is sEURO.
 		// We simply do a swap if amount0 contains the foreign token to keep sEURO first.
-		if (amount0 == pair.amountOther) (amount0, amount1) = (amount1, amount0);
+		if (amount0 == pair.amountOtherU256) (amount0, amount1) = (amount1, amount0);
 		PositionMetaData memory pos = PositionMetaData(tokenId, liquidity, /*sEURO field */ amount0, /* other field */ amount1);
 		return pos;
 
@@ -161,17 +165,17 @@ contract BondingEvent is AccessControl, BondStorage {
 		int128 _amountSeuro,
 		int128 _amountOther,
 		address _otherToken,
-		uint8 _maturityInWeeks,
+		uint256 _maturityInWeeks,
 		int128 _rate
 	) public {
 		require(userData[_otherToken].initialised == true, 'invalid-token-bond');
 		require(validTicks(), 'err-inv-tick');
 
-		uint256 seuro = uint256(ABDKMath64x64.to128x128(_amountSeuro));
-		uint256 sother = uint256(ABDKMath64x64.to128x128(_amountOther));
+		uint256 seuro256 = uint256(ABDKMath64x64.toUInt(_amountSeuro));
+		uint256 sother256 = uint256(ABDKMath64x64.toUInt(_amountOther));
 
 		// to avoid stack to deep in AddLiquidity
-		LiquidityPair memory pair = LiquidityPair(seuro, sother, _otherToken);
+		LiquidityPair memory pair = LiquidityPair(seuro256, sother256, _amountSeuro, _amountOther, _otherToken);
 
 		// information about the liquidity position after it has been successfully added
 		PositionMetaData memory position = addLiquidity(pair);
