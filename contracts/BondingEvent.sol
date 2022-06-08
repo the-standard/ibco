@@ -33,8 +33,8 @@ contract BondingEvent is AccessControl, BondStorage {
 
 	// https://docs.uniswap.org/protocol/reference/core/libraries/Tick
 	int24 public tickSpacing;
-	int24 private constant TICK_LOWER = -887270;
-	int24 private constant TICK_UPPER = 887270;
+	int24 private constant TICK_LOWER = -10000; //TODO: investigate and optimise lower and upper bound
+	int24 private constant TICK_UPPER = 10000;  //      to better concentrate / spread out liquidity
 	uint24 private fee; // should the fee really be private?
 
 	// only contract owner can add the other currency leg
@@ -104,23 +104,25 @@ contract BondingEvent is AccessControl, BondStorage {
 		TransferHelper.safeTransferFrom(sEuroToken, msg.sender, address(this), pair.amountSeuroU256);
 		// send other erc20 tokens from the sender's account to the contract account
 		TransferHelper.safeTransferFrom(pair.other, msg.sender, address(this), pair.amountOtherU256);
-		// approve the contract to send sEURO tokens to manager
-		TransferHelper.safeApprove(sEuroToken, address(manager), pair.amountSeuroU256);
-		// approve the contract to send other erc20 tokens to manager
-		TransferHelper.safeApprove(pair.other, address(manager), pair.amountOtherU256);
 
 		(address token0, address token1) = getAscendingPair(pair.other);
 
 		// not sure why the full amount of seuro can't be added
 		// possible explanation: the price moves so we need some margin, see link below:
-		// https://github.com/Uniswap/v3-periphery/blob/main/contracts/NonfungiblePositionManager.sol#L273-L275=
-		int128 seuroMin128 = ABDKMath64x64.sub(pair.amountSeuro128, ABDKMath64x64.div(1, 2));
+		// https://github.com/Uniswap/v3-periphery/blob/main/contracts/NonfungiblePositionManager.sol#L273-L275
+		int128 seuroMin128 = ABDKMath64x64.sub(pair.amountSeuro128, 10);
 		uint256 minSeuro = uint256(ABDKMath64x64.toUInt(seuroMin128));
 
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
 			token0 == sEuroToken ?
 			(pair.amountSeuroU256, pair.amountOtherU256, minSeuro, MIN_VAL) :
 			(pair.amountOtherU256, pair.amountSeuroU256, MIN_VAL, minSeuro);
+
+		// approve the contract to send sEURO tokens to manager
+		TransferHelper.safeApprove(sEuroToken, address(manager), amount0Desired);
+		// approve the contract to send other erc20 tokens to manager
+		TransferHelper.safeApprove(pair.other, address(manager), amount1Desired);
+
 
 		INonfungiblePositionManager.MintParams memory params =
 			INonfungiblePositionManager.MintParams({
@@ -145,7 +147,7 @@ contract BondingEvent is AccessControl, BondStorage {
 		// So we check if the other amount matches some of the two amounts. If it does, the other is sEURO.
 		// We simply do a swap if amount0 contains the foreign token to keep sEURO first.
 		if (amount0 == pair.amountOtherU256) (amount0, amount1) = (amount1, amount0);
-		PositionMetaData memory pos = PositionMetaData(tokenId, liquidity, /*sEURO field */ amount0, /* other field */ amount1);
+		PositionMetaData memory pos = PositionMetaData(tokenId, liquidity, /* sEURO field */ amount0, /* other field */ amount1);
 		return pos;
 
 		//TODO: look into the refund mechanism again if needed, create tests to make sure nothing is "lost"
