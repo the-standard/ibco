@@ -26,6 +26,9 @@ let USDT_ADDRESS;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 const MOST_STABLE_FEE = 500;
+const HALF_PERCENT_RATE = 5000;
+const ONE_YEAR_IN_WEEKS = 52;
+
 
 beforeEach(async () => {
   [owner, customer] = await ethers.getSigners();
@@ -38,10 +41,11 @@ beforeEach(async () => {
 
 describe('BondingEvent', async () => {
 
-  let BondingEventContract, BondingEvent;
+  let BondingEventContract, BondingEvent, BondStorageContract, BondStorage;
 
   beforeEach(async () => {
 	BondingEventContract = await ethers.getContractFactory('BondingEvent');
+	BondStorageContract = await ethers.getContractFactory('BondStorage');
   });
 
   describe('initialise bonding event', async () => {
@@ -54,6 +58,7 @@ describe('BondingEvent', async () => {
   context('bonding event deployed', async () => {
 	beforeEach(async () => {
 	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS);
+	  BondStorage = await BondStorageContract.deploy();
 	});
 
 	describe('initialise pool', async () => {
@@ -66,7 +71,7 @@ describe('BondingEvent', async () => {
 	  it('stores the tick spacing for the pool', async () => {
 		const price = encodePriceSqrt(100, 93);
 		await BondingEvent.initialisePool("USDT", USDT_ADDRESS, price, MOST_STABLE_FEE);
-		expect(await BondingEvent.tickSpacing()).to.be.gt(0);
+		expect(await BondingEvent.tickSpacing()).to.equal(10);
 	  });
 	});
 
@@ -78,29 +83,30 @@ describe('BondingEvent', async () => {
 			encodePriceSqrt(100, SeurosPerUsdt) :
 			encodePriceSqrt(SeurosPerUsdt, 100);
 		  await BondingEvent.initialisePool("USDT", USDT_ADDRESS, price, MOST_STABLE_FEE);
+		  expect(await BondingEvent.getPoolAmount()).to.equal(1);
 		});
 
-		it('bonds given sEURO amount with required USDT', async () => {
-		  const amountSeuro = ethers.utils.parseEther('1000');
-		  const amountUsdt = amountSeuro.mul(2).div(ethers.BigNumber.from(10).pow(12));
-		  await SEuro.connect(owner).mint(customer.address, amountSeuro);
+		it('bonds given sEURO amount with required USDT for 1 year', async () => {
+		  const CUSTOMER_ADDR = customer.address;
+		  const minLiquidityAmount = ethers.utils.parseEther('4000000');
 
-		  // transfer USDT to customer
-		  await USDT.transfer(customer.address, ethers.utils.parseEther('100'));
-		  const usdtBalance = await USDT.balanceOf(customer.address);
-		  const seuroBalance = await SEuro.balanceOf(customer.address);
+		  await SEuro.connect(owner).mint(CUSTOMER_ADDR, minLiquidityAmount);
+		  await USDT.connect(owner).mint(CUSTOMER_ADDR, minLiquidityAmount);
+		  const euroBalance = await SEuro.balanceOf(CUSTOMER_ADDR);
+		  const usdtBalance = await USDT.balanceOf(CUSTOMER_ADDR);
+		  expect(euroBalance).to.equal(minLiquidityAmount);
+		  expect(usdtBalance).to.equal(minLiquidityAmount);
 
-		  await SEuro.connect(customer).approve(BondingEvent.address, amountSeuro);
-		  await USDT.connect(customer).approve(BondingEvent.address, amountUsdt);
-		  await BondingEvent.connect(customer).bond(amountSeuro, USDT_ADDRESS, amountUsdt);
+		  const seuroAmount = ethers.utils.parseEther('2000000');
+		  const usdtAmount = ethers.utils.parseEther('2000000');
+		  const belowAmount = ethers.utils.parseEther('1900000');
+		  await SEuro.connect(customer).approve(BondingEvent.address, seuroAmount);
+		  await USDT.connect(customer).approve(BondingEvent.address, usdtAmount);
 
-		  let expectedSeuro = seuroBalance.sub(amountSeuro);
-		  let expectedUsdt = usdtBalance.sub(amountUsdt);
-		  let actualSeuroBal = await SEuro.balanceOf(customer.address);
-		  let actualUsdtBal = await USDT.balanceOf(customer.address);
+		  await BondingEvent.connect(customer).bond(seuroAmount, usdtAmount, USDT_ADDRESS, ONE_YEAR_IN_WEEKS, HALF_PERCENT_RATE);
 
-		  expect(actualSeuroBal).to.equal(expectedSeuro);
-		  expect(actualUsdtBal).to.equal(expectedUsdt);
+		  const bonds = await BondStorage.connect(customer).getUserBonds(CUSTOMER_ADDR);
+		  //expect(bonds.length).to.equal(1);
 		});
 	  });
 	});
