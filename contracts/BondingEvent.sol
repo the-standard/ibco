@@ -90,26 +90,34 @@ contract BondingEvent is AccessControl, BondStorage {
 	}
 
 
-	function addLiquidity(uint256 _amountSeuro, uint256 _amountOther, address _otherToken) private returns (PositionMetaData memory) {
+	function addLiquidity(int128 _amountSeuro, int128 _amountOther, address _otherToken) private returns (PositionMetaData memory) {
+		uint256 amountSeuro;
+		uint256 amountOther;
+		uint256 dummyS;
+		uint256 dummyO;
+		amountSeuro = dummyS + uint128(_amountSeuro);
+		amountOther = dummyO + uint128(_amountOther);
+
+
 		// send sEURO tokens from the sender's account to the contract account
-		TransferHelper.safeTransferFrom(sEuroToken, msg.sender, address(this), _amountSeuro);
+		TransferHelper.safeTransferFrom(sEuroToken, msg.sender, address(this), amountSeuro);
 		// send other erc20 tokens from the sender's account to the contract account
-		TransferHelper.safeTransferFrom(_otherToken, msg.sender, address(this), _amountOther);
+		TransferHelper.safeTransferFrom(_otherToken, msg.sender, address(this), amountOther);
 		// approve the contract to send sEURO tokens to manager
-		TransferHelper.safeApprove(sEuroToken, address(manager), _amountSeuro);
+		TransferHelper.safeApprove(sEuroToken, address(manager), amountSeuro);
 		// approve the contract to send other erc20 tokens to manager
-		TransferHelper.safeApprove(_otherToken, address(manager), _amountOther);
+		TransferHelper.safeApprove(_otherToken, address(manager), amountOther);
 
 		(address token0, address token1) = getAscendingPair(_otherToken);
 
 		// not sure why the full amount of seuro can't be added
 		// possible explanation: the price moves so we need some margin, see link below:
 		// https://github.com/Uniswap/v3-periphery/blob/main/contracts/NonfungiblePositionManager.sol#L273-L275=
-		uint256 minSeuro = _amountSeuro - 0.05 ether;
+		uint256 minSeuro = amountSeuro - 0.05 ether;
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
 			token0 == sEuroToken ?
-			(_amountSeuro, _amountOther, minSeuro, MIN_VAL) :
-			(_amountOther, _amountSeuro, MIN_VAL, minSeuro);
+			(amountSeuro, amountOther, minSeuro, MIN_VAL) :
+			(amountOther, amountSeuro, MIN_VAL, minSeuro);
 
 		INonfungiblePositionManager.MintParams memory params =
 			INonfungiblePositionManager.MintParams({
@@ -133,7 +141,7 @@ contract BondingEvent is AccessControl, BondStorage {
 		// We know that the other amount does not change.
 		// So we check if the other amount matches some of the two amounts. If it does, the other is sEURO.
 		// We simply do a swap if amount0 contains the foreign token to keep sEURO first.
-		if (amount0 == _amountOther) (amount0, amount1) = (amount1, amount0);
+		if (amount0 == amountOther) (amount0, amount1) = (amount1, amount0);
 		PositionMetaData memory pos = PositionMetaData(tokenId, liquidity, /*sEURO field */ amount0, /* other field */ amount1);
 		return pos;
 
@@ -147,15 +155,15 @@ contract BondingEvent is AccessControl, BondStorage {
 	/// @param _amountSeuro The amount of sEURO token to bond
 	/// @param _amountOther The amount of the other token to bond
 	/// @param _otherToken The address of the other token
-	/// @param _maturityInMonths The amount of months a bond is active.
+	/// @param _maturityInWeeks The amount of months a bond is active.
 	///                          At the end of maturity, the principal + accrued interest is paid out all at once in TST.
 	/// @param _rate The rate is represented as a 10,000-factor of each basis point so the most stable fee is 500 (= 0.05 pc)
 	function bond(
-		uint256 _amountSeuro,
-		uint256 _amountOther,
+		int128 _amountSeuro,
+		int128 _amountOther,
 		address _otherToken,
 		uint8 _maturityInWeeks,
-		uint24 _rate
+		int128 _rate
 	) public {
 		require(userData[_otherToken].initialised == true, 'invalid-token-bond');
 		require(validTicks(), 'err-inv-tick');
