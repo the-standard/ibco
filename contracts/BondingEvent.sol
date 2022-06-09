@@ -14,6 +14,8 @@ contract BondingEvent is AccessControl, BondStorage {
 	address public immutable sEuroToken;
 	// other: the other ERC-20 token
 	address public immutable otherToken;
+	// bond storage contract
+	address public bondStorage;
 
 	struct TokenMetaData {
 		bool initialised;
@@ -35,15 +37,16 @@ contract BondingEvent is AccessControl, BondStorage {
 	int24 public tickSpacing;
 	int24 private constant TICK_LOWER = -10000; //TODO: investigate and optimise lower and upper bound
 	int24 private constant TICK_UPPER = 10000;  //      to better concentrate / spread out liquidity
-	uint24 private fee; // should the fee really be private?
+	uint24 fee;
 
 	// only contract owner can add the other currency leg
 	bytes32 public constant WHITELIST_BONDING_EVENT = keccak256("WHITELIST_BONDING_EVENT");
 
-	constructor(address _sEuro, address _otherToken, address _manager) {
+	constructor(address _sEuro, address _otherToken, address _manager, address _bondStorage) {
 		_setupRole(WHITELIST_BONDING_EVENT, msg.sender);
 		sEuroToken = _sEuro;
 		otherToken = _otherToken;
+		bondStorage = _bondStorage;
 		manager = INonfungiblePositionManager(_manager);
 	}
 
@@ -142,10 +145,7 @@ contract BondingEvent is AccessControl, BondStorage {
 		// provide liquidity to the pool
 		(uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = manager.mint(params);
 		
-		// How can we know which one of the the two tokens is the sEURO?
-		// We know that the other amount does not change.
-		// So we check if the other amount matches some of the two amounts. If it does, the other is sEURO.
-		// We simply do a swap if amount0 contains the foreign token to keep sEURO first.
+		// do a swap if amount0 contains the foreign token to keep sEURO first
 		if (amount0 == pair.amountOtherU256) (amount0, amount1) = (amount1, amount0);
 		PositionMetaData memory pos = PositionMetaData(tokenId, liquidity, /* sEURO field */ amount0, /* other field */ amount1);
 		return pos;
@@ -182,6 +182,11 @@ contract BondingEvent is AccessControl, BondStorage {
 		// information about the liquidity position after it has been successfully added
 		PositionMetaData memory position = addLiquidity(pair);
 		// begin bonding event
-		startBond(msg.sender, _amountSeuro, _rate, _maturityInWeeks, position);
+		BondStorage.startBond(msg.sender, _amountSeuro, _rate, _maturityInWeeks, position);
+
+	}
+
+	function getAmountBonds(address _user) public view returns (uint) {
+		return BondStorage.getActiveBonds(_user);
 	}
 }
