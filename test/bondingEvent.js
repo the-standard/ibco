@@ -21,7 +21,7 @@ const encodePriceSqrt = (reserve1, reserve0) => {
 //   // await SwapManager.connect(signer).swapEthForToken(token, {value: amount});
 // }
 
-let owner, customer, SEuro, USDT;
+let owner, customer, SEuro, USDT, BStorage;
 let USDT_ADDRESS;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
@@ -34,8 +34,10 @@ beforeEach(async () => {
   [owner, customer] = await ethers.getSigners();
   const SEuroContract = await ethers.getContractFactory('SEuro');
   const ERC20Contract = await ethers.getContractFactory('DUMMY');
+  const BondContract = await ethers.getContractFactory('BondStorage');
   SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
   USDT = await ERC20Contract.deploy('USDT', 'USDT', ethers.utils.parseEther('100000000'));
+  BStorage = await BondContract.deploy();
   USDT_ADDRESS = USDT.address;
 });
 
@@ -50,15 +52,15 @@ describe('BondingEvent', async () => {
 
   describe('initialise bonding event', async () => {
 	it('has not initialised pool', async () => {
-	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS);
+	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address);
 	  expect(await BondingEvent.getPoolAmount()).to.equal(0);
 	});
   });
 
   context('bonding event deployed', async () => {
 	beforeEach(async () => {
-	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS);
-	  BondStorage = await BondStorageContract.deploy();
+	  BStorage = await BondStorageContract.deploy();
+	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address);
 	});
 
 	describe('initialise pool', async () => {
@@ -103,10 +105,12 @@ describe('BondingEvent', async () => {
 		  await SEuro.connect(customer).approve(BondingEvent.address, seuroAmount);
 		  await USDT.connect(customer).approve(BondingEvent.address, usdtAmount);
 
-		  await BondingEvent.connect(customer).bond(seuroAmount, usdtAmount, USDT_ADDRESS, ONE_YEAR_IN_WEEKS, HALF_PERCENT_RATE);
+		  await BondingEvent.connect(customer).bond(
+			seuroAmount, usdtAmount, USDT_ADDRESS, ONE_YEAR_IN_WEEKS, HALF_PERCENT_RATE,
+		  );
 
-		  const bonds = await BondStorage.connect(customer).getUserBonds(CUSTOMER_ADDR);
-		  //expect(bonds.length).to.equal(1);
+		  const bondsAmount = await BondingEvent.connect(customer).getActiveBonds(CUSTOMER_ADDR);
+		  expect(bondsAmount).to.equal(1);
 		});
 	  });
 	});
