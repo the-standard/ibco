@@ -186,7 +186,7 @@ contract BondingEvent is AccessControl, BondStorage {
 
 	}
 
-	function getAmountBonds(address _user) public view returns (uint) {
+	function getAmountBonds(address _user) public view returns (int128) {
 		return BondStorage.getActiveBonds(_user);
 	}
 }

@@ -9,7 +9,6 @@ contract BondStorage is AccessControl {
 
 	constructor() {
 		_setupRole(WHITELIST_BOND_STORAGE, msg.sender);
-		setInitialised(address(this));
 	}
 
 	modifier onlyOwner {
@@ -47,10 +46,8 @@ contract BondStorage is AccessControl {
 		int128 claimAmount;        // total claim from expired bonds (valued in sEURO)
 	}
 
-	BondRecord bondRecord;
-
-	// Public record of all bonds issued for this currency pair
-	mapping(address => BondRecord) public issuedBonds;
+	mapping(address => BondRecord) issuedBonds;
+	mapping(address => int128) amountBonds;
 
 	function isInitialised(address _user) private view returns (bool) {
 		return issuedBonds[_user].isInitialised;
@@ -68,8 +65,8 @@ contract BondStorage is AccessControl {
 		issuedBonds[_user].isActive = true;
 	}
 
-	function addBond(address _user, Bond memory bond) private {
-		issuedBonds[_user].bonds.push(bond);
+	function addBond(address _user, int128 _principal, int128 _rate, uint256 maturityDate, PositionMetaData memory _data) private {
+		issuedBonds[_user].bonds.push(Bond(_principal, _rate, maturityDate, _data));
 	}
 
 	function increaseProfitAmount(address _user, int128 latestAddition) private {
@@ -99,20 +96,20 @@ contract BondStorage is AccessControl {
 		return (bond.principal + profit, profit);
 	}
 
-	function incrementActiveBonds(address _user) private returns (int128) {
-		int128 plusOne = ABDKMath64x64.add(issuedBonds[_user].amountBondsActive, 1);
-		issuedBonds[_user].amountBondsActive = plusOne;
-		return issuedBonds[_user].amountBondsActive;
+	function incrementActiveBonds(address _user) private {
+		int128 currAmount = amountBonds[_user];
+		int128 newAmount = ABDKMath64x64.add(currAmount, 1);
+		amountBonds[_user] = newAmount;
 	}
 
-	function decrementActiveBonds(address _user) private returns (int256) {
-		int128 minusOne = ABDKMath64x64.sub(issuedBonds[_user].amountBondsActive, 1);
-		issuedBonds[_user].amountBondsActive = minusOne;
-		return issuedBonds[_user].amountBondsActive;
+	function decrementActiveBonds(address _user) private {
+		int128 currAmount = amountBonds[_user];
+		int128 newAmount = ABDKMath64x64.sub(currAmount, 1);
+		amountBonds[_user] = newAmount;
 	}
 
-	function getActiveBonds(address _user) private view returns (int256) {
-		return issuedBonds[_user].amountBondsActive;
+	function getActiveBonds(address _user) public view returns (int128) {
+		return amountBonds[_user];
 	}
 
 	function getUserBonds(address _user) public view returns (Bond[] memory) {
@@ -173,8 +170,7 @@ contract BondStorage is AccessControl {
 			setInitialised(_user);
 		}
 
-		Bond memory bond = Bond(_principal, _rate, maturityDate, _data);
-		addBond(_user, bond);
+		addBond(_user, _principal, _rate, maturityDate, _data);
 		incrementActiveBonds(_user);
 	}
 
