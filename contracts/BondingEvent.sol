@@ -24,7 +24,7 @@ contract BondingEvent is AccessControl, BondStorage {
 	}
 
 	// allow quick lookup to see liquidity provided by users
-	mapping(address => TokenMetaData) private userData;
+	TokenMetaData private tokenData;
 	// liquidity pool for a currency pair (sEURO : someToken)
 	address[] public liquidityPools;
 	// minimum currency amount
@@ -50,14 +50,25 @@ contract BondingEvent is AccessControl, BondStorage {
 		manager = INonfungiblePositionManager(_manager);
 	}
 
-	// Adds a new ERC20-token to the list of allowed currency legs
-	function newAllowedErc20(address _token, string memory _name, address _poolAddress) private {
-		require(hasRole(WHITELIST_BONDING_EVENT, msg.sender), 'invalid-whitelist-guard');
-		require(userData[_token].initialised == false, 'token-already-added');
+	modifier onlyPoolOwner {
+		require(hasRole(WHITELIST_BONDING_EVENT, msg.sender), "invalid-user");
+		_;
+	}
 
-		userData[_token].initialised = true;
-		userData[_token].shortName = _name;
-		userData[_token].pool = _poolAddress;
+	modifier isNotInit {
+		require(tokenData.initialised == false, 'token-already-init');
+		_;
+	}
+
+	modifier isInit {
+		require(tokenData.initialised == true, 'token-not-init');
+		_;
+	}
+
+	function bootstrapTokenData(string memory _name, address _poolAddress) private {
+		tokenData.initialised = true;
+		tokenData.shortName = _name;
+		tokenData.pool = _poolAddress;
 	}
 
 
@@ -75,7 +86,8 @@ contract BondingEvent is AccessControl, BondStorage {
 
 	// Initialises a pool with another token (address) and stores it in the array of pools.
 	// Note that the price is in sqrtPriceX96 format.
-	function initialisePool(string memory _otherName, address _otherAddress, uint160 _price, uint24 _fee) external {
+	function initialisePool(string memory _otherName, address _otherAddress, uint160 _price, uint24 _fee)
+	external onlyPoolOwner isNotInit {
 		(address token0, address token1) = getAscendingPair(_otherAddress);
 		fee = _fee;
 		address pool = manager.createAndInitializePoolIfNecessary(
@@ -86,7 +98,7 @@ contract BondingEvent is AccessControl, BondStorage {
 		);
 		tickSpacing = IUniswapV3Pool(pool).tickSpacing();
 		liquidityPools.push(pool);
-		newAllowedErc20(_otherAddress, _otherName, pool);
+		bootstrapTokenData(_otherName, pool);
 	}
 
 	function validTicks() private view returns (bool) {
@@ -169,8 +181,7 @@ contract BondingEvent is AccessControl, BondStorage {
 		address _otherToken,
 		uint256 _maturityInWeeks,
 		int128 _rate
-	) public {
-		require(userData[_otherToken].initialised == true, 'invalid-token-bond');
+	) public isInit {
 		require(validTicks(), 'err-inv-tick');
 
 		uint256 seuro256 = uint256(ABDKMath64x64.toUInt(_amountSeuro));
