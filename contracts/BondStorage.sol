@@ -47,7 +47,6 @@ contract BondStorage is AccessControl {
 	}
 
 	mapping(address => BondRecord) issuedBonds;
-	mapping(address => int128) amountBonds;
 
 	function isInitialised(address _user) private view returns (bool) {
 		return issuedBonds[_user].isInitialised;
@@ -81,14 +80,6 @@ contract BondStorage is AccessControl {
 		issuedBonds[_user].claimAmount = newClaim;
 	}
 
-	// Defunds the claim the user has by receiving TST tokens equal to the claim value left.
-	// This function has to be connected to a middle / cache layer.
-	function defundClaim(address _user, int128 deduct) public onlyOwner {
-		int128 currClaim = issuedBonds[_user].claimAmount;
-		int128 newClaim = ABDKMath64x64.sub(currClaim, deduct);
-		issuedBonds[_user].claimAmount = newClaim;
-	}
-
 	// Returns the total payout and the accrued interest ("profit") component separately
 	function calculateBond(Bond memory bond) private pure returns (int128, int128) {
 		int128 pc = ABDKMath64x64.div(bond.rate, 10 ** 4);
@@ -97,27 +88,15 @@ contract BondStorage is AccessControl {
 	}
 
 	function incrementActiveBonds(address _user) private {
-		int128 currAmount = amountBonds[_user];
+		int128 currAmount = issuedBonds[_user].amountBondsActive;
 		int128 newAmount = ABDKMath64x64.add(currAmount, 1);
-		amountBonds[_user] = newAmount;
+		issuedBonds[_user].amountBondsActive = newAmount;
 	}
 
 	function decrementActiveBonds(address _user) private {
-		int128 currAmount = amountBonds[_user];
+		int128 currAmount = issuedBonds[_user].amountBondsActive;
 		int128 newAmount = ABDKMath64x64.sub(currAmount, 1);
-		amountBonds[_user] = newAmount;
-	}
-
-	function getActiveBonds(address _user) public view returns (int128) {
-		return amountBonds[_user];
-	}
-
-	function getUserBonds(address _user) public view returns (Bond[] memory) {
-		return issuedBonds[_user].bonds;
-	}
-
-	function getUserBondAt(address _user, uint256 index) private view returns (Bond memory) {
-		return getUserBonds(_user)[index];
+		issuedBonds[_user].amountBondsActive = newAmount;
 	}
 
 	function hasExpired(Bond memory bond) private view returns (bool) {
@@ -155,6 +134,8 @@ contract BondStorage is AccessControl {
 		return current + _maturityInWeeks * secondsPerWeek;
 	}
 
+
+	/// ================ BondStorage public APIs ==============
 
 	function startBond(
 		address _user,
@@ -198,6 +179,26 @@ contract BondStorage is AccessControl {
 				decrementActiveBonds(_user);
 			}
 		}
+	}
+
+	function getActiveBonds(address _user) public view returns (int128) {
+		return issuedBonds[_user].amountBondsActive;
+	}
+
+	function getUserBonds(address _user) public view virtual returns (Bond[] memory) {
+		return issuedBonds[_user].bonds;
+	}
+
+	function getBondAt(address _user, uint256 index) public view virtual returns (Bond memory) {
+		return getUserBonds(_user)[index];
+	}
+
+	// Defunds the claim the user has by receiving TST tokens equal to the claim value left.
+	// This function has to be connected to a middle / cache layer.
+	function defundClaim(address _user, int128 deduct) public onlyOwner {
+		int128 currClaim = issuedBonds[_user].claimAmount;
+		int128 newClaim = ABDKMath64x64.sub(currClaim, deduct);
+		issuedBonds[_user].claimAmount = newClaim;
 	}
 
 }
