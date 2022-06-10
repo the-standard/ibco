@@ -189,4 +189,14 @@ contract BondingEvent is AccessControl, BondStorage {
 	function getAmountBonds(address _user) public view returns (int128) {
 		return BondStorage.getActiveBonds(_user);
 	}
+
+	function getUserBonds(address _user) public view override returns (Bond[] memory) {
+		return BondStorage.getUserBonds(_user);
+	}
+
+	function getUserBondAt(address _user, uint128 index) public view returns (Bond memory) {
+		require(index <= getUserBonds(_user).length - 1, 'invalid-bond-index');
+
+		return BondStorage.getBondAt(_user, index);
+	}
 }
