@@ -109,8 +109,19 @@ describe('BondingEvent', async () => {
 			seuroAmount, usdtAmount, USDT_ADDRESS, ONE_YEAR_IN_WEEKS, HALF_PERCENT_RATE,
 		  );
 
-		  const bondsAmount = await BondingEvent.connect(customer).getActiveBonds(CUSTOMER_ADDR);
+		  const bondsAmount = await BondingEvent.connect(customer).getAmountBonds(CUSTOMER_ADDR);
 		  expect(bondsAmount).to.equal(1);
+
+		  const firstBond = await BondingEvent.connect(customer).getUserBondAt(CUSTOMER_ADDR, 0);
+		  let actualPrincipal = firstBond.principal;
+		  let actualRate = firstBond.rate;
+		  expect(actualPrincipal).to.equal(seuroAmount);
+		  expect(actualRate).to.equal(HALF_PERCENT_RATE);
+
+		  //TODO: skip forward 52 weeks and test that the payout is correct
+		  //TODO: add multiple bonds to test that the list of active bonds and inactive bonds are updated properly
+		  //TODO: add failure cases with "unreasonable" bond data (e.g., a maturity in the past) that should not process
+		  //TODO: find other clever ways to try to "game" the system
 		});
 	  });
 	});
