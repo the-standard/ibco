@@ -164,7 +164,7 @@ contract BondStorage is AccessControl {
 	// subtracted with the appropriate amount and the claim counter is increased with the
 	// principal(s) and the accrued interest.
 	// If the user has no bonds active, the isActive will be switched to false.
-	function refreshBondStatus(address _user) public onlyOwner {
+	function refreshBondStatus(address _user) public {
 		Bond[] memory bonds = getUserBonds(_user);
 		uint256 total = bonds.length;
 
