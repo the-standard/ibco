@@ -39,6 +39,9 @@ contract BondingEvent is AccessControl, BondStorage {
 	int24 private constant TICK_UPPER = 10000;  //      to better concentrate / spread out liquidity
 	uint24 fee;
 
+	// Emitted when a user adds liquidity.
+	event mintPosition(address user, uint256 nft, uint128 liquidity, uint256 amount0, uint256 amount1);
+
 	// only contract owner can add the other currency leg
 	bytes32 public constant WHITELIST_BONDING_EVENT = keccak256("WHITELIST_BONDING_EVENT");
 
@@ -105,6 +108,26 @@ contract BondingEvent is AccessControl, BondStorage {
 		return TICK_LOWER % tickSpacing == 0 && TICK_UPPER % tickSpacing == 0;
 	}
 
+	// Various of allowances to be able to create a liquidity position
+	function mintPermissionsPrepare(
+		address _sender,
+		address _token0,
+		address _token1,
+		uint256 _amount0,
+		uint256 _amount1,
+		uint256 _amount0Desired,
+		uint256 _amount1Desired
+	) private {
+		// approve the contract to send the tokens to manager
+		TransferHelper.safeApprove(_token0, address(manager), _amount0Desired);
+		TransferHelper.safeApprove(_token1, address(manager), _amount1Desired);
+
+		// send the tokens from the sender's account to the contract account
+		TransferHelper.safeTransferFrom(_token0, _sender, address(this), _amount0);
+		TransferHelper.safeTransferFrom(_token1, _sender, address(this), _amount1);
+	}
+
+
 	struct LiquidityPair {
 		uint256 amountSeuroU256;
 		uint256 amountOtherU256;
@@ -114,12 +137,6 @@ contract BondingEvent is AccessControl, BondStorage {
 	}
 
 	function addLiquidity(LiquidityPair memory pair) private returns (PositionMetaData memory) {
-
-		// send sEURO tokens from the sender's account to the contract account
-		TransferHelper.safeTransferFrom(sEuroToken, msg.sender, address(this), pair.amountSeuroU256);
-		// send other erc20 tokens from the sender's account to the contract account
-		TransferHelper.safeTransferFrom(pair.other, msg.sender, address(this), pair.amountOtherU256);
-
 		(address token0, address token1) = getAscendingPair(pair.other);
 
 		// not sure why the full amount of seuro can't be added
@@ -133,10 +150,7 @@ contract BondingEvent is AccessControl, BondStorage {
 			(pair.amountSeuroU256, pair.amountOtherU256, minSeuro, MIN_VAL) :
 			(pair.amountOtherU256, pair.amountSeuroU256, MIN_VAL, minSeuro);
 
-		// approve the contract to send sEURO tokens to manager
-		TransferHelper.safeApprove(sEuroToken, address(manager), amount0Desired);
-		// approve the contract to send other erc20 tokens to manager
-		TransferHelper.safeApprove(pair.other, address(manager), amount1Desired);
+		mintPermissionsPrepare(msg.sender, token0, token1, amount0Min, amount1Min, amount0Desired, amount1Desired);
 
 
 		INonfungiblePositionManager.MintParams memory params =
@@ -156,6 +170,7 @@ contract BondingEvent is AccessControl, BondStorage {
 
 		// provide liquidity to the pool
 		(uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = manager.mint(params);
+		emit mintPosition(msg.sender, tokenId, liquidity, amount0, amount1);
 		
 		// do a swap if amount0 contains the foreign token to keep sEURO first
 		if (amount0 == pair.amountOtherU256) (amount0, amount1) = (amount1, amount0);
