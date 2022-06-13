@@ -34,8 +34,8 @@ contract BondingEvent is AccessControl, BondStorage {
 
 	// https://docs.uniswap.org/protocol/reference/core/libraries/Tick
 	int24 public tickSpacing;
-	int24 public tickLow;
-	int24 public tickHigh;
+	int24 public tickLowerBound;
+	int24 public tickHigherBound;
 	uint24 fee;
 
 	// Emitted when a user adds liquidity.
@@ -49,8 +49,8 @@ contract BondingEvent is AccessControl, BondStorage {
 		sEuroToken = _sEuro;
 		otherToken = _otherToken;
 		bondStorage = _bondStorage;
-		tickLow = -10000;
-		tickHigh = 10000;
+		tickLowerBound = -10000;
+		tickHigherBound = 10000;
 		manager = INonfungiblePositionManager(_manager);
 	}
 
@@ -70,13 +70,14 @@ contract BondingEvent is AccessControl, BondStorage {
 	}
 
 	modifier validTickSpacing {
-		require(tickLow % tickSpacing == 0 && tickHigh % tickSpacing == 0);
+		require(tickLowerBound % tickSpacing == 0 && tickHigherBound % tickSpacing == 0);
 		_;
 	}
 
 	modifier validTickRange(int24 low, int24 high) {
 		require(high <= 887270, "tick-max-exceeded");
 		require(low >= -887270, "tick-min-exceeded");
+		require(high != 0 && low != 0, "tick-val-zero");
 		_;
 	}
 
@@ -87,8 +88,12 @@ contract BondingEvent is AccessControl, BondStorage {
 	}
 
 	function adjustTick(int24 newLower, int24 newHigher) public onlyPoolOwner isInit validTickRange(newLower, newHigher) {
-		tickLow = newLower;
-		tickHigh = newHigher;
+		tickLowerBound = newLower;
+		tickHigherBound = newHigher;
+	}
+
+	function getTickBounds() public view returns (int24[2] memory) {
+		return [tickLowerBound, tickHigherBound];
 	}
 
 	// Compares the Standard Euro token to another token and returns them in ascending order
@@ -166,8 +171,8 @@ contract BondingEvent is AccessControl, BondStorage {
 			token0: token0,
 			token1: token1,
 			fee: fee,
-			tickLower: tickLow,
-			tickUpper: tickHigh,
+			tickLower: tickLowerBound,
+			tickUpper: tickHigherBound,
 			amount0Desired: amount0Desired,
 			amount1Desired: amount1Desired,
 			amount0Min: amount0Min,
