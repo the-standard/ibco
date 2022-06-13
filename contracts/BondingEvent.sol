@@ -29,7 +29,7 @@ contract BondingEvent is AccessControl, BondStorage {
 	// minimum currency amount
 	uint256 public immutable MIN_VAL = 0;
 
-	// uniswap: creates bond
+	// uniswap: creates liquidity in the pool
 	INonfungiblePositionManager private immutable manager;
 
 	// https://docs.uniswap.org/protocol/reference/core/libraries/Tick
@@ -200,7 +200,7 @@ contract BondingEvent is AccessControl, BondStorage {
 	/// @param _amountSeuro The amount of sEURO token to bond
 	/// @param _amountOther The amount of the other token to bond
 	/// @param _otherToken The address of the other token
-	/// @param _maturityInWeeks The amount of months a bond is active.
+	/// @param _maturityInWeeks The amount of weeks a bond is active.
 	///                          At the end of maturity, the principal + accrued interest is paid out all at once in TST.
 	/// @param _rate The rate is represented as a 10,000-factor of each basis point so the most stable fee is 500 (= 0.05 pc)
 	function bond(
@@ -232,7 +232,7 @@ contract BondingEvent is AccessControl, BondStorage {
 	}
 
 	function getUserBondAt(address _user, uint128 index) public view returns (Bond memory) {
-		require(index <= getUserBonds(_user).length - 1, 'invalid-bond-index');
+		require(index <= getUserBonds(_user).length - 1 && index >= 0, 'invalid-bond-index');
 
 		return BondStorage.getBondAt(_user, index);
 	}
