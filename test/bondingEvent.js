@@ -64,12 +64,27 @@ describe('BondingEvent', async () => {
 	});
 
 	describe('initialise pool', async () => {
-	  it('initialises and stores the tick spacing for the pool', async () => {
+	  it('initialises and changes the tick range for the pool', async () => {
 		const price = encodePriceSqrt(100, 93);
 		expect(await BondingEvent.isPoolInitialised()).to.equal(false);
 		await BondingEvent.initialisePool("USDT", USDT_ADDRESS, price, MOST_STABLE_FEE);
 		expect(await BondingEvent.isPoolInitialised()).to.equal(true);
 		expect(await BondingEvent.tickSpacing()).to.equal(10);
+
+		let bound = await BondingEvent.getTickBounds();
+		expect(bound[0]).to.equal(-10000);
+		expect(bound[1]).to.equal(10000);
+		await BondingEvent.adjustTick(-25000, 25000);
+		bound = await BondingEvent.getTickBounds();
+		expect(bound[0]).to.equal(-25000);
+		expect(bound[1]).to.equal(25000);
+
+		await expect(BondingEvent.adjustTick(-9999999999, 10000)).to.be.throw;
+		await expect(BondingEvent.adjustTick(10000, 9999999999)).to.be.throw;
+		await expect(BondingEvent.adjustTick(-10001, 10000)).to.be.throw;
+		await expect(BondingEvent.adjustTick(-10000, 10001)).to.be.throw;
+		await expect(BondingEvent.adjustTick(0, 10000)).to.be.reverted;
+		await expect(BondingEvent.adjustTick(10000, 0)).to.be.reverted;
 	  });
 	});
 
