@@ -19,7 +19,8 @@ contract BondingEvent is AccessControl, BondStorage {
 
 	struct TokenMetaData {
 		bool initialised;
-		address pool; //TODO: clarify relation between pool address and tokenId (NFT)
+		address pool; // "Every pool is a unique instance of the UniswapV3Pool contract and is deployed
+		              // at its own unique address" (see https://docs.uniswap.org/protocol/reference/deployments)
 		string shortName;
 	}
 
@@ -35,8 +36,8 @@ contract BondingEvent is AccessControl, BondStorage {
 
 	// https://docs.uniswap.org/protocol/reference/core/libraries/Tick
 	int24 public tickSpacing;
-	int24 private constant TICK_LOWER = -10000; //TODO: investigate and optimise lower and upper bound
-	int24 private constant TICK_UPPER = 10000;  //      to better concentrate / spread out liquidity
+	int24 public tickLow;
+	int24 public tickHigh;
 	uint24 fee;
 
 	// Emitted when a user adds liquidity.
@@ -50,6 +51,8 @@ contract BondingEvent is AccessControl, BondStorage {
 		sEuroToken = _sEuro;
 		otherToken = _otherToken;
 		bondStorage = _bondStorage;
+		tickLow = -10000;
+		tickHigh = 10000;
 		manager = INonfungiblePositionManager(_manager);
 	}
 
@@ -68,12 +71,27 @@ contract BondingEvent is AccessControl, BondStorage {
 		_;
 	}
 
+	modifier validTickSpacing {
+		require(tickLow % tickSpacing == 0 && tickHigh % tickSpacing == 0);
+		_;
+	}
+
+	modifier validTickRange(int24 low, int24 high) {
+		require(high <= 887270, "tick-max-exceeded");
+		require(low >= -887270, "tick-min-exceeded");
+		_;
+	}
+
 	function bootstrapTokenData(string memory _name, address _poolAddress) private {
 		tokenData.initialised = true;
 		tokenData.shortName = _name;
 		tokenData.pool = _poolAddress;
 	}
 
+	function adjustTick(int24 newLower, int24 newHigher) public onlyPoolOwner isInit validTickRange(newLower, newHigher) {
+		tickLow = newLower;
+		tickHigh = newHigher;
+	}
 
 	// Compares the Standard Euro token to another token and returns them in ascending order
 	function getAscendingPair(address _otherToken) private view returns (address token0, address token1) {
@@ -102,10 +120,6 @@ contract BondingEvent is AccessControl, BondStorage {
 		tickSpacing = IUniswapV3Pool(pool).tickSpacing();
 		liquidityPools.push(pool);
 		bootstrapTokenData(_otherName, pool);
-	}
-
-	function validTicks() private view returns (bool) {
-		return TICK_LOWER % tickSpacing == 0 && TICK_UPPER % tickSpacing == 0;
 	}
 
 	// Various of allowances to be able to create a liquidity position
@@ -139,8 +153,7 @@ contract BondingEvent is AccessControl, BondStorage {
 	function addLiquidity(LiquidityPair memory pair) private returns (PositionMetaData memory) {
 		(address token0, address token1) = getAscendingPair(pair.other);
 
-		// not sure why the full amount of seuro can't be added
-		// possible explanation: the price moves so we need some margin, see link below:
+		// The price moves so we need some margin, see link below:
 		// https://github.com/Uniswap/v3-periphery/blob/main/contracts/NonfungiblePositionManager.sol#L273-L275
 		int128 seuroMin128 = ABDKMath64x64.sub(pair.amountSeuro128, 10);
 		uint256 minSeuro = uint256(ABDKMath64x64.toUInt(seuroMin128));
@@ -152,14 +165,13 @@ contract BondingEvent is AccessControl, BondStorage {
 
 		mintPermissionsPrepare(msg.sender, token0, token1, amount0Min, amount1Min, amount0Desired, amount1Desired);
 
-
 		INonfungiblePositionManager.MintParams memory params =
 			INonfungiblePositionManager.MintParams({
 			token0: token0,
 			token1: token1,
 			fee: fee,
-			tickLower: TICK_LOWER,
-			tickUpper: TICK_UPPER,
+			tickLower: tickLow,
+			tickUpper: tickHigh,
 			amount0Desired: amount0Desired,
 			amount1Desired: amount1Desired,
 			amount0Min: amount0Min,
@@ -196,9 +208,7 @@ contract BondingEvent is AccessControl, BondStorage {
 		address _otherToken,
 		uint256 _maturityInWeeks,
 		int128 _rate
-	) public isInit {
-		require(validTicks(), 'err-inv-tick');
-
+	) public isInit validTickSpacing {
 		uint256 seuro256 = uint256(ABDKMath64x64.toUInt(_amountSeuro));
 		uint256 sother256 = uint256(ABDKMath64x64.toUInt(_amountOther));
 
