@@ -53,7 +53,7 @@ describe('BondingEvent', async () => {
   describe('initialise bonding event', async () => {
 	it('has not initialised pool', async () => {
 	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address);
-	  expect(await BondingEvent.getPoolAmount()).to.equal(0);
+	  expect(await BondingEvent.isPoolInitialised()).to.equal(false);
 	});
   });
 
@@ -64,15 +64,11 @@ describe('BondingEvent', async () => {
 	});
 
 	describe('initialise pool', async () => {
-	  it('initialises the uniswap pool with one currency pair', async () => {
-		const price = encodePriceSqrt(100,93);
-		await BondingEvent.initialisePool("USDT", USDT_ADDRESS, price, MOST_STABLE_FEE);
-		expect(await BondingEvent.getPoolAmount()).not.to.equal(0);
-	  });
-
-	  it('stores the tick spacing for the pool', async () => {
+	  it('initialises and stores the tick spacing for the pool', async () => {
 		const price = encodePriceSqrt(100, 93);
+		expect(await BondingEvent.isPoolInitialised()).to.equal(false);
 		await BondingEvent.initialisePool("USDT", USDT_ADDRESS, price, MOST_STABLE_FEE);
+		expect(await BondingEvent.isPoolInitialised()).to.equal(true);
 		expect(await BondingEvent.tickSpacing()).to.equal(10);
 	  });
 	});
@@ -85,7 +81,7 @@ describe('BondingEvent', async () => {
 			encodePriceSqrt(100, SeurosPerUsdt) :
 			encodePriceSqrt(SeurosPerUsdt, 100);
 		  await BondingEvent.initialisePool("USDT", USDT_ADDRESS, price, MOST_STABLE_FEE);
-		  expect(await BondingEvent.getPoolAmount()).to.equal(1);
+		  expect(await BondingEvent.isPoolInitialised()).to.equal(true);
 		});
 
 		it('bonds given sEURO amount with required USDT for 1 year', async () => {

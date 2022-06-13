@@ -26,8 +26,6 @@ contract BondingEvent is AccessControl, BondStorage {
 
 	// allow quick lookup to see liquidity provided by users
 	TokenMetaData private tokenData;
-	// liquidity pool for a currency pair (sEURO : someToken)
-	address[] public liquidityPools;
 	// minimum currency amount
 	uint256 public immutable MIN_VAL = 0;
 
@@ -100,9 +98,8 @@ contract BondingEvent is AccessControl, BondStorage {
 			: (_otherToken, sEuroToken);
 	}
 
-	// Returns the amount of pools created
-	function getPoolAmount() external view returns (uint256) {
-		return liquidityPools.length;
+	function isPoolInitialised() external view returns (bool) {
+		return tokenData.initialised;
 	}
 
 	// Initialises a pool with another token (address) and stores it in the array of pools.
@@ -118,7 +115,6 @@ contract BondingEvent is AccessControl, BondStorage {
 			_price
 		);
 		tickSpacing = IUniswapV3Pool(pool).tickSpacing();
-		liquidityPools.push(pool);
 		bootstrapTokenData(_otherName, pool);
 	}
 
