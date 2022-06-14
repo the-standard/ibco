@@ -18,8 +18,8 @@ contract BondingCurve {
     address private immutable seuro;
     uint256 private immutable bucketSize;
 
-    uint32 private bucket;
-    uint256 public bucketPrice;
+    uint32 private cacheBucketIndex;
+    uint256 public cacheBucketPrice;
 
     constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
         seuro = _seuro;
@@ -50,12 +50,12 @@ contract BondingCurve {
     }
 
     function setBucketCache() private {
-        bucket = 0;
-        bucketPrice = getBucketPrice(bucket);
+        cacheBucketIndex = 0;
+        cacheBucketPrice = getBucketPrice(cacheBucketIndex);
     }
 
     function getBucketPrice(uint32 bucketIndex) private view returns (uint256) {
-        uint256 medianBucketToken = bucketIndex * bucketSize + bucketSize / 2;
+        uint256 medianBucketToken = getMedianToken(bucketIndex);
         int128 supplyRatio = ABDKMath64x64.divu(medianBucketToken, maxSupply);
         int128 log2SupplyRatio = ABDKMath64x64.log_2(supplyRatio);
         int128 jlog2SupplyRatio = ABDKMath64x64.mul(j, log2SupplyRatio);
@@ -64,21 +64,43 @@ contract BondingCurve {
         return curve + initialPrice;
     }
 
-    function seuroValue(uint256 _euroAmount) external returns (uint256) {
-        return convertEuroToSeuro(_euroAmount, bucketPrice);
-        // if supply is beyond current bucket
-        //   move bucket index
-        //   calculate new cached bucket price
-        // in loop (while remaining > 0):
-        //   if remaining euros is more than equivalent seuro in remaining in bucket
-        //     subtract equivalent of seuro in euros from remaining
-        //     add equivalent seuro to "seuroTotal"
-        //     increment current bucket (not the field)
-        //   else
-        //     add equivalent seuro to "seuroTotal" for remaining euros
+    function getMedianToken(uint32 _bucketIndex) private view returns (uint256) {
+        return _bucketIndex * bucketSize + bucketSize / 2;
     }
 
-    function convertEuroToSeuro(uint256 _amount, uint256 _rate) private view returns (uint256) {
+    function seuroValue(uint256 _euroAmount) external returns (uint256) {
+        uint256 sEuroTotal = 0;
+        uint256 remainingEuros = _euroAmount;
+        uint32 bucketIndex = cacheBucketIndex;
+        uint256 bucketPrice = cacheBucketPrice;
+        while (remainingEuros > 0) {
+            uint256 remainingInSeuro = convertEuroToSeuro(remainingEuros, bucketPrice);
+            uint256 remainingCapacityInBucket = remainingCapacityInBucket(bucketIndex);
+            if (remainingInSeuro > remainingCapacityInBucket) {
+                sEuroTotal += remainingCapacityInBucket;
+                remainingEuros -= convertSeuroToEuro(remainingCapacityInBucket, bucketPrice);
+                bucketIndex++;
+                bucketPrice = getBucketPrice(bucketIndex);
+            } else {
+                sEuroTotal += remainingInSeuro;
+                remainingEuros = 0;
+            }
+        }
+        return sEuroTotal;
+    }
+
+    function remainingCapacityInBucket(uint32 _bucketIndex) private view returns(uint256) {
+        uint256 bucketCapacity = (_bucketIndex + 1) * bucketSize;
+        uint256 supply = SEuro(seuro).totalSupply();
+        uint256 diff = bucketCapacity - supply;
+        return diff > bucketSize ? bucketSize : diff;
+    }
+
+    function convertEuroToSeuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
         return _amount * 10 ** 18 / _rate;
+    }
+
+    function convertSeuroToEuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
+        return _amount * _rate / 10 ** 18;
     }
 }

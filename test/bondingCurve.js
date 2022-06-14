@@ -40,8 +40,20 @@ describe('BondingCurve', async () => {
 
       const seuros = await BondingCurve.callStatic.seuroValue(euros);
 
-      const expectedSeuros = euros.mul(ethers.utils.parseEther('1')).div(await BondingCurve.bucketPrice())
+      const expectedSeuros = euros.mul(ethers.utils.parseEther('1')).div(await BondingCurve.cacheBucketPrice())
       expect(seuros).to.equal(expectedSeuros);
+    });
+
+    it('should price some tokens from next bucket if transaction will cross bucket limit', async () => {
+      // will force crossover to next bucket due to discount
+      const euros = BUCKET_SIZE;
+      
+      const firstBucketPrice = await BondingCurve.cacheBucketPrice();
+      const seuros = await BondingCurve.callStatic.seuroValue(euros);
+
+      const maximumSeuros = euros.mul(ethers.utils.parseEther('1')).div(firstBucketPrice);
+      // should be less than maximum seuros as that calculation assumes all seuro will be priced in first bucket
+      expect(seuros).to.be.lt(maximumSeuros);
     });
   });
 });
