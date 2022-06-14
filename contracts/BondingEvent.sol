@@ -7,7 +7,7 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "abdk-libraries-solidity/ABDKMath64x64.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract BondingEvent is AccessControl, BondStorage {
 	// sEUR: the main leg of the currency pair
@@ -144,25 +144,18 @@ contract BondingEvent is AccessControl, BondStorage {
 
 
 	struct LiquidityPair {
-		uint256 amountSeuroU256;
-		uint256 amountOtherU256;
-		int128 amountSeuro128;
-		int128 amountOther128;
+		uint256 amountSeuro;
+		uint256 amountOther;
 		address other;
 	}
 
-	function addLiquidity(LiquidityPair memory pair) private returns (PositionMetaData memory) {
-		(address token0, address token1) = getAscendingPair(pair.other);
-
-		// The price moves so we need some margin, see link below:
-		// https://github.com/Uniswap/v3-periphery/blob/main/contracts/NonfungiblePositionManager.sol#L273-L275
-		int128 seuroMin128 = ABDKMath64x64.sub(pair.amountSeuro128, 10);
-		uint256 minSeuro = uint256(ABDKMath64x64.toUInt(seuroMin128));
+	function addLiquidity(uint256 _amountSeuro, uint256 _amountOther, address _other) private returns (PositionMetaData memory) {
+		(address token0, address token1) = getAscendingPair(_other);
 
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
 			token0 == sEuroToken ?
-			(pair.amountSeuroU256, pair.amountOtherU256, minSeuro, MIN_VAL) :
-			(pair.amountOtherU256, pair.amountSeuroU256, MIN_VAL, minSeuro);
+			(_amountSeuro, _amountOther, _amountSeuro, MIN_VAL) :
+			(_amountOther, _amountSeuro, MIN_VAL, _amountSeuro);
 
 		mintPermissionsPrepare(msg.sender, token0, token1, amount0Min, amount1Min, amount0Desired, amount1Desired);
 
@@ -186,7 +179,7 @@ contract BondingEvent is AccessControl, BondStorage {
 		emit mintPosition(msg.sender, tokenId, liquidity, amount0, amount1);
 		
 		// do a swap if amount0 contains the foreign token to keep sEURO first
-		if (amount0 == pair.amountOtherU256) (amount0, amount1) = (amount1, amount0);
+		if (amount0 == _amountOther) (amount0, amount1) = (amount1, amount0);
 		PositionMetaData memory pos = PositionMetaData(tokenId, liquidity, /* sEURO field */ amount0, /* other field */ amount1);
 		return pos;
 
@@ -204,26 +197,19 @@ contract BondingEvent is AccessControl, BondStorage {
 	///                          At the end of maturity, the principal + accrued interest is paid out all at once in TST.
 	/// @param _rate The rate is represented as a 10,000-factor of each basis point so the most stable fee is 500 (= 0.05 pc)
 	function bond(
-		int128 _amountSeuro,
-		int128 _amountOther,
+		uint256 _amountSeuro,
+		uint256 _amountOther,
 		address _otherToken,
 		uint256 _maturityInWeeks,
-		int128 _rate
+		uint256 _rate
 	) public isInit validTickSpacing {
-		uint256 seuro256 = uint256(ABDKMath64x64.toUInt(_amountSeuro));
-		uint256 sother256 = uint256(ABDKMath64x64.toUInt(_amountOther));
-
-		// to avoid stack to deep in AddLiquidity
-		LiquidityPair memory pair = LiquidityPair(seuro256, sother256, _amountSeuro, _amountOther, _otherToken);
-
 		// information about the liquidity position after it has been successfully added
-		PositionMetaData memory position = addLiquidity(pair);
+		PositionMetaData memory position = addLiquidity(_amountSeuro, _amountOther, _otherToken);
 		// begin bonding event
 		BondStorage.startBond(msg.sender, _amountSeuro, _rate, _maturityInWeeks, position);
-
 	}
 
-	function getAmountBonds(address _user) public view returns (int128) {
+	function getAmountBonds(address _user) public view returns (uint256) {
 		return BondStorage.getActiveBonds(_user);
 	}
 
@@ -236,4 +222,13 @@ contract BondingEvent is AccessControl, BondStorage {
 
 		return BondStorage.getBondAt(_user, index);
 	}
+
+	function getUserProfit(address _user) public view returns (uint256) {
+		return BondStorage.getProfit(_user);
+	}
+
+	function updateBondStatus(address _user) public {
+		BondStorage.refreshBondStatus(_user);
+	}
+
 }
