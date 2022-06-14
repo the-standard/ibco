@@ -14,20 +14,19 @@ contract IBCO is Ownable {
     uint256 private start;
     uint256 private stop;
     address private seuro;
-    address private sEuroRateCalculator;    
-    address private tokenManager;
+    SEuroRateCalculator private sEuroRateCalculator;    
+    TokenManager private tokenManager;
 
     event Swap(bytes32 _token, uint256 amountIn, uint256 amountOut);
 
     constructor(address _seuro, address _sEuroRateCalculator, address _tokenManager) {
         seuro = _seuro;
-        sEuroRateCalculator = _sEuroRateCalculator;
-        tokenManager = _tokenManager;
+        sEuroRateCalculator = SEuroRateCalculator(_sEuroRateCalculator);
+        tokenManager = TokenManager(_tokenManager);
     }
 
     function getEuros(uint256 _amount, address _chainlinkAddr, uint8 _chainlinkDec) private view returns (uint256) {
-        SEuroRateCalculator calculator = SEuroRateCalculator(sEuroRateCalculator);
-        return _amount * calculator.calculate(_chainlinkAddr, _chainlinkDec) / calculator.FIXED_POINT();
+        return _amount * sEuroRateCalculator.calculate(_chainlinkAddr, _chainlinkDec) / sEuroRateCalculator.FIXED_POINT();
     }
 
     function activated() private view returns (bool) {
@@ -45,7 +44,7 @@ contract IBCO is Ownable {
     }
 
     function swap(bytes32 _token, uint256 _amount) external ifActive {
-        (address addr, address chainlinkAddr, uint8 chainlinkDec) = TokenManager(tokenManager).get(_token);
+        (address addr, address chainlinkAddr, uint8 chainlinkDec) = tokenManager.get(_token);
         IERC20 token = IERC20(addr);
         require(token.balanceOf(msg.sender) >= _amount, "err-tok-bal");
         require(token.allowance(msg.sender, address(this)) >= _amount, "err-tok-allow");
@@ -56,7 +55,7 @@ contract IBCO is Ownable {
     }
 
     function swapETH() external payable ifActive {
-        (address addr, address chainlinkAddr, uint8 chainlinkDec) = TokenManager(tokenManager).get(bytes32("WETH"));
+        (address addr, address chainlinkAddr, uint8 chainlinkDec) = tokenManager.get(bytes32("WETH"));
         WETH weth = WETH(addr);
         weth.deposit{value: msg.value};
         uint256 euros = getEuros(msg.value, chainlinkAddr, chainlinkDec);
