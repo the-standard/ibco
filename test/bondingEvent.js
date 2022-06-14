@@ -26,7 +26,7 @@ let USDT_ADDRESS;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 const MOST_STABLE_FEE = 500;
-const HALF_PERCENT_RATE = 5000;
+const HALF_PERCENT_RATE = 500;
 const ONE_YEAR_IN_WEEKS = 52;
 
 
@@ -129,7 +129,15 @@ describe('BondingEvent', async () => {
 		  expect(actualPrincipal).to.equal(seuroAmount);
 		  expect(actualRate).to.equal(HALF_PERCENT_RATE);
 
-		  //TODO: skip forward 52 weeks and test that the payout is correct
+		  const fiftyTwoWeeksInSeconds = 52 * 7 * 24 * 60 * 60;
+		  await ethers.provider.send('evm_increaseTime', [fiftyTwoWeeksInSeconds]);
+		  await ethers.provider.send('evm_mine');
+		  await BondingEvent.connect(customer).updateBondStatus(CUSTOMER_ADDR);
+
+		  let expectedProfit = ethers.utils.parseEther('10000').toString(); // 2_000_000 * 0.005 = 10_000
+		  let actualProfit = (await BondingEvent.getUserProfit(CUSTOMER_ADDR)).toString();
+		  expect(actualProfit).to.equal(expectedProfit);
+
 		  //TODO: add multiple bonds to test that the list of active bonds and inactive bonds are updated properly
 		  //TODO: add failure cases with "unreasonable" bond data (e.g., a maturity in the past) that should not process
 		  //TODO: find other clever ways to try to "game" the system
