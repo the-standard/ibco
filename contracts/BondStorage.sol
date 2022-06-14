@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "abdk-libraries-solidity/ABDKMath64x64.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract BondStorage is AccessControl {
 	bytes32 public constant WHITELIST_BOND_STORAGE = keccak256("WHITELIST_BOND_STORAGE");
@@ -30,20 +30,21 @@ contract BondStorage is AccessControl {
 
 	// Bond is a traditional bond: exchanged for a principal with a fixed rate and maturity
 	struct Bond {
-		int128 principal;      // amount in sEURO
-		int128 rate;           // example: 500 is 0.05 pc per annum
-		uint256 maturity;      // in amount of weeks
-		PositionMetaData data; // liquidity position data
+		uint256 principal;      // amount in sEURO
+		uint256 rate;           // example: 500 is 0.5 pc per annum (= 0.005)
+		uint256 maturity;       // in amount of weeks
+		bool tapped;            // if we squeezed the profit from this bond
+		PositionMetaData data;  // liquidity position data
 	}
 
 	// BondRecord holds the main data
 	struct BondRecord {
-		bool isInitialised;        // if the user has bonded before
-		bool isActive;             // if the user has an active bond
-		int128 amountBondsActive;  // amount of bonds in play
-		Bond[] bonds;              // all the bonds in play
-		int128 profitAmount;       // total profit: all payout less the principals
-		int128 claimAmount;        // total claim from expired bonds (valued in sEURO)
+		bool isInitialised;         // if the user has bonded before
+		bool isActive;              // if the user has an active bond
+		uint256 amountBondsActive;  // amount of bonds in play
+		Bond[] bonds;               // all the bonds in play
+		uint256 profitAmount;       // total profit: all payout less the principals
+		uint256 claimAmount;        // total claim from expired bonds (valued in sEURO)
 	}
 
 	mapping(address => BondRecord) issuedBonds;
@@ -64,38 +65,46 @@ contract BondStorage is AccessControl {
 		issuedBonds[_user].isActive = true;
 	}
 
-	function addBond(address _user, int128 _principal, int128 _rate, uint256 maturityDate, PositionMetaData memory _data) private {
-		issuedBonds[_user].bonds.push(Bond(_principal, _rate, maturityDate, _data));
+	function addBond(address _user, uint256 _principal, uint256 _rate, uint256 maturityDate, PositionMetaData memory _data) private {
+		issuedBonds[_user].bonds.push(Bond(_principal, _rate, maturityDate, false, _data));
 	}
 
-	function increaseProfitAmount(address _user, int128 latestAddition) private {
-		int128 currProfit = issuedBonds[_user].profitAmount;
-		int128 newProfit = ABDKMath64x64.add(latestAddition, currProfit);
+	function tapBond(address _user, uint256 index) private {
+		issuedBonds[_user].bonds[index].tapped = true;
+	}
+
+	function increaseProfitAmount(address _user, uint256 latestAddition) private {
+		uint256 currProfit = issuedBonds[_user].profitAmount;
+		uint256 newProfit = SafeMath.add(latestAddition, currProfit);
 		issuedBonds[_user].profitAmount = newProfit;
 	}
 
-	function increaseClaimAmount(address _user, int128 latestAddition) private {
-		int128 currClaim = issuedBonds[_user].claimAmount;
-		int128 newClaim = ABDKMath64x64.add(latestAddition, currClaim);
+	function increaseClaimAmount(address _user, uint256 latestAddition) private {
+		uint256 currClaim = issuedBonds[_user].claimAmount;
+		uint256 newClaim = SafeMath.add(latestAddition, currClaim);
 		issuedBonds[_user].claimAmount = newClaim;
 	}
 
 	// Returns the total payout and the accrued interest ("profit") component separately
-	function calculateBond(Bond memory bond) private pure returns (int128, int128) {
-		int128 pc = ABDKMath64x64.div(bond.rate, 10 ** 4);
-		int128 profit = ABDKMath64x64.mul(pc, bond.principal);
-		return (bond.principal + profit, profit);
+	function calculateBond(Bond memory bond) private pure returns (uint256, uint256) {
+		// basic (rate * principal) calculations
+		uint256 rateFactor = 100000; // due to the way we store interest rates
+		uint256 ratePrincipal = SafeMath.mul(bond.rate, bond.principal);
+		uint256 denominator = SafeMath.add(bond.principal, ratePrincipal);
+		uint256 payout = SafeMath.div(denominator, rateFactor);
+		uint256 profit = SafeMath.div(ratePrincipal, rateFactor);
+		return (payout, profit);
 	}
 
 	function incrementActiveBonds(address _user) private {
-		int128 currAmount = issuedBonds[_user].amountBondsActive;
-		int128 newAmount = ABDKMath64x64.add(currAmount, 1);
+		uint256 currAmount = issuedBonds[_user].amountBondsActive;
+		uint256 newAmount = SafeMath.add(currAmount, 1);
 		issuedBonds[_user].amountBondsActive = newAmount;
 	}
 
 	function decrementActiveBonds(address _user) private {
-		int128 currAmount = issuedBonds[_user].amountBondsActive;
-		int128 newAmount = ABDKMath64x64.sub(currAmount, 1);
+		uint256 currAmount = issuedBonds[_user].amountBondsActive;
+		uint256 newAmount = SafeMath.sub(currAmount, 1);
 		issuedBonds[_user].amountBondsActive = newAmount;
 	}
 
@@ -139,8 +148,8 @@ contract BondStorage is AccessControl {
 
 	function startBond(
 		address _user,
-		int128 _principal,
-		int128 _rate,
+		uint256 _principal,
+		uint256 _rate,
 		uint256 _maturityInWeeks,
 		PositionMetaData memory _data
 	) public {
@@ -172,8 +181,9 @@ contract BondStorage is AccessControl {
 		// we do the O(n) solution and check each bond at every refresh
 		// TODO: to optimise later with more clever sorting algo
 		for (uint i = 0; i < total; i++) {
-			if (hasExpired(bonds[i])) {
-				(int128 payout, int128 profit) = calculateBond(bonds[i]);
+			if (hasExpired(bonds[i]) && !bonds[i].tapped) {
+				tapBond(_user, i); // prevents the abuse of squeezing profit from same bond more than once
+				(uint256 payout, uint256 profit) = calculateBond(bonds[i]);
 				increaseProfitAmount(_user, profit);
 				increaseClaimAmount(_user, payout);
 				decrementActiveBonds(_user);
@@ -181,7 +191,7 @@ contract BondStorage is AccessControl {
 		}
 	}
 
-	function getActiveBonds(address _user) public view returns (int128) {
+	function getActiveBonds(address _user) public view returns (uint256) {
 		return issuedBonds[_user].amountBondsActive;
 	}
 
@@ -195,10 +205,14 @@ contract BondStorage is AccessControl {
 
 	// Defunds the claim the user has by receiving TST tokens equal to the claim value left.
 	// This function has to be connected to a middle / cache layer.
-	function defundClaim(address _user, int128 deduct) public onlyOwner {
-		int128 currClaim = issuedBonds[_user].claimAmount;
-		int128 newClaim = ABDKMath64x64.sub(currClaim, deduct);
+	function defundClaim(address _user, uint256 deduct) public onlyOwner {
+		uint256 currClaim = issuedBonds[_user].claimAmount;
+		uint256 newClaim = SafeMath.sub(currClaim, deduct);
 		issuedBonds[_user].claimAmount = newClaim;
+	}
+
+	function getProfit(address _user) public view virtual returns (uint256) {
+		return issuedBonds[_user].profitAmount;
 	}
 
 }
