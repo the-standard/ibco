@@ -13,7 +13,7 @@ contract BondingCurve {
     uint256 private immutable maxSupply;
     uint256 private immutable k;
     int128 private immutable j;
-    address private immutable seuro;
+    SEuro private immutable seuro;
     uint256 private immutable bucketSize;
     uint32 private immutable finalBucketIndex;
 
@@ -22,7 +22,7 @@ contract BondingCurve {
     mapping(uint32 => uint256) private bucketPricesCache;
 
     constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
-        seuro = _seuro;
+        seuro = SEuro(_seuro);
         initialPrice = _initialPrice;
         maxSupply = _maxSupply;
         k = FINAL_PRICE - initialPrice;
@@ -78,16 +78,14 @@ contract BondingCurve {
     }
 
     function updateCurrentBucket() private {
-        uint256 supply = SEuro(seuro).totalSupply();
-        currentBucketIndex = uint32(supply / bucketSize);
+        currentBucketIndex = uint32(seuro.totalSupply() / bucketSize);
         currentBucketPrice = getBucketPrice(currentBucketIndex);
         delete bucketPricesCache[currentBucketIndex];
     }
 
     function getRemainingCapacityInBucket(uint32 _bucketIndex) private view returns(uint256) {
         uint256 bucketCapacity = (_bucketIndex + 1) * bucketSize;
-        uint256 supply = SEuro(seuro).totalSupply();
-        uint256 diff = bucketCapacity - supply;
+        uint256 diff = bucketCapacity - seuro.totalSupply();
         return diff > bucketSize ? bucketSize : diff;
     }
 
