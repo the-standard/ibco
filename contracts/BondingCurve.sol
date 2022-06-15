@@ -19,6 +19,7 @@ contract BondingCurve {
 
     uint32 private currentBucketIndex;
     uint256 public currentBucketPrice;
+    mapping(uint32 => uint256) private bucketPricesCache;
 
     constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
         seuro = _seuro;
@@ -32,23 +33,29 @@ contract BondingCurve {
         updateCurrentBucket();
     }
 
-    function getBucketPrice(uint32 _bucketIndex) private view returns (uint256) {
+    function getBucketPrice(uint32 _bucketIndex) private returns (uint256 _price) {
         if (_bucketIndex >= finalBucketIndex) return FINAL_PRICE;
+        uint256 cachedPrice = bucketPricesCache[_bucketIndex];
+        if (cachedPrice > 0) return cachedPrice;
         uint256 medianBucketToken = getMedianToken(_bucketIndex);
         int128 supplyRatio = ABDKMath64x64.divu(medianBucketToken, maxSupply);
         int128 log2SupplyRatio = ABDKMath64x64.log_2(supplyRatio);
         int128 jlog2SupplyRatio = ABDKMath64x64.mul(j, log2SupplyRatio);
         int128 baseCurve = ABDKMath64x64.exp_2(jlog2SupplyRatio);
         uint256 curve = ABDKMath64x64.mulu(baseCurve, k);
-        return curve + initialPrice;
+        _price = curve + initialPrice;
+        cacheBucketPrice(_bucketIndex, _price);
     }
 
     function getMedianToken(uint32 _bucketIndex) private view returns (uint256) {
         return _bucketIndex * bucketSize + bucketSize / 2;
     }
 
+    function cacheBucketPrice(uint32 _bucketIndex, uint256 _bucketPrice) private {
+        bucketPricesCache[_bucketIndex] = _bucketPrice;
+    }
+
     function seuroValue(uint256 _euroAmount) external returns (uint256) {
-        // TODO add the "next price" to a cache mapping, look for this when updating based on supply, then delete from mapping afterwards
         updateCurrentBucket();
         uint256 sEuroTotal = 0;
         uint256 remainingEuros = _euroAmount;
@@ -74,6 +81,7 @@ contract BondingCurve {
         uint256 supply = SEuro(seuro).totalSupply();
         currentBucketIndex = uint32(supply / bucketSize);
         currentBucketPrice = getBucketPrice(currentBucketIndex);
+        delete bucketPricesCache[currentBucketIndex];
     }
 
     function getRemainingCapacityInBucket(uint32 _bucketIndex) private view returns(uint256) {
