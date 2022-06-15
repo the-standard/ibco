@@ -5,6 +5,7 @@ const { expect } = require('chai');
 describe('BondingCurve', async () => {
   let BondingCurve, SEuro;
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
+  const MAX_SUPPLY = ethers.utils.parseEther('200000000');
 
   beforeEach(async () => {
     [owner] = await ethers.getSigners();
@@ -13,7 +14,6 @@ describe('BondingCurve', async () => {
     const SEuroContract = await ethers.getContractFactory('SEuro');
     SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
     const INITIAL_PRICE = ethers.utils.parseEther('0.8');
-    const MAX_SUPPLY = ethers.utils.parseEther('200000000');
     BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   });
 
@@ -56,7 +56,7 @@ describe('BondingCurve', async () => {
       expect(seuros).to.be.lt(maximumSeuros);
     });
 
-    it.only('saves new bucket price when supply has changed', async () => {
+    it('saves new bucket price when supply has changed', async () => {
       const euros = ethers.utils.parseEther('1');
       const initialBucketPrice = await BondingCurve.currentBucketPrice();
       await SEuro.mint(owner.address, BUCKET_SIZE);
@@ -65,6 +65,15 @@ describe('BondingCurve', async () => {
       const newBucketPrice = await BondingCurve.currentBucketPrice();
 
       expect(newBucketPrice).to.be.gt(initialBucketPrice);
+    });
+
+    it('will not exceed full price', async () => {
+      await SEuro.mint(owner.address, MAX_SUPPLY);
+      const euros = ethers.utils.parseEther('1');
+
+      const seuros = await BondingCurve.callStatic.seuroValue(euros);
+
+      expect(seuros).to.equal(euros);
     });
   });
 });
