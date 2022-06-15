@@ -60,12 +60,12 @@ contract BondingEvent is AccessControl, BondStorage {
 	}
 
 	modifier isNotInit {
-		require(tokenData.initialised == false, 'token-already-init');
+		require(tokenData.initialised == false, "token-already-init");
 		_;
 	}
 
 	modifier isInit {
-		require(tokenData.initialised == true, 'token-not-init');
+		require(tokenData.initialised == true, "token-not-init");
 		_;
 	}
 
@@ -76,7 +76,7 @@ contract BondingEvent is AccessControl, BondStorage {
 	}
 
 	function adjustTick(int24 newLower, int24 newHigher) public onlyPoolOwner isInit {
-		require(newLower % tickSpacing == 0 && newHigher % tickSpacing == 0, 'tick-mod-spacing-nonzero');
+		require(newLower % tickSpacing == 0 && newHigher % tickSpacing == 0, "tick-mod-spacing-nonzero");
 		require(newHigher <= 887270, "tick-max-exceeded");
 		require(newLower >= -887270, "tick-min-exceeded");
 		require(newHigher != 0 && newLower != 0, "tick-val-zero");
@@ -211,7 +211,7 @@ contract BondingEvent is AccessControl, BondStorage {
 	}
 
 	function getUserBondAt(address _user, uint128 index) public view returns (Bond memory) {
-		require(index <= getUserBonds(_user).length - 1 && index >= 0, 'invalid-bond-index');
+		require(index <= getUserBonds(_user).length - 1 && index >= 0, "invalid-bond-index");
 
 		return BondStorage.getBondAt(_user, index);
 	}
