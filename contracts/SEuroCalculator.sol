@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "contracts/BondingCurve.sol";
 import "contracts/interfaces/Chainlink.sol";
 
-contract SEuroRateCalculator {
+contract SEuroCalculator {
     uint256 public constant FIXED_POINT = 1_000_000_000_000_000_000;
     address public constant EUR_USD_CL = 0xb49f677943BC038e9857d61E7d053CaA2C1734C1;
     uint8 public constant EUR_USD_CL_DEC = 8;

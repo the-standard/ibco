@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "contracts/interfaces/Chainlink.sol";
 import "contracts/interfaces/WETH.sol";
 import "contracts/SEuro.sol";
-import "contracts/SEuroRateCalculator.sol";
+import "contracts/SEuroCalculator.sol";
 import "contracts/TokenManager.sol";
 
 contract IBCO is Ownable {
@@ -14,14 +14,14 @@ contract IBCO is Ownable {
     uint256 private start;
     uint256 private stop;
     address private seuro;
-    SEuroRateCalculator private sEuroRateCalculator;    
+    SEuroCalculator private sEuroRateCalculator;    
     TokenManager private tokenManager;
 
     event Swap(bytes32 _token, uint256 amountIn, uint256 amountOut);
 
     constructor(address _seuro, address _sEuroRateCalculator, address _tokenManager) {
         seuro = _seuro;
-        sEuroRateCalculator = SEuroRateCalculator(_sEuroRateCalculator);
+        sEuroRateCalculator = SEuroCalculator(_sEuroRateCalculator);
         tokenManager = TokenManager(_tokenManager);
     }
 
