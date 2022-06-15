@@ -22,7 +22,7 @@ describe('BondingCurve', async () => {
 
       const seuros = await BondingCurve.callStatic.seuroValue(euros);
 
-      const expectedSeuros = euros.mul(ethers.utils.parseEther('1')).div(await BondingCurve.currentBucketPrice())
+      const expectedSeuros = euros.mul(ethers.utils.parseEther('1')).div((await BondingCurve.currentBucket()).price)
       expect(seuros).to.equal(expectedSeuros);
     });
 
@@ -30,7 +30,7 @@ describe('BondingCurve', async () => {
       // will force crossover to next bucket due to discount
       const euros = BUCKET_SIZE;
       
-      const firstBucketPrice = await BondingCurve.currentBucketPrice();
+      const firstBucketPrice = (await BondingCurve.currentBucket()).price;
       const seuros = await BondingCurve.callStatic.seuroValue(euros);
 
       const maximumSeuros = euros.mul(ethers.utils.parseEther('1')).div(firstBucketPrice);
@@ -40,11 +40,11 @@ describe('BondingCurve', async () => {
 
     it('saves new bucket price when supply has changed', async () => {
       const euros = ethers.utils.parseEther('1');
-      const initialBucketPrice = await BondingCurve.currentBucketPrice();
+      const initialBucketPrice = (await BondingCurve.currentBucket()).price;
       await SEuro.mint(owner.address, BUCKET_SIZE);
       // activates updating of current price
       await BondingCurve.seuroValue(euros);
-      const newBucketPrice = await BondingCurve.currentBucketPrice();
+      const newBucketPrice = (await BondingCurve.currentBucket()).price;
 
       expect(newBucketPrice).to.be.gt(initialBucketPrice);
     });

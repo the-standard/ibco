@@ -32,7 +32,7 @@ describe('SEuroCalculator', async () => {
   async function expectedSEuros(clTokUsd, amount) {
     return (await getBaseEurRate(clTokUsd))
       .mul(amount)
-      .div(await BondingCurve.currentBucketPrice());
+      .div((await BondingCurve.currentBucket()).price);
   }
 
   it('calculates the seuros for weth', async () => {

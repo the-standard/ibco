@@ -5,6 +5,11 @@ import "contracts/SEuro.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 
 contract BondingCurve {
+    struct Bucket {
+        uint32 index;
+        uint256 price;
+    }
+
     uint256 private constant FINAL_PRICE = 1_000_000_000_000_000_000;
     uint8 private constant J_NUMERATOR = 1;
     uint8 private constant J_DENOMINATOR = 5;
@@ -17,8 +22,7 @@ contract BondingCurve {
     uint256 private immutable bucketSize;
     uint32 private immutable finalBucketIndex;
 
-    uint32 private currentBucketIndex;
-    uint256 public currentBucketPrice;
+    Bucket public currentBucket;
     mapping(uint32 => uint256) private bucketPricesCache;
 
     constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
@@ -59,8 +63,8 @@ contract BondingCurve {
         updateCurrentBucket();
         uint256 sEuroTotal = 0;
         uint256 remainingEuros = _euroAmount;
-        uint32 bucketIndex = currentBucketIndex;
-        uint256 bucketPrice = currentBucketPrice;
+        uint32 bucketIndex = currentBucket.index;
+        uint256 bucketPrice = currentBucket.price;
         while (remainingEuros > 0) {
             uint256 remainingInSeuro = convertEuroToSeuro(remainingEuros, bucketPrice);
             uint256 remainingCapacityInBucket = getRemainingCapacityInBucket(bucketIndex);
@@ -78,9 +82,9 @@ contract BondingCurve {
     }
 
     function updateCurrentBucket() private {
-        currentBucketIndex = uint32(seuro.totalSupply() / bucketSize);
-        currentBucketPrice = getBucketPrice(currentBucketIndex);
-        delete bucketPricesCache[currentBucketIndex];
+        uint32 bucketIndex = uint32(seuro.totalSupply() / bucketSize);
+        currentBucket = Bucket(bucketIndex, getBucketPrice(bucketIndex));
+        delete bucketPricesCache[bucketIndex];
     }
 
     function getRemainingCapacityInBucket(uint32 _bucketIndex) private view returns(uint256) {
