@@ -40,7 +40,7 @@ describe('BondingCurve', async () => {
 
       const seuros = await BondingCurve.callStatic.seuroValue(euros);
 
-      const expectedSeuros = euros.mul(ethers.utils.parseEther('1')).div(await BondingCurve.cacheBucketPrice())
+      const expectedSeuros = euros.mul(ethers.utils.parseEther('1')).div(await BondingCurve.currentBucketPrice())
       expect(seuros).to.equal(expectedSeuros);
     });
 
@@ -48,12 +48,23 @@ describe('BondingCurve', async () => {
       // will force crossover to next bucket due to discount
       const euros = BUCKET_SIZE;
       
-      const firstBucketPrice = await BondingCurve.cacheBucketPrice();
+      const firstBucketPrice = await BondingCurve.currentBucketPrice();
       const seuros = await BondingCurve.callStatic.seuroValue(euros);
 
       const maximumSeuros = euros.mul(ethers.utils.parseEther('1')).div(firstBucketPrice);
       // should be less than maximum seuros as that calculation assumes all seuro will be priced in first bucket
       expect(seuros).to.be.lt(maximumSeuros);
+    });
+
+    it.only('saves new bucket price when supply has changed', async () => {
+      const euros = ethers.utils.parseEther('1');
+      const initialBucketPrice = await BondingCurve.currentBucketPrice();
+      await SEuro.mint(owner.address, BUCKET_SIZE);
+      // activates updating of current price
+      await BondingCurve.seuroValue(euros);
+      const newBucketPrice = await BondingCurve.currentBucketPrice();
+
+      expect(newBucketPrice).to.be.gt(initialBucketPrice);
     });
   });
 });

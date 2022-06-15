@@ -18,8 +18,8 @@ contract BondingCurve {
     address private immutable seuro;
     uint256 private immutable bucketSize;
 
-    uint32 private cacheBucketIndex;
-    uint256 public cacheBucketPrice;
+    uint32 private currentBucketIndex;
+    uint256 public currentBucketPrice;
 
     constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
         seuro = _seuro;
@@ -28,9 +28,8 @@ contract BondingCurve {
         k = FINAL_PRICE - initialPrice;
         j = ABDKMath64x64.divu(J_NUMERATOR, J_DENOMINATOR);
 
-
         bucketSize = _bucketSize;
-        setBucketCache();
+        updateCurrentBucket();
     }
 
     function pricePerEuro() public view returns (uint256) {
@@ -49,13 +48,8 @@ contract BondingCurve {
         return curve + initialPrice;
     }
 
-    function setBucketCache() private {
-        cacheBucketIndex = 0;
-        cacheBucketPrice = getBucketPrice(cacheBucketIndex);
-    }
-
-    function getBucketPrice(uint32 bucketIndex) private view returns (uint256) {
-        uint256 medianBucketToken = getMedianToken(bucketIndex);
+    function getBucketPrice(uint32 _bucketIndex) private view returns (uint256) {
+        uint256 medianBucketToken = getMedianToken(_bucketIndex);
         int128 supplyRatio = ABDKMath64x64.divu(medianBucketToken, maxSupply);
         int128 log2SupplyRatio = ABDKMath64x64.log_2(supplyRatio);
         int128 jlog2SupplyRatio = ABDKMath64x64.mul(j, log2SupplyRatio);
@@ -69,10 +63,15 @@ contract BondingCurve {
     }
 
     function seuroValue(uint256 _euroAmount) external returns (uint256) {
+        // TODO test a transaction which jumps several buckets somehow
+        // ensure price calculations stop when max supply reached
+        // make dependent contracts implement this function
+        // add the "next price" to a cache mapping, look for this when updating based on supply, then delete from mapping afterwards
+        updateCurrentBucket();
         uint256 sEuroTotal = 0;
         uint256 remainingEuros = _euroAmount;
-        uint32 bucketIndex = cacheBucketIndex;
-        uint256 bucketPrice = cacheBucketPrice;
+        uint32 bucketIndex = currentBucketIndex;
+        uint256 bucketPrice = currentBucketPrice;
         while (remainingEuros > 0) {
             uint256 remainingInSeuro = convertEuroToSeuro(remainingEuros, bucketPrice);
             uint256 remainingCapacityInBucket = remainingCapacityInBucket(bucketIndex);
@@ -87,6 +86,12 @@ contract BondingCurve {
             }
         }
         return sEuroTotal;
+    }
+
+    function updateCurrentBucket() private {
+        uint256 supply = SEuro(seuro).totalSupply();
+        currentBucketIndex = uint32(supply / bucketSize);
+        currentBucketPrice = getBucketPrice(currentBucketIndex);
     }
 
     function remainingCapacityInBucket(uint32 _bucketIndex) private view returns(uint256) {
