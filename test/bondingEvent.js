@@ -23,6 +23,7 @@ const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 const TWO_MILLION = ethers.utils.parseEther('2000000');
 const TEN_MILLION = ethers.utils.parseEther('10000000');
 const MOST_STABLE_FEE = 500;
+const ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
 var rates = {
   "HALF_PC": 500,
   "FIVE_PC": 5000,
@@ -114,27 +115,50 @@ describe('BondingEvent', async () => {
 		  await USDT.connect(customer).approve(BondingEvent.address, TEN_MILLION);
 		});
 
+		async function helperGetActiveBonds() {
+		  return BondingEvent.getAmountBonds(CUSTOMER_ADDR);
+		}
+
+		async function helperGetBondAt(index) {
+		  return BondingEvent.getUserBondAt(CUSTOMER_ADDR, index);
+		}
+
+		async function helperUpdateBondStatus() {
+		  return BondingEvent.connect(customer).updateBondStatus(CUSTOMER_ADDR);
+		}
+
+		async function helperGetProfit() {
+		  return BondingEvent.getUserProfit(CUSTOMER_ADDR);
+		}
+
+		async function helperFastForwardTime(seconds) {
+		  ethers.provider.send('evm_increaseTime', [ seconds ]);
+		  ethers.provider.send('evm_mine');
+		}
+
+		function etherStr(amountStr) {
+		  return ethers.utils.parseEther(amountStr).toString();
+		}
+
 		it('bonds sEURO and USDT for 52 weeks and receives correct reward', async () => {
 		  await BondingEvent.connect(customer).bond(
 			TWO_MILLION, TWO_MILLION, USDT_ADDRESS, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
 		  );
 
-		  const bondsAmount = await BondingEvent.connect(customer).getAmountBonds(CUSTOMER_ADDR);
+		  const bondsAmount = await helperGetActiveBonds();
 		  expect(bondsAmount).to.equal(1);
 
-		  const firstBond = await BondingEvent.connect(customer).getUserBondAt(CUSTOMER_ADDR, 0);
+		  const firstBond = await helperGetBondAt(0);
 		  let actualPrincipal = firstBond.principal;
 		  let actualRate = firstBond.rate;
 		  expect(actualPrincipal).to.equal(TWO_MILLION);
 		  expect(actualRate).to.equal(rates["TEN_PC"]);
 
-		  const fiftyTwoWeeksInSeconds = 52 * 7 * 24 * 60 * 60;
-		  await ethers.provider.send('evm_increaseTime', [fiftyTwoWeeksInSeconds]);
-		  await ethers.provider.send('evm_mine');
-		  await BondingEvent.connect(customer).updateBondStatus(CUSTOMER_ADDR);
+		  await helperFastForwardTime(52 * ONE_WEEK_IN_SECONDS);
+		  await helperUpdateBondStatus();
 
-		  let expectedReward = ethers.utils.parseEther('200000').toString(); // 2_000_000 * 0.1 = 200_000
-		  let actualReward = (await BondingEvent.getUserProfit(CUSTOMER_ADDR)).toString();
+		  let expectedReward = etherStr('200000');
+		  let actualReward = (await helperGetProfit()).toString();
 		  expect(actualReward).to.equal(expectedReward);
 		});
 
@@ -150,44 +174,41 @@ describe('BondingEvent', async () => {
 		  );
 
 		  let expectedActiveBonds = 3;
-		  let actualActiveBonds = await BondingEvent.connect(customer).getAmountBonds(CUSTOMER_ADDR);
+		  let actualActiveBonds = await helperGetActiveBonds();
 		  expect(actualActiveBonds).to.equal(expectedActiveBonds);
 
 		  let expectedReward = '0';
-		  let actualReward = (await BondingEvent.getUserProfit(CUSTOMER_ADDR)).toString();
+		  let actualReward = (await helperGetProfit()).toString();
 		  expect(actualReward).to.equal(expectedReward);
 
-		  await ethers.provider.send('evm_increaseTime', [/* one week */ 7 * 24 * 60 * 60 ]);
-		  await ethers.provider.send('evm_mine');
-		  await BondingEvent.connect(customer).updateBondStatus(CUSTOMER_ADDR);
+		  await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
+		  await helperUpdateBondStatus();
 
-		  expectedReward = ethers.utils.parseEther('100000').toString(); // 2_000_000 * 0.05 = 100_000
-		  actualReward = (await BondingEvent.getUserProfit(CUSTOMER_ADDR)).toString();
+		  expectedReward = etherStr('100000');
+		  actualReward = (await helperGetProfit()).toString();
 		  expect(actualReward).to.equal(expectedReward);
 		  expectedActiveBonds = 2;
-		  actualActiveBonds = await BondingEvent.connect(customer).getAmountBonds(CUSTOMER_ADDR);
+		  actualActiveBonds = await helperGetActiveBonds();
 		  expect(actualActiveBonds).to.equal(expectedActiveBonds);
 
-		  await ethers.provider.send('evm_increaseTime', [ 7 * 24 * 60 * 60 ]);
-		  await ethers.provider.send('evm_mine');
-		  await BondingEvent.connect(customer).updateBondStatus(CUSTOMER_ADDR);
+		  await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
+		  await helperUpdateBondStatus();
 
-		  expectedReward = ethers.utils.parseEther('220000').toString(); // 100_000 + (2_000_000 * 0.06) = 220_000
-		  actualReward = (await BondingEvent.getUserProfit(CUSTOMER_ADDR)).toString();
+		  expectedReward = etherStr('220000');
+		  actualReward = (await helperGetProfit()).toString();
 		  expect(actualReward).to.equal(expectedReward);
 		  expectedActiveBonds = 1;
-		  actualActiveBonds = await BondingEvent.connect(customer).getAmountBonds(CUSTOMER_ADDR);
+		  actualActiveBonds = await helperGetActiveBonds();
 		  expect(actualActiveBonds).to.equal(expectedActiveBonds);
 
-		  await ethers.provider.send('evm_increaseTime', [ 14 * 24 * 60 * 60 ]);
-		  await ethers.provider.send('evm_mine');
-		  await BondingEvent.connect(customer).updateBondStatus(CUSTOMER_ADDR);
+		  await helperFastForwardTime(2 * ONE_WEEK_IN_SECONDS);
+		  await helperUpdateBondStatus();
 
-		  expectedReward = ethers.utils.parseEther('420000').toString();
-		  actualReward = (await BondingEvent.getUserProfit(CUSTOMER_ADDR)).toString();
+		  expectedReward = etherStr('420000');
+		  actualReward = (await helperGetProfit()).toString();
 		  expect(actualReward).to.equal(expectedReward);
 		  expectedActiveBonds = 0;
-		  actualActiveBonds = await BondingEvent.connect(customer).getAmountBonds(CUSTOMER_ADDR);
+		  actualActiveBonds = await helperGetActiveBonds();
 		  expect(actualActiveBonds).to.equal(expectedActiveBonds);
 		});
 	  });
