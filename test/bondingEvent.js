@@ -96,6 +96,8 @@ describe('BondingEvent', async () => {
 		await expect(BondingEvent.adjustTick(-10000, 10001)).to.be.throw;
 		await expect(BondingEvent.adjustTick(0, 10000)).to.be.reverted;
 		await expect(BondingEvent.adjustTick(10000, 0)).to.be.reverted;
+		await expect(BondingEvent.adjustTick(1, 10000)).to.be.reverted;
+		await expect(BondingEvent.adjustTick(10000, 1)).to.be.reverted;
 	  });
 	});
 

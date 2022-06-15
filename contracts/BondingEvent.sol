@@ -69,25 +69,18 @@ contract BondingEvent is AccessControl, BondStorage {
 		_;
 	}
 
-	modifier validTickSpacing {
-		require(tickLowerBound % tickSpacing == 0 && tickHigherBound % tickSpacing == 0);
-		_;
-	}
-
-	modifier validTickRange(int24 low, int24 high) {
-		require(high <= 887270, "tick-max-exceeded");
-		require(low >= -887270, "tick-min-exceeded");
-		require(high != 0 && low != 0, "tick-val-zero");
-		_;
-	}
-
 	function bootstrapTokenData(string memory _name, address _poolAddress) private {
 		tokenData.initialised = true;
 		tokenData.shortName = _name;
 		tokenData.pool = _poolAddress;
 	}
 
-	function adjustTick(int24 newLower, int24 newHigher) public onlyPoolOwner isInit validTickRange(newLower, newHigher) {
+	function adjustTick(int24 newLower, int24 newHigher) public onlyPoolOwner isInit {
+		require(newLower % tickSpacing == 0 && newHigher % tickSpacing == 0, 'tick-mod-spacing-nonzero');
+		require(newHigher <= 887270, "tick-max-exceeded");
+		require(newLower >= -887270, "tick-min-exceeded");
+		require(newHigher != 0 && newLower != 0, "tick-val-zero");
+
 		tickLowerBound = newLower;
 		tickHigherBound = newHigher;
 	}
@@ -202,7 +195,7 @@ contract BondingEvent is AccessControl, BondStorage {
 		address _otherToken,
 		uint256 _maturityInWeeks,
 		uint256 _rate
-	) public isInit validTickSpacing {
+	) public isInit {
 		// information about the liquidity position after it has been successfully added
 		PositionMetaData memory position = addLiquidity(_amountSeuro, _amountOther, _otherToken);
 		// begin bonding event
