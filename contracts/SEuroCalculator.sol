@@ -9,10 +9,10 @@ contract SEuroCalculator {
     address public constant EUR_USD_CL = 0xb49f677943BC038e9857d61E7d053CaA2C1734C1;
     uint8 public constant EUR_USD_CL_DEC = 8;
 
-    address private bondingCurve;
+    BondingCurve private bondingCurve;
 
     constructor(address _bondingCurve) {
-        bondingCurve = _bondingCurve;
+        bondingCurve = BondingCurve(_bondingCurve);
     }
 
     function calculateBaseRate(address _tokUsdCl, uint8 _tokUsdDec) private view returns (uint256) {
@@ -22,8 +22,7 @@ contract SEuroCalculator {
     }
 
     function calculate(uint256 _amount, address _tokUsdCl, uint8 _tokUsdDec) external returns (uint256 rate) {
-        BondingCurve curve = BondingCurve(bondingCurve);
         uint256 euros = calculateBaseRate(_tokUsdCl, _tokUsdDec) * _amount / FIXED_POINT;
-        rate = curve.seuroValue(euros);
+        rate = bondingCurve.seuroValue(euros);
     }
 }
