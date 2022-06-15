@@ -4,8 +4,6 @@ pragma solidity ^0.8.0;
 import "contracts/SEuro.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 
-import "hardhat/console.sol";
-
 contract BondingCurve {
     uint256 public constant FIXED_POINT = 1_000_000_000_000_000_000;
     uint256 private constant FINAL_PRICE = 1_000_000_000_000_000_000;
@@ -36,22 +34,6 @@ contract BondingCurve {
         updateCurrentBucket();
     }
 
-    function pricePerEuro() public view returns (uint256) {
-        uint256 supply = SEuro(seuro).totalSupply();
-        if (supply < INITIAL_SUPPLY) {
-            return initialPrice;
-        }
-        if (supply >= maxSupply) {
-            return FINAL_PRICE;
-        }
-        int128 supplyRatio = ABDKMath64x64.divu(supply, maxSupply);
-        int128 log2SupplyRatio = ABDKMath64x64.log_2(supplyRatio);
-        int128 jlog2SupplyRatio = ABDKMath64x64.mul(j, log2SupplyRatio);
-        int128 baseCurve = ABDKMath64x64.exp_2(jlog2SupplyRatio);
-        uint256 curve = ABDKMath64x64.mulu(baseCurve, k);
-        return curve + initialPrice;
-    }
-
     function getBucketPrice(uint32 _bucketIndex) private view returns (uint256) {
         if (_bucketIndex >= finalBucketIndex) return FINAL_PRICE;
         uint256 medianBucketToken = getMedianToken(_bucketIndex);
@@ -68,8 +50,7 @@ contract BondingCurve {
     }
 
     function seuroValue(uint256 _euroAmount) external returns (uint256) {
-        // TODO ensure price calculations stop when max supply reached
-        // make dependent contracts implement this function
+        // TODO make dependent contracts implement this function
         // add the "next price" to a cache mapping, look for this when updating based on supply, then delete from mapping afterwards
         updateCurrentBucket();
         uint256 sEuroTotal = 0;

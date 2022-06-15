@@ -21,13 +21,9 @@ contract SEuroRateCalculator {
         return FIXED_POINT * uint256(tokUsd) / uint256(eurUsd) / 10 ** (_tokUsdDec - EUR_USD_CL_DEC);
     }
 
-    function calculateDiscountRate() private view returns (uint256) {
+    function calculate(uint256 _amount, address _tokUsdCl, uint8 _tokUsdDec) external returns (uint256 rate) {
         BondingCurve curve = BondingCurve(bondingCurve);
-        return curve.FIXED_POINT() / curve.pricePerEuro();
-    }
-
-    function calculate(address _tokUsdCl, uint8 _tokUsdDec) external view returns (uint256 rate) {
-        BondingCurve curve = BondingCurve(bondingCurve);
-        return calculateBaseRate(_tokUsdCl, _tokUsdDec) * curve.FIXED_POINT() / curve.pricePerEuro();
+        uint256 euros = calculateBaseRate(_tokUsdCl, _tokUsdDec) * _amount / FIXED_POINT;
+        rate = curve.seuroValue(euros);
     }
 }

@@ -1,5 +1,4 @@
 const { ethers } = require('hardhat');
-const { utils } = ethers;
 const { expect } = require('chai');
 
 describe('BondingCurve', async () => {
@@ -17,24 +16,7 @@ describe('BondingCurve', async () => {
     BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   });
 
-  describe('discount rate', async () => {
-    it('initialises with given initial price', async () => {
-      const initialPrice = utils.parseEther('0.7');
-      const discountRate = await BondingCurve.pricePerEuro();
-
-      expect(discountRate).to.equal(initialPrice);
-    });
-
-    it('gets more expensive as supply increases', async () => {
-      const initialPrice = await BondingCurve.pricePerEuro();
-      await SEuro.connect(owner).mint(owner.address, 10_000_000)
-      const latestPrice = await BondingCurve.pricePerEuro();
-
-      expect(latestPrice).to.be.gt(initialPrice);
-    });
-  });
-
-  describe.only('seuroValue', async () => {
+  describe('seuroValue', async () => {
     it('gets the current value of given euros in terms of seuros', async () => {
       const euros = ethers.utils.parseEther('1000');
 

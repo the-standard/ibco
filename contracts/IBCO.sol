@@ -25,8 +25,8 @@ contract IBCO is Ownable {
         tokenManager = TokenManager(_tokenManager);
     }
 
-    function getEuros(uint256 _amount, address _chainlinkAddr, uint8 _chainlinkDec) private view returns (uint256) {
-        return _amount * sEuroRateCalculator.calculate(_chainlinkAddr, _chainlinkDec) / sEuroRateCalculator.FIXED_POINT();
+    function getEuros(uint256 _amount, address _chainlinkAddr, uint8 _chainlinkDec) private returns (uint256) {
+        return sEuroRateCalculator.calculate(_amount, _chainlinkAddr, _chainlinkDec);
     }
 
     function activated() private view returns (bool) {
