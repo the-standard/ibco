@@ -48,8 +48,7 @@ contract BondingCurve {
     }
 
     function seuroValue(uint256 _euroAmount) external returns (uint256) {
-        // TODO make dependent contracts implement this function
-        // add the "next price" to a cache mapping, look for this when updating based on supply, then delete from mapping afterwards
+        // TODO add the "next price" to a cache mapping, look for this when updating based on supply, then delete from mapping afterwards
         updateCurrentBucket();
         uint256 sEuroTotal = 0;
         uint256 remainingEuros = _euroAmount;
@@ -57,7 +56,7 @@ contract BondingCurve {
         uint256 bucketPrice = currentBucketPrice;
         while (remainingEuros > 0) {
             uint256 remainingInSeuro = convertEuroToSeuro(remainingEuros, bucketPrice);
-            uint256 remainingCapacityInBucket = remainingCapacityInBucket(bucketIndex);
+            uint256 remainingCapacityInBucket = getRemainingCapacityInBucket(bucketIndex);
             if (remainingInSeuro > remainingCapacityInBucket) {
                 sEuroTotal += remainingCapacityInBucket;
                 remainingEuros -= convertSeuroToEuro(remainingCapacityInBucket, bucketPrice);
@@ -77,7 +76,7 @@ contract BondingCurve {
         currentBucketPrice = getBucketPrice(currentBucketIndex);
     }
 
-    function remainingCapacityInBucket(uint32 _bucketIndex) private view returns(uint256) {
+    function getRemainingCapacityInBucket(uint32 _bucketIndex) private view returns(uint256) {
         uint256 bucketCapacity = (_bucketIndex + 1) * bucketSize;
         uint256 supply = SEuro(seuro).totalSupply();
         uint256 diff = bucketCapacity - supply;
