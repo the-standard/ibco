@@ -8,7 +8,7 @@ describe('IBCO', async () => {
   const CL_ETH_USD_DEC = 8;
   const DAI_USD_CL = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
   const DAI_CL_DEC = 8;
-  let IBCO, SEuro, BondingCurve, SEuroRateCalculator, TokenManager, WETH, owner, user;
+  let IBCO, SEuro, BondingCurve, SEuroCalculator, TokenManager, WETH, owner, user;
 
   async function buyWETH(signer, amount) {
     await WETH.connect(signer).deposit({ value: amount });
@@ -20,12 +20,12 @@ describe('IBCO', async () => {
     await SwapManager.connect(signer).swapEthForToken(token, {value: amount});
   }
 
-  async function getEthEuroRate() {
-    return await SEuroRateCalculator.calculate(CL_ETH_USD, CL_ETH_USD_DEC);
+  async function getEthToSEuro(amount) {
+    return await SEuroCalculator.callStatic.calculate(amount, CL_ETH_USD, CL_ETH_USD_DEC);
   }
 
-  async function getDaiEuroRate() {
-    return await SEuroRateCalculator.calculate(DAI_USD_CL, DAI_CL_DEC);
+  async function getDaiToSEuro(amount) {
+    return await SEuroCalculator.callStatic.calculate(amount, DAI_USD_CL, DAI_CL_DEC);
   }
 
   beforeEach(async () => {
@@ -34,17 +34,18 @@ describe('IBCO', async () => {
     const SEuroContract = await ethers.getContractFactory('SEuro');
     const IBCOContract = await ethers.getContractFactory('IBCO');
     const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
-    const SEuroRateCalculatorContract = await ethers.getContractFactory('SEuroRateCalculator');
+    const SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');
     const TokenManagerContract = await ethers.getContractFactory('TokenManager');
 
     WETH = await ethers.getContractAt('WETH', WETH_ADDRESS);
     SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
-    const INITIAL_PRICE = ethers.utils.parseEther('0.7');
-    const MAX_SUPPLY = 200_000_000;
-    BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY);
-    SEuroRateCalculator = await SEuroRateCalculatorContract.deploy(BondingCurve.address);
+    const INITIAL_PRICE = ethers.utils.parseEther('0.8');
+    const MAX_SUPPLY = ethers.utils.parseEther('200000000');
+    const BUCKET_SIZE = ethers.utils.parseEther('100000');
+    BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
+    SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address);
     TokenManager = await TokenManagerContract.deploy();
-    IBCO = await IBCOContract.deploy(SEuro.address, SEuroRateCalculator.address, TokenManager.address);
+    IBCO = await IBCOContract.deploy(SEuro.address, SEuroCalculator.address, TokenManager.address);
 
     await SEuro.connect(owner).grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), IBCO.address)
   });
@@ -84,7 +85,7 @@ describe('IBCO', async () => {
         await WETH.connect(user).approve(IBCO.address, toSwap);
 
 
-        const expectedEuros = toSwap.mul(await getEthEuroRate()).div(await SEuroRateCalculator.FIXED_POINT());
+        const expectedEuros = await getEthToSEuro(toSwap);
         const swap = IBCO.connect(user).swap(WETH_BYTES, toSwap);
         await expect(swap).to.emit(IBCO, 'Swap').withArgs(WETH_BYTES, toSwap, expectedEuros);
         const userSEuroBalance = await SEuro.balanceOf(user.address);
@@ -125,7 +126,7 @@ describe('IBCO', async () => {
         const userTokens = await Dai.balanceOf(user.address);
         await Dai.connect(user).approve(IBCO.address, userTokens);
 
-        const expectedEuros = userTokens.mul(await getDaiEuroRate()).div(await SEuroRateCalculator.FIXED_POINT());
+        const expectedEuros = await getDaiToSEuro(userTokens);
         const swap = IBCO.connect(user).swap(daiBytes, userTokens);
         await expect(swap).to.emit(IBCO, 'Swap').withArgs(daiBytes, userTokens, expectedEuros);
         const userSEuroBalance = await SEuro.balanceOf(user.address);
@@ -137,7 +138,7 @@ describe('IBCO', async () => {
           const toSwap = await ethers.utils.parseEther('1');
           const ethBytes = ethers.utils.formatBytes32String('ETH');
 
-          const expectedEuros = toSwap.mul(await getEthEuroRate()).div(await SEuroRateCalculator.FIXED_POINT());
+          const expectedEuros = await getEthToSEuro(toSwap);
           const swap = IBCO.connect(user).swapETH({ value: toSwap });
           await expect(swap).to.emit(IBCO, 'Swap').withArgs(ethBytes, toSwap, expectedEuros);
           const userSEuroBalance = await SEuro.balanceOf(user.address);

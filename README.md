@@ -146,7 +146,7 @@ Can only be performed by Token Manager contract owner.
 ---
 
 # SEuro Rate Calculator
-Code at [SEuroRateCalculator.sol](https://github.com/the-standard/ibco/blob/master/contracts/SEuroRateCalculator.sol).
+Code at [SEuroCalculator.sol](https://github.com/the-standard/ibco/blob/master/contracts/SEuroCalculator.sol).
 Deployed at `0x7dsf78r634hf938u2j394` _(insert the real address when deployed)_ on the Polygon network.
 
 ## Read-only functions
