@@ -5,39 +5,99 @@ import "contracts/SEuro.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 
 contract BondingCurve {
-    uint256 public constant FIXED_POINT = 1_000_000_000_000_000_000;
+    struct Bucket {
+        uint32 index;
+        uint256 price;
+    }
+
     uint256 private constant FINAL_PRICE = 1_000_000_000_000_000_000;
-    uint8 private constant INITIAL_SUPPLY = 1;
     uint8 private constant J_NUMERATOR = 1;
     uint8 private constant J_DENOMINATOR = 5;
 
-    uint256 private initialPrice;
+    uint256 private immutable initialPrice;
     uint256 private immutable maxSupply;
     uint256 private immutable k;
     int128 private immutable j;
-    address private immutable seuro;
+    SEuro private immutable seuro;
+    uint256 private immutable bucketSize;
+    uint32 private immutable finalBucketIndex;
 
-    constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply) {
-        seuro = _seuro;
+    Bucket public currentBucket;
+    mapping(uint32 => uint256) private bucketPricesCache;
+
+    constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
+        seuro = SEuro(_seuro);
         initialPrice = _initialPrice;
         maxSupply = _maxSupply;
         k = FINAL_PRICE - initialPrice;
         j = ABDKMath64x64.divu(J_NUMERATOR, J_DENOMINATOR);
+
+        bucketSize = _bucketSize;
+        finalBucketIndex = uint32(_maxSupply / _bucketSize);
+        updateCurrentBucket();
     }
-    
-    function pricePerEuro() public view returns (uint256) {
-        uint256 supply = SEuro(seuro).totalSupply();
-        if (supply < INITIAL_SUPPLY) {
-            return initialPrice;
-        }
-        if (supply >= maxSupply) {
-            return FINAL_PRICE;
-        }
-        int128 supplyRatio = ABDKMath64x64.divu(supply, maxSupply);
+
+    function getBucketPrice(uint32 _bucketIndex) private returns (uint256 _price) {
+        if (_bucketIndex >= finalBucketIndex) return FINAL_PRICE;
+        uint256 cachedPrice = bucketPricesCache[_bucketIndex];
+        if (cachedPrice > 0) return cachedPrice;
+        uint256 medianBucketToken = getMedianToken(_bucketIndex);
+        int128 supplyRatio = ABDKMath64x64.divu(medianBucketToken, maxSupply);
         int128 log2SupplyRatio = ABDKMath64x64.log_2(supplyRatio);
         int128 jlog2SupplyRatio = ABDKMath64x64.mul(j, log2SupplyRatio);
         int128 baseCurve = ABDKMath64x64.exp_2(jlog2SupplyRatio);
         uint256 curve = ABDKMath64x64.mulu(baseCurve, k);
-        return curve + initialPrice;
+        _price = curve + initialPrice;
+        cacheBucketPrice(_bucketIndex, _price);
+    }
+
+    function getMedianToken(uint32 _bucketIndex) private view returns (uint256) {
+        return _bucketIndex * bucketSize + bucketSize / 2;
+    }
+
+    function cacheBucketPrice(uint32 _bucketIndex, uint256 _bucketPrice) private {
+        bucketPricesCache[_bucketIndex] = _bucketPrice;
+    }
+
+    function seuroValue(uint256 _euroAmount) external returns (uint256) {
+        updateCurrentBucket();
+        uint256 sEuroTotal = 0;
+        uint256 remainingEuros = _euroAmount;
+        uint32 bucketIndex = currentBucket.index;
+        uint256 bucketPrice = currentBucket.price;
+        while (remainingEuros > 0) {
+            uint256 remainingInSeuro = convertEuroToSeuro(remainingEuros, bucketPrice);
+            uint256 remainingCapacityInBucket = getRemainingCapacityInBucket(bucketIndex);
+            if (remainingInSeuro > remainingCapacityInBucket) {
+                sEuroTotal += remainingCapacityInBucket;
+                remainingEuros -= convertSeuroToEuro(remainingCapacityInBucket, bucketPrice);
+                bucketIndex++;
+                bucketPrice = getBucketPrice(bucketIndex);
+            } else {
+                sEuroTotal += remainingInSeuro;
+                remainingEuros = 0;
+            }
+        }
+        return sEuroTotal;
+    }
+
+    function updateCurrentBucket() private {
+        uint32 bucketIndex = uint32(seuro.totalSupply() / bucketSize);
+        currentBucket = Bucket(bucketIndex, getBucketPrice(bucketIndex));
+        delete bucketPricesCache[bucketIndex];
+    }
+
+    function getRemainingCapacityInBucket(uint32 _bucketIndex) private view returns(uint256) {
+        uint256 bucketCapacity = (_bucketIndex + 1) * bucketSize;
+        uint256 diff = bucketCapacity - seuro.totalSupply();
+        return diff > bucketSize ? bucketSize : diff;
+    }
+
+    function convertEuroToSeuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
+        return _amount * 10 ** 18 / _rate;
+    }
+
+    function convertSeuroToEuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
+        return _amount * _rate / 10 ** 18;
     }
 }

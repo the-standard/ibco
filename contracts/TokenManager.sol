@@ -16,7 +16,7 @@ contract TokenManager is Ownable {
         address chainlinkAddr;
         uint8 chainlinkDec;
     }
-        
+
     constructor() {
         addAcceptedTokens();
     }
