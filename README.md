@@ -1,4 +1,7 @@
 # Getting Started
+
+![Main CI](https://github.com/the-standard/ibco/actions/workflows/.github/workflows/main.yml/badge.svg?branch=master)
+
 ## Installation
 If you have npm installed, you can install the required project dependencies
 ```
