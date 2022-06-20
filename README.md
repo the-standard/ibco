@@ -1,4 +1,7 @@
 # Getting Started
+
+![Main CI](https://github.com/the-standard/ibco/actions/workflows/.github/workflows/main.yml/badge.svg?branch=master)
+
 ## Installation
 If you have npm installed, you can install the required project dependencies
 ```
@@ -25,6 +28,12 @@ npx hardhat test
 Or a specific contract's tests e.g.
 ```
 npx hardhat test test/ibco.js
+```
+
+## Coverage
+Run the code coverage suite with
+```
+npx hardhat coverage
 ```
 
 ## Technical Documentation
