@@ -30,5 +30,11 @@ Or a specific contract's tests e.g.
 npx hardhat test test/ibco.js
 ```
 
+## Coverage
+Run the code coverage suite with
+```
+npx hardhat coverage
+```
+
 ## Technical Documentation
 - [Stage 1](docs/stage-1)
