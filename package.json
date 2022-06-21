@@ -34,6 +34,7 @@
     "open-zeppelin-latest": "npm:@openzeppelin/contracts@4.6.0"
   },
   "dependencies": {
+    "hardhat-contract-sizer": "^2.5.1",
     "solidity-coverage": "^0.7.21"
   }
 }
