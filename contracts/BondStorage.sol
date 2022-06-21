@@ -74,14 +74,12 @@ contract BondStorage is AccessControl {
 	}
 
 	function increaseProfitAmount(address _user, uint256 latestAddition) private {
-		uint256 currProfit = issuedBonds[_user].profitAmount;
-		uint256 newProfit = SafeMath.add(latestAddition, currProfit);
+		uint256 newProfit = SafeMath.add(latestAddition, issuedBonds[_user].profitAmount);
 		issuedBonds[_user].profitAmount = newProfit;
 	}
 
 	function increaseClaimAmount(address _user, uint256 latestAddition) private {
-		uint256 currClaim = issuedBonds[_user].claimAmount;
-		uint256 newClaim = SafeMath.add(latestAddition, currClaim);
+		uint256 newClaim = SafeMath.add(latestAddition, issuedBonds[_user].claimAmount);
 		issuedBonds[_user].claimAmount = newClaim;
 	}
 
@@ -97,44 +95,17 @@ contract BondStorage is AccessControl {
 	}
 
 	function incrementActiveBonds(address _user) private {
-		uint256 currAmount = issuedBonds[_user].amountBondsActive;
-		uint256 newAmount = SafeMath.add(currAmount, 1);
+		uint256 newAmount = SafeMath.add(issuedBonds[_user].amountBondsActive, 1);
 		issuedBonds[_user].amountBondsActive = newAmount;
 	}
 
 	function decrementActiveBonds(address _user) private {
-		uint256 currAmount = issuedBonds[_user].amountBondsActive;
-		uint256 newAmount = SafeMath.sub(currAmount, 1);
+		uint256 newAmount = SafeMath.sub(issuedBonds[_user].amountBondsActive, 1);
 		issuedBonds[_user].amountBondsActive = newAmount;
 	}
 
 	function hasExpired(Bond memory bond) private view returns (bool) {
 		return block.timestamp >= bond.maturity;
-	}
-
-	// Swap the location of two bonds which are contiguous in an array.
-	// TODO: use as optimisation for later, leave it unused for now
-	function bondOrderSwap(address _user, uint8 i, uint8 j) private {
-		Bond memory temporary = issuedBonds[_user].bonds[i];
-		issuedBonds[_user].bonds[i] = issuedBonds[_user].bonds[j];
-		issuedBonds[_user].bonds[j] = temporary;
-	}
-
-	// Insertion sort.
-	// Implementation is based on on the insertion sort algorithm.
-	// TODO: use as optimisation for later, leave it unused for now
-	function insertSort(address _user) private {
-		uint256 total = getUserBonds(_user).length;
-
-		uint8 i = 1;
-		uint8 j = 0;
-		for (j = i; i < total; i++) {
-			Bond[] memory latestUpd = getUserBonds(_user);
-			if (j > 0 && latestUpd[j-1].maturity > latestUpd[j].maturity) {
-				bondOrderSwap(_user, i, j);
-				j--;
-			}
-		}
 	}
 
 	function maturityDateAfterWeeks(uint256 _maturityInWeeks) private view returns (uint256) {
