@@ -149,19 +149,18 @@ contract BondStorage is AccessControl {
 	// If the user has no bonds active, the isActive will be switched to false.
 	function refreshBondStatus(address _user) public {
 		Bond[] memory bonds = getUserBonds(_user);
-		uint256 total = getActiveBonds(_user); // bound it to avoid transaction failed due running out of gas
+		uint256 total = bonds.length;
 
 		// check each bond to see if it has expired.
 		// we do the O(n) solution and check each bond at every refresh
 		// TODO: to optimise later with more clever sorting algo
-		for (uint i = 0; i < total;) {
+		for (uint i = 0; i < total; i++) {
 			if (hasExpired(bonds[i]) && !bonds[i].tapped) {
 				tapBond(_user, i); // prevents the abuse of squeezing profit from same bond more than once
 				(uint256 payout, uint256 profit) = calculateBond(bonds[i]);
 				increaseProfitAmount(_user, profit);
 				increaseClaimAmount(_user, payout);
 				decrementActiveBonds(_user);
-				unchecked { i++; }
 			}
 		}
 	}
