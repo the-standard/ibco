@@ -37,7 +37,7 @@ contract BondingCurve {
         updateCurrentBucket();
     }
 
-    function getBucketPrice(uint32 _bucketIndex) private returns (uint256 _price) {
+    function getBucketPrice(uint32 _bucketIndex) internal returns (uint256 _price) {
         if (_bucketIndex >= finalBucketIndex) return FINAL_PRICE;
         uint256 cachedPrice = bucketPricesCache[_bucketIndex];
         if (cachedPrice > 0) return cachedPrice;
