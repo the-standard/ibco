@@ -73,6 +73,10 @@ contract BondingEvent is AccessControl {
 		require(init == true, "token-not-init");
 	}
 
+	function setStorageContract(address _newAddress) public onlyPoolOwner {
+		bondStorage = _newAddress;
+	}
+
 	function adjustTick(int24 newLower, int24 newHigher) public {
 		_validTicks(newLower, newHigher);
 		tickLowerBound = newLower;
