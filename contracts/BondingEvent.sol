@@ -9,7 +9,11 @@ import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract BondingEvent is AccessControl, BondStorage {
+interface IBondStorage {
+	function startBond(address _user, uint256 _principal, uint256 _rate, uint256 _maturity, uint256 _tokenId, uint128 _liquidity, uint256 _amountSeuro, uint256 _amountOther) external;
+}
+
+contract BondingEvent is AccessControl {
 	// sEUR: the main leg of the currency pair
 	address public immutable sEuroToken;
 	// other: the other ERC-20 token
@@ -109,7 +113,7 @@ contract BondingEvent is AccessControl, BondStorage {
 		init = true;
 	}
 
-	function addLiquidity(uint256 _amountSeuro, uint256 _amountOther, address _other) private returns (PositionMetaData memory) {
+	function addLiquidity(uint256 _amountSeuro, uint256 _amountOther, address _other) private returns (uint256, uint128, uint256, uint256) {
 		(address token0, address token1) = getAscendingPair(_other);
 
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
@@ -143,14 +147,13 @@ contract BondingEvent is AccessControl, BondStorage {
 
 		// provide liquidity to the pool
 		(uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = manager.mint(params);
+
+		// stack to deep as of now. TODO: check this downstream instead
+		//if (amount0 == _amountOther) (amount0, amount1) = (amount1, amount0);
+
 		emit mintPosition(msg.sender, tokenId, liquidity, amount0, amount1);
 		
-		// do a swap if amount0 contains the foreign token to keep sEURO first
-		if (amount0 == _amountOther) (amount0, amount1) = (amount1, amount0);
-		PositionMetaData memory pos = PositionMetaData(tokenId, liquidity, /* sEURO field */ amount0, /* other field */ amount1);
-		return pos;
-
-		//TODO: look into the refund mechanism again if needed, create tests to make sure nothing is "lost"
+		return (tokenId, liquidity, amount0, amount1);
 	}
 
 	// We assume that there is a higher layer solution which helps to fetch the latest price as a quote.
@@ -171,8 +174,8 @@ contract BondingEvent is AccessControl, BondStorage {
 		uint256 _rate
 	) public isInit {
 		// information about the liquidity position after it has been successfully added
-		PositionMetaData memory position = addLiquidity(_amountSeuro, _amountOther, _otherToken);
+		(uint256 tokenId, uint128 liquidity, uint256 amountSeuro, uint256 amountOther) = addLiquidity(_amountSeuro, _amountOther, _otherToken);
 		// begin bonding event
-		BondStorage.startBond(msg.sender, _amountSeuro, _rate, _maturityInWeeks, position);
+		IBondStorage(bondStorage).startBond(msg.sender, _amountSeuro, _rate, _maturityInWeeks, tokenId, liquidity, amountSeuro, amountOther);
 	}
 }
