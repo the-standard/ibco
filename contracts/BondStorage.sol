@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
+
 contract BondStorage is AccessControl {
 	bytes32 public constant WHITELIST_BOND_STORAGE = keccak256("WHITELIST_BOND_STORAGE");
 
@@ -95,13 +96,11 @@ contract BondStorage is AccessControl {
 	}
 
 	function incrementActiveBonds(address _user) private {
-		uint256 newAmount = SafeMath.add(issuedBonds[_user].amountBondsActive, 1);
-		issuedBonds[_user].amountBondsActive = newAmount;
+		issuedBonds[_user].amountBondsActive += 1;
 	}
 
 	function decrementActiveBonds(address _user) private {
-		uint256 newAmount = SafeMath.sub(issuedBonds[_user].amountBondsActive, 1);
-		issuedBonds[_user].amountBondsActive = newAmount;
+		issuedBonds[_user].amountBondsActive -= 1;
 	}
 
 	function hasExpired(Bond memory bond) private view returns (bool) {
@@ -122,8 +121,11 @@ contract BondStorage is AccessControl {
 		uint256 _principal,
 		uint256 _rate,
 		uint256 _maturityInWeeks,
-		PositionMetaData memory _data
-	) public {
+		uint256 _tokenId,
+		uint128 _liquidity,
+		uint256 _amountSeuro,
+		uint256 _amountOther
+	) external {
 		uint256 maturityDate = maturityDateAfterWeeks(_maturityInWeeks);
 
 		if (!isInitialised(_user)) {
@@ -131,7 +133,8 @@ contract BondStorage is AccessControl {
 			setInitialised(_user);
 		}
 
-		addBond(_user, _principal, _rate, maturityDate, _data);
+		PositionMetaData memory data = PositionMetaData(_tokenId, _liquidity, _amountSeuro, _amountOther);
+		addBond(_user, _principal, _rate, maturityDate, data);
 		incrementActiveBonds(_user);
 	}
 
@@ -146,18 +149,19 @@ contract BondStorage is AccessControl {
 	// If the user has no bonds active, the isActive will be switched to false.
 	function refreshBondStatus(address _user) public {
 		Bond[] memory bonds = getUserBonds(_user);
-		uint256 total = bonds.length;
+		uint256 total = getActiveBonds(_user); // bound it to avoid transaction failed due running out of gas
 
 		// check each bond to see if it has expired.
 		// we do the O(n) solution and check each bond at every refresh
 		// TODO: to optimise later with more clever sorting algo
-		for (uint i = 0; i < total; i++) {
+		for (uint i = 0; i < total;) {
 			if (hasExpired(bonds[i]) && !bonds[i].tapped) {
 				tapBond(_user, i); // prevents the abuse of squeezing profit from same bond more than once
 				(uint256 payout, uint256 profit) = calculateBond(bonds[i]);
 				increaseProfitAmount(_user, profit);
 				increaseClaimAmount(_user, payout);
 				decrementActiveBonds(_user);
+				unchecked { i++; }
 			}
 		}
 	}
@@ -174,6 +178,10 @@ contract BondStorage is AccessControl {
 		return getUserBonds(_user)[index];
 	}
 
+	function getProfit(address _user) public view virtual returns (uint256) {
+		return issuedBonds[_user].profitAmount;
+	}
+
 	// Defunds the claim the user has by receiving TST tokens equal to the claim value left.
 	// This function has to be connected to a middle / cache layer.
 	function defundClaim(address _user, uint256 deduct) public onlyOwner {
@@ -181,9 +189,4 @@ contract BondStorage is AccessControl {
 		uint256 newClaim = SafeMath.sub(currClaim, deduct);
 		issuedBonds[_user].claimAmount = newClaim;
 	}
-
-	function getProfit(address _user) public view virtual returns (uint256) {
-		return issuedBonds[_user].profitAmount;
-	}
-
 }
