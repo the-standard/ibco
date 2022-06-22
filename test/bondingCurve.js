@@ -2,9 +2,10 @@ const { ethers } = require('hardhat');
 const { expect } = require('chai');
 
 describe('BondingCurve', async () => {
-  let BondingCurve, SEuro;
+  let BondingCurve, SEuro, BondingCurveBucketPrices;
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
+  const INITIAL_PRICE = ethers.utils.parseEther('0.8');
 
   beforeEach(async () => {
     [owner] = await ethers.getSigners();
@@ -12,9 +13,13 @@ describe('BondingCurve', async () => {
     const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
     const SEuroContract = await ethers.getContractFactory('SEuro');
     SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
-    const INITIAL_PRICE = ethers.utils.parseEther('0.8');
     BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
+    BondingCurveBucketPrices = await (await ethers.getContractFactory('BondingCurveBucketPrices')).deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   });
+
+  const getBucketPrice = async (index) => {
+    return BondingCurveBucketPrices.callStatic.getPriceOfBucket(index);
+  }
 
   describe('seuroValue', async () => {
     it('gets the current value of given euros in terms of seuros', async () => {
@@ -22,7 +27,8 @@ describe('BondingCurve', async () => {
 
       const seuros = await BondingCurve.callStatic.seuroValue(euros);
 
-      const expectedSeuros = euros.mul(ethers.utils.parseEther('1')).div((await BondingCurve.currentBucket()).price)
+      const bucket0Price = await getBucketPrice(0);
+      const expectedSeuros = euros.mul(ethers.utils.parseEther('1')).div(bucket0Price);
       expect(seuros).to.equal(expectedSeuros);
     });
 
