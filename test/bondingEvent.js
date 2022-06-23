@@ -1,6 +1,5 @@
 const { ethers } = require('hardhat');
-const { bigNumber } = ethers;
-const { expect, use } = require('chai');
+const { expect } = require('chai');
 const bn = require('bignumber.js');
 
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
@@ -18,7 +17,6 @@ const encodePriceSqrt = (reserve1, reserve0) => {
 
 let owner, customer, SEuro, USDT, BStorage, BAPIs;
 let USDT_ADDRESS, CUSTOMER_ADDR;
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 const TWO_MILLION = ethers.utils.parseEther('2000000');
 const TEN_MILLION = ethers.utils.parseEther('10000000');
