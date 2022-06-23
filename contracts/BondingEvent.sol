@@ -30,6 +30,7 @@ contract BondingEvent is AccessControl {
 	// https://docs.uniswap.org/protocol/reference/core/libraries/Tick
 	int24 public tickLowerBound;
 	int24 public tickHigherBound;
+	int24 public tickSpacing;
 	uint24 fee;
 
 	// Emitted when a user adds liquidity.
@@ -91,7 +92,6 @@ contract BondingEvent is AccessControl {
 	}
 
 	function _validTicks(int24 newLower, int24 newHigher) private view onlyPoolOwner isInit {
-		int24 tickSpacing = 10;
 		require(newLower % tickSpacing == 0 && newHigher % tickSpacing == 0, "tick-mod-spacing-nonzero");
 		require(newHigher <= 887270, "tick-max-exceeded");
 		require(newLower >= -887270, "tick-min-exceeded");
@@ -115,12 +115,13 @@ contract BondingEvent is AccessControl {
 	external onlyPoolOwner isNotInit {
 		(address token0, address token1) = getAscendingPair(_otherAddress);
 		fee = _fee;
-		manager.createAndInitializePoolIfNecessary(
+		address pool = manager.createAndInitializePoolIfNecessary(
 			token0,
 			token1,
 			_fee,
 			_price
 		);
+		tickSpacing = IUniswapV3Pool(pool).tickSpacing();
 		init = true;
 	}
 
