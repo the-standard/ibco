@@ -20,6 +20,8 @@ contract BondingEvent is AccessControl {
 	address public immutable otherToken;
 	// bond storage contract
 	address public bondStorage;
+	// controls the bonding event and manages the rates and maturities
+	address public operatorAddress;
 
 	bool private init;
 
@@ -36,11 +38,12 @@ contract BondingEvent is AccessControl {
 	// only contract owner can add the other currency leg
 	bytes32 public constant WHITELIST_BONDING_EVENT = keccak256("WHITELIST_BONDING_EVENT");
 
-	constructor(address _sEuro, address _otherToken, address _manager, address _bondStorage) {
+	constructor(address _sEuro, address _otherToken, address _manager, address _bondStorage, address _operatorAddress) {
 		_setupRole(WHITELIST_BONDING_EVENT, msg.sender);
 		sEuroToken = _sEuro;
 		otherToken = _otherToken;
 		bondStorage = _bondStorage;
+		operatorAddress = _operatorAddress;
 		tickLowerBound = -10000;
 		tickHigherBound = 10000;
 		manager = INonfungiblePositionManager(_manager);
@@ -75,6 +78,10 @@ contract BondingEvent is AccessControl {
 
 	function setStorageContract(address _newAddress) public onlyPoolOwner {
 		bondStorage = _newAddress;
+	}
+
+	function setOperator(address _newAddress) public onlyPoolOwner {
+		operatorAddress = _newAddress;
 	}
 
 	function adjustTick(int24 newLower, int24 newHigher) public {
@@ -176,7 +183,9 @@ contract BondingEvent is AccessControl {
 		address _otherToken,
 		uint256 _maturityInWeeks,
 		uint256 _rate
-	) public onlyPoolOwner isInit {
+	) public isInit {
+		require(msg.sender == operatorAddress, "inv-sender");
+
 		// information about the liquidity position after it has been successfully added
 		(uint256 tokenId, uint128 liquidity, uint256 amountSeuro, uint256 amountOther) = addLiquidity(_amountSeuro, _amountOther, _otherToken);
 		// begin bonding event
