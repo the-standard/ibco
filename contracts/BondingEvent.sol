@@ -176,7 +176,7 @@ contract BondingEvent is AccessControl {
 		address _otherToken,
 		uint256 _maturityInWeeks,
 		uint256 _rate
-	) public isInit {
+	) public onlyPoolOwner isInit {
 		// information about the liquidity position after it has been successfully added
 		(uint256 tokenId, uint128 liquidity, uint256 amountSeuro, uint256 amountOther) = addLiquidity(_amountSeuro, _amountOther, _otherToken);
 		// begin bonding event
