@@ -1,6 +1,5 @@
 const { ethers } = require('hardhat');
-const { bigNumber } = ethers;
-const { expect, use } = require('chai');
+const { expect } = require('chai');
 const bn = require('bignumber.js');
 
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
@@ -16,9 +15,8 @@ const encodePriceSqrt = (reserve1, reserve0) => {
   )
 }
 
-let owner, customer, SEuro, USDT, BStorage;
+let owner, customer, SEuro, USDT, BStorage, BAPIs;
 let USDT_ADDRESS, CUSTOMER_ADDR;
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 const TWO_MILLION = ethers.utils.parseEther('2000000');
 const TEN_MILLION = ethers.utils.parseEther('10000000');
@@ -44,10 +42,8 @@ beforeEach(async () => {
   [owner, customer] = await ethers.getSigners();
   const SEuroContract = await ethers.getContractFactory('SEuro');
   const ERC20Contract = await ethers.getContractFactory('DUMMY');
-  const BondContract = await ethers.getContractFactory('BondStorage');
   SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
   USDT = await ERC20Contract.deploy('USDT', 'USDT', ethers.utils.parseEther('100000000'));
-  BStorage = await BondContract.deploy();
   USDT_ADDRESS = USDT.address;
   CUSTOMER_ADDR = customer.address;
 });
@@ -63,7 +59,7 @@ describe('BondingEvent', async () => {
 
   describe('initialise bonding event', async () => {
 	it('has not initialised pool', async () => {
-	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address);
+	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, /* dummy address */ USDT_ADDRESS, CUSTOMER_ADDR);
 	  expect(await BondingEvent.isPoolInitialised()).to.equal(false);
 	});
   });
@@ -71,24 +67,26 @@ describe('BondingEvent', async () => {
   context('bonding event deployed', async () => {
 	beforeEach(async () => {
 	  BStorage = await BondStorageContract.deploy();
-	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address);
+	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address, CUSTOMER_ADDR);
 	});
 
 	describe('initialise pool', async () => {
 	  it('initialises and changes the tick range for the pool', async () => {
+		let low, high;
 		const price = encodePriceSqrt(100, 93);
 		expect(await BondingEvent.isPoolInitialised()).to.equal(false);
-		await BondingEvent.initialisePool("USDT", USDT_ADDRESS, price, MOST_STABLE_FEE);
+		await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
 		expect(await BondingEvent.isPoolInitialised()).to.equal(true);
-		expect(await BondingEvent.tickSpacing()).to.equal(10);
 
-		let bound = await BondingEvent.getTickBounds();
-		expect(bound[0]).to.equal(-10000);
-		expect(bound[1]).to.equal(10000);
+		low = await helperGetLowTickBound();
+		high = await helperGetHighTickBound();
+		expect(low).to.equal(-10000);
+		expect(high).to.equal(10000);
 		await BondingEvent.adjustTick(-25000, 25000);
-		bound = await BondingEvent.getTickBounds();
-		expect(bound[0]).to.equal(-25000);
-		expect(bound[1]).to.equal(25000);
+		low = await helperGetLowTickBound();
+		high = await helperGetHighTickBound();
+		expect(low).to.equal(-25000);
+		expect(high).to.equal(25000);
 
 		await expect(BondingEvent.adjustTick(-9999999999, 10000)).to.be.throw;
 		await expect(BondingEvent.adjustTick(10000, 9999999999)).to.be.throw;
@@ -99,6 +97,17 @@ describe('BondingEvent', async () => {
 		await expect(BondingEvent.adjustTick(1, 10000)).to.be.reverted;
 		await expect(BondingEvent.adjustTick(10000, 1)).to.be.reverted;
 	  });
+
+	  async function helperGetLowTickBound() {
+		let lower = await BondingEvent.tickLowerBound();
+		return lower;
+	  }
+
+	  async function helperGetHighTickBound() {
+		let higher = BondingEvent.tickHigherBound();
+		return higher;
+	  }
+
 	});
 
 	describe('bonding', async () => {
@@ -108,7 +117,7 @@ describe('BondingEvent', async () => {
 		  const price = SEuro.address < USDT.address ?
 			encodePriceSqrt(100, SeurosPerUsdt) :
 			encodePriceSqrt(SeurosPerUsdt, 100);
-		  await BondingEvent.initialisePool("USDT", USDT_ADDRESS, price, MOST_STABLE_FEE);
+		  await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
 		  expect(await BondingEvent.isPoolInitialised()).to.equal(true);
 
 		  await SEuro.connect(owner).mint(CUSTOMER_ADDR, TEN_MILLION);
@@ -118,19 +127,19 @@ describe('BondingEvent', async () => {
 		});
 
 		async function helperGetActiveBonds() {
-		  return BondingEvent.getAmountBonds(CUSTOMER_ADDR);
+		  return BStorage.getActiveBonds(CUSTOMER_ADDR);
 		}
 
 		async function helperGetBondAt(index) {
-		  return BondingEvent.getUserBondAt(CUSTOMER_ADDR, index);
+		  return BStorage.getBondAt(CUSTOMER_ADDR, index);
 		}
 
 		async function helperUpdateBondStatus() {
-		  return BondingEvent.connect(customer).updateBondStatus(CUSTOMER_ADDR);
+		  return BStorage.connect(customer).refreshBondStatus(CUSTOMER_ADDR);
 		}
 
 		async function helperGetProfit() {
-		  return BondingEvent.getUserProfit(CUSTOMER_ADDR);
+		  return BStorage.getProfit(CUSTOMER_ADDR);
 		}
 
 		async function helperFastForwardTime(seconds) {
@@ -147,6 +156,7 @@ describe('BondingEvent', async () => {
 			TWO_MILLION, TWO_MILLION, USDT_ADDRESS, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
 		  );
 
+		  await helperUpdateBondStatus();
 		  const bondsAmount = await helperGetActiveBonds();
 		  expect(bondsAmount).to.equal(1);
 

@@ -9,33 +9,28 @@ import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract BondingEvent is AccessControl, BondStorage {
+interface IBondStorage {
+	function startBond(address _user, uint256 _principal, uint256 _rate, uint256 _maturity, uint256 _tokenId, uint128 _liquidity, uint256 _amountSeuro, uint256 _amountOther) external;
+}
+
+contract BondingEvent is AccessControl {
 	// sEUR: the main leg of the currency pair
 	address public immutable sEuroToken;
 	// other: the other ERC-20 token
 	address public immutable otherToken;
 	// bond storage contract
 	address public bondStorage;
+	// controls the bonding event and manages the rates and maturities
+	address public operatorAddress;
 
-	struct TokenMetaData {
-		bool initialised;
-		address pool; // "Every pool is a unique instance of the UniswapV3Pool contract and is deployed
-		              // at its own unique address" (see https://docs.uniswap.org/protocol/reference/deployments)
-		string shortName;
-	}
+	bool private init;
 
-	// allow quick lookup to see liquidity provided by users
-	TokenMetaData private tokenData;
-	// minimum currency amount
-	uint256 public immutable MIN_VAL = 0;
-
-	// uniswap: creates liquidity in the pool
 	INonfungiblePositionManager private immutable manager;
 
 	// https://docs.uniswap.org/protocol/reference/core/libraries/Tick
-	int24 public tickSpacing;
 	int24 public tickLowerBound;
 	int24 public tickHigherBound;
+	int24 public tickSpacing;
 	uint24 fee;
 
 	// Emitted when a user adds liquidity.
@@ -44,49 +39,63 @@ contract BondingEvent is AccessControl, BondStorage {
 	// only contract owner can add the other currency leg
 	bytes32 public constant WHITELIST_BONDING_EVENT = keccak256("WHITELIST_BONDING_EVENT");
 
-	constructor(address _sEuro, address _otherToken, address _manager, address _bondStorage) {
+	constructor(address _sEuro, address _otherToken, address _manager, address _bondStorage, address _operatorAddress) {
 		_setupRole(WHITELIST_BONDING_EVENT, msg.sender);
 		sEuroToken = _sEuro;
 		otherToken = _otherToken;
 		bondStorage = _bondStorage;
+		operatorAddress = _operatorAddress;
 		tickLowerBound = -10000;
 		tickHigherBound = 10000;
 		manager = INonfungiblePositionManager(_manager);
 	}
 
 	modifier onlyPoolOwner {
-		require(hasRole(WHITELIST_BONDING_EVENT, msg.sender), "invalid-user");
+		_onlyPoolOwner();
 		_;
+	}
+
+	function _onlyPoolOwner() private view {
+		require(hasRole(WHITELIST_BONDING_EVENT, msg.sender), "invalid-user");
 	}
 
 	modifier isNotInit {
-		require(tokenData.initialised == false, "token-already-init");
+		_isNotInit();
 		_;
+	}
+
+	function _isNotInit() private view {
+		require(init == false, "token-already-init");
 	}
 
 	modifier isInit {
-		require(tokenData.initialised == true, "token-not-init");
+		_isInit();
 		_;
 	}
 
-	function bootstrapTokenData(string memory _name, address _poolAddress) private {
-		tokenData.initialised = true;
-		tokenData.shortName = _name;
-		tokenData.pool = _poolAddress;
+	function _isInit() private view {
+		require(init == true, "token-not-init");
 	}
 
-	function adjustTick(int24 newLower, int24 newHigher) public onlyPoolOwner isInit {
-		require(newLower % tickSpacing == 0 && newHigher % tickSpacing == 0, "tick-mod-spacing-nonzero");
-		require(newHigher <= 887270, "tick-max-exceeded");
-		require(newLower >= -887270, "tick-min-exceeded");
-		require(newHigher != 0 && newLower != 0, "tick-val-zero");
+	function setStorageContract(address _newAddress) public onlyPoolOwner {
+		bondStorage = _newAddress;
+	}
 
+	function setOperator(address _newAddress) public onlyPoolOwner {
+		operatorAddress = _newAddress;
+	}
+
+	function adjustTick(int24 newLower, int24 newHigher) public {
+		_validTicks(newLower, newHigher);
 		tickLowerBound = newLower;
 		tickHigherBound = newHigher;
 	}
 
-	function getTickBounds() public view returns (int24[2] memory) {
-		return [tickLowerBound, tickHigherBound];
+	function _validTicks(int24 newLower, int24 newHigher) private view onlyPoolOwner isInit {
+		require(newLower % tickSpacing == 0 && newHigher % tickSpacing == 0, "tick-mod-spacing-nonzero");
+		require(newHigher <= 887270, "tick-max-exceeded");
+		require(newLower >= -887270, "tick-min-exceeded");
+		require(newHigher != 0 && newLower != 0, "tick-val-zero");
 	}
 
 	// Compares the Standard Euro token to another token and returns them in ascending order
@@ -97,12 +106,12 @@ contract BondingEvent is AccessControl, BondStorage {
 	}
 
 	function isPoolInitialised() external view returns (bool) {
-		return tokenData.initialised;
+		return init;
 	}
 
 	// Initialises a pool with another token (address) and stores it in the array of pools.
 	// Note that the price is in sqrtPriceX96 format.
-	function initialisePool(string memory _otherName, address _otherAddress, uint160 _price, uint24 _fee)
+	function initialisePool(address _otherAddress, uint160 _price, uint24 _fee)
 	external onlyPoolOwner isNotInit {
 		(address token0, address token1) = getAscendingPair(_otherAddress);
 		fee = _fee;
@@ -113,44 +122,25 @@ contract BondingEvent is AccessControl, BondStorage {
 			_price
 		);
 		tickSpacing = IUniswapV3Pool(pool).tickSpacing();
-		bootstrapTokenData(_otherName, pool);
+		init = true;
 	}
 
-	// Various of allowances to be able to create a liquidity position
-	function mintPermissionsPrepare(
-		address _sender,
-		address _token0,
-		address _token1,
-		uint256 _amount0,
-		uint256 _amount1,
-		uint256 _amount0Desired,
-		uint256 _amount1Desired
-	) private {
-		// approve the contract to send the tokens to manager
-		TransferHelper.safeApprove(_token0, address(manager), _amount0Desired);
-		TransferHelper.safeApprove(_token1, address(manager), _amount1Desired);
-
-		// send the tokens from the sender's account to the contract account
-		TransferHelper.safeTransferFrom(_token0, _sender, address(this), _amount0);
-		TransferHelper.safeTransferFrom(_token1, _sender, address(this), _amount1);
-	}
-
-
-	struct LiquidityPair {
-		uint256 amountSeuro;
-		uint256 amountOther;
-		address other;
-	}
-
-	function addLiquidity(uint256 _amountSeuro, uint256 _amountOther, address _other) private returns (PositionMetaData memory) {
+	function addLiquidity(uint256 _amountSeuro, uint256 _amountOther, address _other) private returns (uint256, uint128, uint256, uint256) {
 		(address token0, address token1) = getAscendingPair(_other);
 
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
 			token0 == sEuroToken ?
-			(_amountSeuro, _amountOther, _amountSeuro, MIN_VAL) :
-			(_amountOther, _amountSeuro, MIN_VAL, _amountSeuro);
+			(_amountSeuro, _amountOther, _amountSeuro, uint256(0)) :
+			(_amountOther, _amountSeuro, uint256(0), _amountSeuro);
 
-		mintPermissionsPrepare(msg.sender, token0, token1, amount0Min, amount1Min, amount0Desired, amount1Desired);
+		// approve the contract to send the tokens to manager
+		TransferHelper.safeApprove(token0, address(manager), amount0Desired);
+		TransferHelper.safeApprove(token1, address(manager), amount1Desired);
+
+		// send the tokens from the sender's account to the contract account
+		TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0Min);
+		TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1Min);
+
 
 		INonfungiblePositionManager.MintParams memory params =
 			INonfungiblePositionManager.MintParams({
@@ -169,14 +159,13 @@ contract BondingEvent is AccessControl, BondStorage {
 
 		// provide liquidity to the pool
 		(uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = manager.mint(params);
+
+		// stack to deep as of now. TODO: check this downstream instead
+		//if (amount0 == _amountOther) (amount0, amount1) = (amount1, amount0);
+
 		emit mintPosition(msg.sender, tokenId, liquidity, amount0, amount1);
 		
-		// do a swap if amount0 contains the foreign token to keep sEURO first
-		if (amount0 == _amountOther) (amount0, amount1) = (amount1, amount0);
-		PositionMetaData memory pos = PositionMetaData(tokenId, liquidity, /* sEURO field */ amount0, /* other field */ amount1);
-		return pos;
-
-		//TODO: look into the refund mechanism again if needed, create tests to make sure nothing is "lost"
+		return (tokenId, liquidity, amount0, amount1);
 	}
 
 	// We assume that there is a higher layer solution which helps to fetch the latest price as a quote.
@@ -196,32 +185,11 @@ contract BondingEvent is AccessControl, BondStorage {
 		uint256 _maturityInWeeks,
 		uint256 _rate
 	) public isInit {
+		require(msg.sender == operatorAddress, "inv-sender");
+
 		// information about the liquidity position after it has been successfully added
-		PositionMetaData memory position = addLiquidity(_amountSeuro, _amountOther, _otherToken);
+		(uint256 tokenId, uint128 liquidity, uint256 amountSeuro, uint256 amountOther) = addLiquidity(_amountSeuro, _amountOther, _otherToken);
 		// begin bonding event
-		BondStorage.startBond(msg.sender, _amountSeuro, _rate, _maturityInWeeks, position);
+		IBondStorage(bondStorage).startBond(msg.sender, _amountSeuro, _rate, _maturityInWeeks, tokenId, liquidity, amountSeuro, amountOther);
 	}
-
-	function getAmountBonds(address _user) public view returns (uint256) {
-		return BondStorage.getActiveBonds(_user);
-	}
-
-	function getUserBonds(address _user) public view override returns (Bond[] memory) {
-		return BondStorage.getUserBonds(_user);
-	}
-
-	function getUserBondAt(address _user, uint128 index) public view returns (Bond memory) {
-		require(index <= getUserBonds(_user).length - 1 && index >= 0, "invalid-bond-index");
-
-		return BondStorage.getBondAt(_user, index);
-	}
-
-	function getUserProfit(address _user) public view returns (uint256) {
-		return BondStorage.getProfit(_user);
-	}
-
-	function updateBondStatus(address _user) public {
-		BondStorage.refreshBondStatus(_user);
-	}
-
 }
