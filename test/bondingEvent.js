@@ -59,7 +59,7 @@ describe('BondingEvent', async () => {
 
   describe('initialise bonding event', async () => {
 	it('has not initialised pool', async () => {
-	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, /* acts as dummy address */ USDT_ADDRESS);
+	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, /* dummy address */ USDT_ADDRESS, CUSTOMER_ADDR);
 	  expect(await BondingEvent.isPoolInitialised()).to.equal(false);
 	});
   });
@@ -67,7 +67,7 @@ describe('BondingEvent', async () => {
   context('bonding event deployed', async () => {
 	beforeEach(async () => {
 	  BStorage = await BondStorageContract.deploy();
-	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address);
+	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address, CUSTOMER_ADDR);
 	});
 
 	describe('initialise pool', async () => {
