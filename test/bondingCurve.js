@@ -1,5 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
+const { BigNumber } = require('ethers');
 
 describe('BondingCurve', async () => {
   let BondingCurve, SEuro, BondingCurveBucketPrices;
@@ -21,14 +22,32 @@ describe('BondingCurve', async () => {
     return BondingCurveBucketPrices.callStatic.getPriceOfBucket(index);
   }
 
+  const calculateSEuros = async (euros) => {
+    let seuros = BigNumber.from(0);
+    let remainingEuros = euros;
+    let bucket = 0;
+    while (remainingEuros > 0) {
+      const bucketPrice = await getBucketPrice(bucket);
+      const euroBucketCapacity = BUCKET_SIZE.mul(bucketPrice).div(ethers.utils.parseEther('1'));
+      if (remainingEuros.gt(euroBucketCapacity)) {
+        seuros = seuros.add(BUCKET_SIZE);
+        remainingEuros = remainingEuros.sub(euroBucketCapacity);
+        bucket++;
+      } else {
+        seuros = seuros.add(remainingEuros.mul(ethers.utils.parseEther('1')).div(bucketPrice));
+        remainingEuros = 0;
+      }
+    }
+    return seuros;
+  }
+
   describe('seuroValue', async () => {
     it('gets the current value of given euros in terms of seuros', async () => {
       const euros = ethers.utils.parseEther('1000');
 
       const seuros = await BondingCurve.callStatic.seuroValue(euros);
 
-      const bucket0Price = await getBucketPrice(0);
-      const expectedSeuros = euros.mul(ethers.utils.parseEther('1')).div(bucket0Price);
+      const expectedSeuros = await calculateSEuros(euros);
       expect(seuros).to.equal(expectedSeuros);
     });
 
@@ -36,12 +55,10 @@ describe('BondingCurve', async () => {
       // will force crossover to next bucket due to discount
       const euros = BUCKET_SIZE;
       
-      const firstBucketPrice = (await BondingCurve.currentBucket()).price;
       const seuros = await BondingCurve.callStatic.seuroValue(euros);
 
-      const maximumSeuros = euros.mul(ethers.utils.parseEther('1')).div(firstBucketPrice);
-      // should be less than maximum seuros as that calculation assumes all seuro will be priced in first bucket
-      expect(seuros).to.be.lt(maximumSeuros);
+      const expectedSEuros = await calculateSEuros(euros);
+      expect(seuros).to.equal(expectedSEuros);
     });
 
     it('saves new bucket price when supply has changed', async () => {
