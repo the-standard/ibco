@@ -15,7 +15,7 @@ const encodePriceSqrt = (reserve1, reserve0) => {
   )
 }
 
-let owner, customer, SEuro, USDT, BStorage, BAPIs;
+let owner, customer, SEuro, TST, USDT, BStorage, BAPIs;
 let USDT_ADDRESS, CUSTOMER_ADDR;
 const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 const TWO_MILLION = ethers.utils.parseEther('2000000');
@@ -44,30 +44,35 @@ beforeEach(async () => {
   const ERC20Contract = await ethers.getContractFactory('DUMMY');
   SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
   USDT = await ERC20Contract.deploy('USDT', 'USDT', ethers.utils.parseEther('100000000'));
+  TST = await ERC20Contract.deploy('TST', 'TST', ethers.utils.parseEther('100000000'));
   USDT_ADDRESS = USDT.address;
+  TST_ADDRESS = TST.address;
+  SEUR_ADDRESS = SEuro.address;
   CUSTOMER_ADDR = customer.address;
 });
 
 describe('BondingEvent', async () => {
 
-  let BondingEventContract, BondingEvent, BondStorageContract, BondStorage;
+  let BondingEventContract, BondingEvent, BondStorageContract, BondStorage, TokenGateway;
 
   beforeEach(async () => {
 	BondingEventContract = await ethers.getContractFactory('BondingEvent');
 	BondStorageContract = await ethers.getContractFactory('BondStorage');
+	TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
   });
 
   describe('initialise bonding event', async () => {
 	it('has not initialised pool', async () => {
-	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, /* dummy address */ USDT_ADDRESS, CUSTOMER_ADDR);
+	  BondingEvent = await BondingEventContract.deploy(SEUR_ADDRESS, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, /* dummy address */ USDT_ADDRESS, CUSTOMER_ADDR);
 	  expect(await BondingEvent.isPoolInitialised()).to.equal(false);
 	});
   });
 
   context('bonding event deployed', async () => {
 	beforeEach(async () => {
-	  BStorage = await BondStorageContract.deploy();
-	  BondingEvent = await BondingEventContract.deploy(SEuro.address, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address, CUSTOMER_ADDR);
+	  TokenGateway = await TokenGatewayContract.deploy(TST_ADDRESS, SEUR_ADDRESS);
+	  BStorage = await BondStorageContract.deploy(TokenGateway.address);
+	  BondingEvent = await BondingEventContract.deploy(SEUR_ADDRESS, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address, CUSTOMER_ADDR);
 	});
 
 	describe('initialise pool', async () => {
@@ -114,7 +119,7 @@ describe('BondingEvent', async () => {
 	  context('pool initialised', async () => {
 		beforeEach(async () => {
 		  const SeurosPerUsdt = ethers.BigNumber.from(93).mul(ethers.BigNumber.from(10).pow(12));
-		  const price = SEuro.address < USDT.address ?
+		  const price = SEUR_ADDRESS <  USDT_ADDRESS ?
 			encodePriceSqrt(100, SeurosPerUsdt) :
 			encodePriceSqrt(SeurosPerUsdt, 100);
 		  await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);

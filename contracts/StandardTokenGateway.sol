@@ -28,11 +28,10 @@ contract StandardTokenGateway is AccessControl {
 
 	bytes32 public constant TST_TOKEN_GATEWAY = keccak256("TST_TOKEN_GATEWAY");
 
-	constructor(address _standardToken, address _seuroToken, address _bondStorage) {
+	constructor(address _standardToken, address _seuroToken) {
 		_setupRole(TST_TOKEN_GATEWAY, msg.sender);
 		TST_ADDRESS = _standardToken;
 		SEUR_ADDRESS = _seuroToken;
-		bondStorageAddress = _bondStorage;
 		tokenPrice = ABDKMath64x64.divu(1, 20); // 0.05 EUR from latest liquidity bootstrapping
 		bondRewardPoolSupply = 500_000_000; // 500M: half the total supply is available as bond reward
 	}

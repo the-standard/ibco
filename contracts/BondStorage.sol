@@ -130,7 +130,7 @@ contract BondStorage is AccessControl {
 		return (payout < actualSupply, payout);
 	}
 
-	function toStandardTokens(uint256 _amountSeuro) private returns (int256) {
+	function toStandardTokens(uint256 _amountSeuro) private view returns (int256) {
 		int128 currTokPrice = tokenGateway.getStandardTokenPrice();
 		int128 seuro128 = ABDKMath64x64.fromUInt(_amountSeuro);
 		int128 tokenAmount128 = ABDKMath64x64.div(seuro128, currTokPrice);
