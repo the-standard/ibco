@@ -49,8 +49,8 @@ contract BondStorage is AccessControl {
 		bool isActive;              // if the user has an active bond
 		uint256 amountBondsActive;  // amount of bonds in play
 		Bond[] bonds;               // all the bonds in play
-		uint256 profitAmount;       // total profit: all payout less the principals
-		int256 claimAmount;        // total claim from expired bonds (valued in sEURO)
+		int256 profitAmount;        // total profit: all payout less the principals
+		int256 claimAmount;         // total claim from expired bonds (valued in sEURO)
 	}
 
 	mapping(address => BondRecord) issuedBonds;
@@ -79,8 +79,10 @@ contract BondStorage is AccessControl {
 		issuedBonds[_user].bonds[index].tapped = true;
 	}
 
-	function increaseProfitAmount(address _user, uint256 latestAddition) private {
-		uint256 newProfit = latestAddition + issuedBonds[_user].profitAmount;
+	function increaseProfitAmount(address _user, int256 latestAddition) private {
+		int256 currAmount = issuedBonds[_user].profitAmount;
+		int256 newProfit = latestAddition + currAmount;
+		require(newProfit > currAmount, "inv-negative-add");
 		issuedBonds[_user].profitAmount = newProfit;
 	}
 
@@ -205,15 +207,16 @@ contract BondStorage is AccessControl {
 		return getUserBonds(_user)[index];
 	}
 
-	function getProfit(address _user) public view virtual returns (uint256) {
+	function getProfit(address _user) public view virtual returns (int256) {
 		return issuedBonds[_user].profitAmount;
 	}
 
 	// Defunds the claim the user has by receiving TST tokens equal to the claim value left.
 	// This function has to be connected to a middle / cache layer.
-	function defundClaim(address _user, uint256 deduct) public onlyOwner {
-		uint256 currClaim = issuedBonds[_user].claimAmount;
-		uint256 newClaim = SafeMath.sub(currClaim, deduct);
+	function defundClaim(address _user, int256 deduct) public onlyOwner {
+		int256 currClaim = issuedBonds[_user].claimAmount;
+		int256 newClaim = currClaim - deduct;
+		require(newClaim < currClaim, "inv-negative-sub");
 		issuedBonds[_user].claimAmount = newClaim;
 	}
 }
