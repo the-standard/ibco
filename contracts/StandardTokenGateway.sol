@@ -15,13 +15,13 @@ contract StandardTokenGateway is AccessControl {
 	address public immutable SEUR_ADDRESS;
 
 	// Total supply TST
-	int256 public immutable TST_MAX_AMOUNT = 1_000_000_000;
+	uint256 public immutable TST_MAX_AMOUNT = 1_000_000_000;
 
 	// The price of one TST in EUR
 	int128 public tokenPrice;
 
 	// The amount of TST available to get as bond reward
-	int256 public bondRewardPoolSupply;
+	uint256 public bondRewardPoolSupply;
 
 	// The contract which owns the bonds
 	address public bondStorageAddress;
@@ -55,17 +55,21 @@ contract StandardTokenGateway is AccessControl {
 		return tokenPrice;
 	}
 
+	function getRewardSupply() public view returns (uint256) {
+		return bondRewardPoolSupply;
+	}
+
 	function setNewBondStorage(address _newAddress) public onlyGatewayOwner {
 		require(_newAddress != address(0), "inv-contract-address");
 		bondStorageAddress = _newAddress;
 	}
 
-	function decreaseRewardSupply(int256 _amount) public onlyStorageOwner {
+	function decreaseRewardSupply(uint256 _amount) public onlyStorageOwner {
 		require(bondRewardPoolSupply - _amount > 0, "dec-supply-uf");
 		bondRewardPoolSupply -= _amount;
 	}
 
-	function increaseRewardSupply(int256 _amount) public onlyStorageOwner {
+	function increaseRewardSupply(uint256 _amount) public onlyStorageOwner {
 		require(bondRewardPoolSupply + _amount < TST_MAX_AMOUNT, "inc-supply-of");
 		bondRewardPoolSupply += _amount;
 	}

@@ -3,13 +3,18 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "./StandardTokenGateway.sol";
 
 
 contract BondStorage is AccessControl {
 	bytes32 public constant WHITELIST_BOND_STORAGE = keccak256("WHITELIST_BOND_STORAGE");
 
-	constructor() {
+	// Standard Token data feed
+	StandardTokenGateway private tokenGateway;
+
+	constructor(address _gatewayAddress) {
 		_setupRole(WHITELIST_BOND_STORAGE, msg.sender);
+		tokenGateway = StandardTokenGateway(_gatewayAddress);
 	}
 
 	modifier onlyOwner {
@@ -45,7 +50,7 @@ contract BondStorage is AccessControl {
 		uint256 amountBondsActive;  // amount of bonds in play
 		Bond[] bonds;               // all the bonds in play
 		uint256 profitAmount;       // total profit: all payout less the principals
-		uint256 claimAmount;        // total claim from expired bonds (valued in sEURO)
+		int256 claimAmount;        // total claim from expired bonds (valued in sEURO)
 	}
 
 	mapping(address => BondRecord) issuedBonds;
@@ -75,12 +80,14 @@ contract BondStorage is AccessControl {
 	}
 
 	function increaseProfitAmount(address _user, uint256 latestAddition) private {
-		uint256 newProfit = SafeMath.add(latestAddition, issuedBonds[_user].profitAmount);
+		uint256 newProfit = latestAddition + issuedBonds[_user].profitAmount;
 		issuedBonds[_user].profitAmount = newProfit;
 	}
 
-	function increaseClaimAmount(address _user, uint256 latestAddition) private {
-		uint256 newClaim = SafeMath.add(latestAddition, issuedBonds[_user].claimAmount);
+	function increaseClaimAmount(address _user, int256 latestAddition) private {
+		int256 currAmount = issuedBonds[_user].claimAmount;
+		int256 newClaim = currAmount + latestAddition;
+		require(newClaim > currAmount, "inv-negative-add");
 		issuedBonds[_user].claimAmount = newClaim;
 	}
 
@@ -89,8 +96,8 @@ contract BondStorage is AccessControl {
 		// basic (rate * principal) calculations
 		uint256 rateFactor = 100000; // due to the way we store interest rates
 		uint256 ratePrincipal = SafeMath.mul(bond.rate, bond.principal);
-		uint256 denominator = SafeMath.add(bond.principal, ratePrincipal);
-		uint256 payout = SafeMath.div(denominator, rateFactor);
+		uint256 nominator = SafeMath.add(bond.principal, ratePrincipal);
+		uint256 payout = SafeMath.div(nominator, rateFactor);
 		uint256 profit = SafeMath.div(ratePrincipal, rateFactor);
 		return (payout, profit);
 	}
@@ -113,6 +120,20 @@ contract BondStorage is AccessControl {
 		return current + _maturityInWeeks * secondsPerWeek;
 	}
 
+	function isBondingPossible(uint256 _principal, uint256 _rate, uint256 _maturityInWeeks) private view returns (bool, uint256) {
+		Bond memory dummyBond = Bond(_principal, _rate, _maturityInWeeks, false, PositionMetaData(0, 0, 0, 0));
+		(uint256 payout, ) = calculateBond(dummyBond);
+		uint256 actualSupply = tokenGateway.getRewardSupply();
+		// if we are able to payout this bond in TST
+		return (payout < actualSupply, payout);
+	}
+
+	function toStandardTokens(uint256 _amountSeuro) private returns (int256) {
+		int128 currTokPrice = tokenGateway.getStandardTokenPrice();
+		int128 seuro128 = ABDKMath64x64.fromUInt(_amountSeuro);
+		int128 tokenAmount128 = ABDKMath64x64.div(seuro128, currTokPrice);
+		return ABDKMath64x64.to128x128(tokenAmount128);
+	}
 
 	/// ================ BondStorage public APIs ==============
 
@@ -126,13 +147,19 @@ contract BondStorage is AccessControl {
 		uint256 _amountSeuro,
 		uint256 _amountOther
 	) external {
-		uint256 maturityDate = maturityDateAfterWeeks(_maturityInWeeks);
+		(bool ok, uint256 futurePayout) = isBondingPossible(_principal, _rate, _maturityInWeeks);
+		require(ok == true, "err-insuff-tst-supply");
 
+		uint256 maturityDate = maturityDateAfterWeeks(_maturityInWeeks);
 		if (!isInitialised(_user)) {
 			setActive(_user);
 			setInitialised(_user);
 		}
 
+		// reduce the amount of available bonding reward TSTs
+		tokenGateway.decreaseRewardSupply(futurePayout);
+
+		// finalise record of bond
 		PositionMetaData memory data = PositionMetaData(_tokenId, _liquidity, _amountSeuro, _amountOther);
 		addBond(_user, _principal, _rate, maturityDate, data);
 		incrementActiveBonds(_user);
@@ -145,21 +172,22 @@ contract BondStorage is AccessControl {
 	// If the user has no bond that has passed its maturity, nothing changes.
 	// If the user has at least one bond that has passed maturity, the amountBondsActive is
 	// subtracted with the appropriate amount and the claim counter is increased with the
-	// principal(s) and the accrued interest.
+	// sum of the principals and the their respective accrued interest, all in TST.
 	// If the user has no bonds active, the isActive will be switched to false.
 	function refreshBondStatus(address _user) public {
 		Bond[] memory bonds = getUserBonds(_user);
-		uint256 total = bonds.length;
 
 		// check each bond to see if it has expired.
 		// we do the O(n) solution and check each bond at every refresh
 		// TODO: to optimise later with more clever sorting algo
-		for (uint i = 0; i < total; i++) {
+		for (uint i = 0; i < bonds.length; i++) {
 			if (hasExpired(bonds[i]) && !bonds[i].tapped) {
 				tapBond(_user, i); // prevents the abuse of squeezing profit from same bond more than once
-				(uint256 payout, uint256 profit) = calculateBond(bonds[i]);
-				increaseProfitAmount(_user, profit);
-				increaseClaimAmount(_user, payout);
+				(uint256 payoutSeuro, uint256 profitSeuro) = calculateBond(bonds[i]);
+				int256 payoutTok = toStandardTokens(payoutSeuro);
+				int256 profitTok = toStandardTokens(profitSeuro);
+				increaseProfitAmount(_user, profitTok);
+				increaseClaimAmount(_user, payoutTok);
 				decrementActiveBonds(_user);
 			}
 		}
