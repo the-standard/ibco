@@ -9,3 +9,9 @@ test:
 
 clean:
 		@rm -rf node_modules/ && npm install
+
+cov:
+		@npx hardhat coverage
+
+size:
+		@npx hardhat size-contracts
