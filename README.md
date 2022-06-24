@@ -33,7 +33,13 @@ npx hardhat test test/ibco.js
 ## Coverage
 Run the code coverage suite with
 ```
-npx hardhat coverage
+make cov
+```
+
+## Contract size benchmark
+Run the contract sizer with
+```
+make size
 ```
 
 ## Technical Documentation
