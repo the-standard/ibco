@@ -41,11 +41,11 @@ describe('BondingCurve', async () => {
     return seuros;
   }
 
-  describe.only('seuroValue', async () => {
+  describe('updateBucketAndCalculatePrice', async () => {
     it('gets the current value of given euros in terms of seuros', async () => {
       const euros = ethers.utils.parseEther('1000');
 
-      const seuros = await BondingCurve.callStatic.seuroValue(euros);
+      const seuros = await BondingCurve.callStatic.updateBucketAndCalculatePrice(euros);
 
       const expectedSeuros = await calculateSEuros(euros);
       expect(seuros).to.equal(expectedSeuros);
@@ -55,7 +55,7 @@ describe('BondingCurve', async () => {
       // will force crossover to next bucket due to discount
       const euros = BUCKET_SIZE;
       
-      const seuros = await BondingCurve.callStatic.seuroValue(euros);
+      const seuros = await BondingCurve.callStatic.updateBucketAndCalculatePrice(euros);
 
       const expectedSEuros = await calculateSEuros(euros);
       expect(seuros).to.equal(expectedSEuros);
@@ -64,7 +64,7 @@ describe('BondingCurve', async () => {
     it('will cross two price buckets when calculating', async () => {
       const euros = BUCKET_SIZE.mul(2);
       
-      const seuros = await BondingCurve.callStatic.seuroValue(euros);
+      const seuros = await BondingCurve.callStatic.updateBucketAndCalculatePrice(euros);
 
       const expectedSEuros = await calculateSEuros(euros);
       expect(seuros).to.equal(expectedSEuros);
@@ -74,7 +74,7 @@ describe('BondingCurve', async () => {
       const euros = ethers.utils.parseEther('1');
       await SEuro.mint(owner.address, BUCKET_SIZE);
       // activates updating of current price
-      await BondingCurve.seuroValue(euros);
+      await BondingCurve.updateBucketAndCalculatePrice(euros);
 
       const newBucketPrice = (await BondingCurve.currentBucket()).price;
 
@@ -85,7 +85,7 @@ describe('BondingCurve', async () => {
       await SEuro.mint(owner.address, MAX_SUPPLY);
       const euros = ethers.utils.parseEther('1');
 
-      const seuros = await BondingCurve.callStatic.seuroValue(euros);
+      const seuros = await BondingCurve.callStatic.updateBucketAndCalculatePrice(euros);
 
       expect(seuros).to.equal(euros);
     });

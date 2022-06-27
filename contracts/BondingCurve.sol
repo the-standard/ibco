@@ -59,9 +59,13 @@ contract BondingCurve {
         bucketPricesCache[_bucketIndex] = _bucketPrice;
     }
 
-    function seuroValue(uint256 _euroAmount) external returns (uint256) {
+    function updateBucketAndCalculatePrice(uint256 _euroAmount) external returns (uint256) {
         updateCurrentBucket();
-        uint256 sEuroTotal = 0;
+        return calculatePrice(_euroAmount);
+    }
+
+    function calculatePrice(uint256 _euroAmount) private returns (uint256) {
+        uint256 _sEuroTotal = 0;
         uint256 remainingEuros = _euroAmount;
         uint32 bucketIndex = currentBucket.index;
         uint256 bucketPrice = currentBucket.price;
@@ -69,16 +73,16 @@ contract BondingCurve {
             uint256 remainingInSeuro = convertEuroToSeuro(remainingEuros, bucketPrice);
             uint256 remainingCapacityInBucket = getRemainingCapacityInBucket(bucketIndex);
             if (remainingInSeuro > remainingCapacityInBucket) {
-                sEuroTotal += remainingCapacityInBucket;
+                _sEuroTotal += remainingCapacityInBucket;
                 remainingEuros -= convertSeuroToEuro(remainingCapacityInBucket, bucketPrice);
                 bucketIndex++;
                 bucketPrice = getBucketPrice(bucketIndex);
-            } else {
-                sEuroTotal += remainingInSeuro;
-                remainingEuros = 0;
+                continue;
             }
+            _sEuroTotal += remainingInSeuro;
+            remainingEuros = 0;
         }
-        return sEuroTotal;
+        return _sEuroTotal;
     }
 
     function updateCurrentBucket() private {
