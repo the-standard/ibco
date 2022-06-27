@@ -14,8 +14,9 @@ contract StandardTokenGateway is AccessControl {
 	// Address to the sEURO contract with a varying supply
 	address public immutable SEUR_ADDRESS;
 
-	// Total supply TST
-	uint256 public immutable TST_MAX_AMOUNT = 1_000_000_000;
+	uint256 immutable one_billion = 10 ** 9;
+	uint256 immutable decimals = 10 ** 18;
+	uint256 public immutable TST_MAX_AMOUNT; // 1B tokens
 
 	// The price of one TST in EUR
 	int128 public tokenPrice;
@@ -23,8 +24,8 @@ contract StandardTokenGateway is AccessControl {
 	// The amount of TST available to get as bond reward
 	uint256 public bondRewardPoolSupply;
 
-	// The contract which owns the bonds
-	address public bondStorageAddress;
+	// The operator address
+	address public operatorAddress;
 
 	bytes32 public constant TST_TOKEN_GATEWAY = keccak256("TST_TOKEN_GATEWAY");
 
@@ -33,7 +34,8 @@ contract StandardTokenGateway is AccessControl {
 		TST_ADDRESS = _standardToken;
 		SEUR_ADDRESS = _seuroToken;
 		tokenPrice = ABDKMath64x64.divu(1, 20); // 0.05 EUR from latest liquidity bootstrapping
-		bondRewardPoolSupply = 500_000_000; // 500M: half the total supply is available as bond reward
+		TST_MAX_AMOUNT = one_billion * decimals;
+		bondRewardPoolSupply = TST_MAX_AMOUNT / 2; // half the total supply is available as bond reward
 	}
 
 	modifier onlyGatewayOwner {
@@ -42,7 +44,7 @@ contract StandardTokenGateway is AccessControl {
 	}
 
 	modifier onlyStorageOwner {
-		require(msg.sender == bondStorageAddress, "inv-contract-sender");
+		require(msg.sender == operatorAddress, "err-not-storage-caller");
 		_;
 	}
 
@@ -58,9 +60,9 @@ contract StandardTokenGateway is AccessControl {
 		return bondRewardPoolSupply;
 	}
 
-	function setNewBondStorage(address _newAddress) public onlyGatewayOwner {
-		require(_newAddress != address(0), "inv-contract-address");
-		bondStorageAddress = _newAddress;
+	function setOperatorAddress(address _newAddress) public onlyGatewayOwner {
+		require(_newAddress != address(0), "err-zero-address");
+		operatorAddress = _newAddress;
 	}
 
 	function decreaseRewardSupply(uint256 _amount) public onlyStorageOwner {

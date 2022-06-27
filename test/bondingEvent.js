@@ -157,6 +157,7 @@ describe('BondingEvent', async () => {
 		}
 
 		it('bonds sEURO and USDT for 52 weeks and receives correct reward', async () => {
+		  await TokenGateway.connect(owner).setOperatorAddress(BStorage.address);
 		  await BondingEvent.connect(customer).bond(
 			TWO_MILLION, TWO_MILLION, USDT_ADDRESS, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
 		  );
