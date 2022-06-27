@@ -9,7 +9,7 @@ import "contracts/SEuro.sol";
 import "contracts/SEuroCalculator.sol";
 import "contracts/TokenManager.sol";
 
-contract IBCO is Ownable {
+contract SEuroOffering is Ownable {
     bool private active;
     uint256 private start;
     uint256 private stop;
