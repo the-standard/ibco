@@ -18,8 +18,11 @@ contract StandardTokenGateway is AccessControl {
 	uint256 immutable decimals = 10 ** 18;
 	uint256 public immutable TST_MAX_AMOUNT; // 1B tokens
 
-	// The price of one TST in EUR
-	int128 public tokenPrice;
+	// Make the math simpler whilst TST < 1.00 EUR, store the inverted token price:
+	// (price of one TST in EUR)^-1
+	uint256 public tokenPrice;
+	// Enabled when the price is less than 1
+	bool public inversed;
 
 	// The amount of TST available to get as bond reward
 	uint256 public bondRewardPoolSupply;
@@ -33,7 +36,8 @@ contract StandardTokenGateway is AccessControl {
 		_setupRole(TST_TOKEN_GATEWAY, msg.sender);
 		TST_ADDRESS = _standardToken;
 		SEUR_ADDRESS = _seuroToken;
-		tokenPrice = ABDKMath64x64.divu(1, 20); // 0.05 EUR from latest liquidity bootstrapping
+		inversed = true;
+		tokenPrice = 20; // 0.05 EUR
 		TST_MAX_AMOUNT = one_billion * decimals;
 		bondRewardPoolSupply = TST_MAX_AMOUNT / 2; // half the total supply is available as bond reward
 	}
@@ -48,12 +52,13 @@ contract StandardTokenGateway is AccessControl {
 		_;
 	}
 
-	function setUnitPrice(int128 _newPrice) public onlyGatewayOwner {
+	function setUnitPrice(uint256 _newPrice, bool _inversed) public onlyGatewayOwner {
 		tokenPrice = _newPrice;
+		inversed = _inversed;
 	}
 
-	function getStandardTokenPrice() public view returns (int128) {
-		return tokenPrice;
+	function getStandardTokenPrice() public view returns (uint256, bool) {
+		return (tokenPrice, inversed);
 	}
 
 	function getRewardSupply() public view returns (uint256) {
