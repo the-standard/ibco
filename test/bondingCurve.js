@@ -70,24 +70,23 @@ describe('BondingCurve', async () => {
       expect(seuros).to.equal(expectedSEuros);
     });
 
-    // it('saves new bucket price when supply has changed', async () => {
-    //   const euros = ethers.utils.parseEther('1');
-    //   await SEuro.mint(owner.address, BUCKET_SIZE);
-    //   // activates updating of current price
-    //   await BondingCurve.updateBucketAndCalculatePrice(euros);
+    it('saves new bucket price when supply has changed', async () => {
+      await SEuro.mint(owner.address, BUCKET_SIZE);
+      await BondingCurve.updateCurrentBucket();
 
-    //   const newBucketPrice = (await BondingCurve.currentBucket()).price;
+      const newBucketPrice = (await BondingCurve.currentBucket()).price;
 
-    //   expect(newBucketPrice).to.equal(await getBucketPrice(1));
-    // });
+      expect(newBucketPrice).to.equal(await getBucketPrice(1));
+    });
 
-    // it('will not exceed full price', async () => {
-    //   await SEuro.mint(owner.address, MAX_SUPPLY);
-    //   const euros = ethers.utils.parseEther('1');
+    it('will not exceed full price', async () => {
+      await SEuro.mint(owner.address, MAX_SUPPLY);
+      await BondingCurve.updateCurrentBucket();
+      const euros = ethers.utils.parseEther('1');
 
-    //   const seuros = await BondingCurve.callStatic.calculatePrice(euros);
+      const seuros = await BondingCurve.callStatic.calculatePrice(euros);
 
-    //   expect(seuros).to.equal(euros);
-    // });
+      expect(seuros).to.equal(euros);
+    });
   });
 });

@@ -39,29 +39,7 @@ contract BondingCurve {
         updateCurrentBucket();
     }
 
-    function getBucketPrice(uint32 _bucketIndex) internal returns (uint256 _price) {
-        if (_bucketIndex >= finalBucketIndex) return FINAL_PRICE;
-        uint256 cachedPrice = bucketPricesCache[_bucketIndex];
-        if (cachedPrice > 0) return cachedPrice;
-        uint256 medianBucketToken = getMedianToken(_bucketIndex);
-        int128 supplyRatio = ABDKMath64x64.divu(medianBucketToken, maxSupply);
-        int128 log2SupplyRatio = ABDKMath64x64.log_2(supplyRatio);
-        int128 jlog2SupplyRatio = ABDKMath64x64.mul(j, log2SupplyRatio);
-        int128 baseCurve = ABDKMath64x64.exp_2(jlog2SupplyRatio);
-        uint256 curve = ABDKMath64x64.mulu(baseCurve, k);
-        _price = curve + initialPrice;
-        cacheBucketPrice(_bucketIndex, _price);
-    }
-
-    function getMedianToken(uint32 _bucketIndex) private view returns (uint256) {
-        return _bucketIndex * bucketSize + bucketSize / 2;
-    }
-
-    function cacheBucketPrice(uint32 _bucketIndex, uint256 _bucketPrice) private {
-        bucketPricesCache[_bucketIndex] = _bucketPrice;
-    }
-
-    function calculatePrice(uint256 _euroAmount) public returns (uint256) {
+    function calculatePrice(uint256 _euroAmount) external returns (uint256) {
         uint256 _sEuroTotal = 0;
         uint256 remainingEuros = _euroAmount;
         uint32 bucketIndex = currentBucket.index;
@@ -88,17 +66,39 @@ contract BondingCurve {
         delete bucketPricesCache[bucketIndex];
     }
 
-    function getRemainingCapacityInBucket(uint32 _bucketIndex) private view returns(uint256) {
-        uint256 bucketCapacity = (_bucketIndex + 1) * bucketSize;
-        uint256 diff = bucketCapacity - seuro.totalSupply();
-        return diff > bucketSize ? bucketSize : diff;
+    function getBucketPrice(uint32 _bucketIndex) internal returns (uint256 _price) {
+        if (_bucketIndex >= finalBucketIndex) return FINAL_PRICE;
+        uint256 cachedPrice = bucketPricesCache[_bucketIndex];
+        if (cachedPrice > 0) return cachedPrice;
+        uint256 medianBucketToken = getMedianToken(_bucketIndex);
+        int128 supplyRatio = ABDKMath64x64.divu(medianBucketToken, maxSupply);
+        int128 log2SupplyRatio = ABDKMath64x64.log_2(supplyRatio);
+        int128 jlog2SupplyRatio = ABDKMath64x64.mul(j, log2SupplyRatio);
+        int128 baseCurve = ABDKMath64x64.exp_2(jlog2SupplyRatio);
+        uint256 curve = ABDKMath64x64.mulu(baseCurve, k);
+        _price = curve + initialPrice;
+        cacheBucketPrice(_bucketIndex, _price);
     }
 
     function convertEuroToSeuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
         return _amount * 10 ** 18 / _rate;
     }
 
+    function getRemainingCapacityInBucket(uint32 _bucketIndex) private view returns(uint256) {
+        uint256 bucketCapacity = (_bucketIndex + 1) * bucketSize;
+        uint256 diff = bucketCapacity - seuro.totalSupply();
+        return diff > bucketSize ? bucketSize : diff;
+    }
+
     function convertSeuroToEuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
         return _amount * _rate / 10 ** 18;
+    }
+
+    function getMedianToken(uint32 _bucketIndex) private view returns (uint256) {
+        return _bucketIndex * bucketSize + bucketSize / 2;
+    }
+
+    function cacheBucketPrice(uint32 _bucketIndex, uint256 _bucketPrice) private {
+        bucketPricesCache[_bucketIndex] = _bucketPrice;
     }
 }
