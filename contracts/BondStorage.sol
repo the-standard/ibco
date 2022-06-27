@@ -49,8 +49,8 @@ contract BondStorage is AccessControl {
 		bool isActive;              // if the user has an active bond
 		uint256 amountBondsActive;  // amount of bonds in play
 		Bond[] bonds;               // all the bonds in play
-		int256 profitAmount;        // total profit: all payout less the principals
-		int256 claimAmount;         // total claim from expired bonds (valued in sEURO)
+		uint256 profitAmount;        // total profit: all payout less the principals
+		uint256 claimAmount;         // total claim from expired bonds (valued in sEURO)
 	}
 
 	mapping(address => BondRecord) issuedBonds;
@@ -79,17 +79,15 @@ contract BondStorage is AccessControl {
 		issuedBonds[_user].bonds[index].tapped = true;
 	}
 
-	function increaseProfitAmount(address _user, int256 latestAddition) private {
-		int256 currAmount = issuedBonds[_user].profitAmount;
-		int256 newProfit = latestAddition + currAmount;
-		require(newProfit > currAmount, "inv-negative-add");
+	function increaseProfitAmount(address _user, uint256 latestAddition) private {
+		uint256 currAmount = issuedBonds[_user].profitAmount;
+		uint256 newProfit = latestAddition + currAmount;
 		issuedBonds[_user].profitAmount = newProfit;
 	}
 
-	function increaseClaimAmount(address _user, int256 latestAddition) private {
-		int256 currAmount = issuedBonds[_user].claimAmount;
-		int256 newClaim = currAmount + latestAddition;
-		require(newClaim > currAmount, "inv-negative-add");
+	function increaseClaimAmount(address _user, uint256 latestAddition) private {
+		uint256 currAmount = issuedBonds[_user].claimAmount;
+		uint256 newClaim = currAmount + latestAddition;
 		issuedBonds[_user].claimAmount = newClaim;
 	}
 
@@ -130,11 +128,15 @@ contract BondStorage is AccessControl {
 		return (payout < actualSupply, payout);
 	}
 
-	function toStandardTokens(uint256 _amountSeuro) private view returns (int256) {
-		int128 currTokPrice = tokenGateway.getStandardTokenPrice();
-		int128 seuro128 = ABDKMath64x64.fromUInt(_amountSeuro);
-		int128 tokenAmount128 = ABDKMath64x64.div(seuro128, currTokPrice);
-		return ABDKMath64x64.to128x128(tokenAmount128);
+	function toStandardTokens(uint256 _amountSeuro) private view returns (uint256) {
+		uint256 result;
+		(uint256 currTokPrice, bool inverted) = tokenGateway.getStandardTokenPrice();
+		if (inverted) {
+			result = _amountSeuro * currTokPrice;
+		} else {
+			result = _amountSeuro / currTokPrice;
+		}
+		return result;
 	}
 
 	/// ================ BondStorage public APIs ==============
@@ -186,8 +188,8 @@ contract BondStorage is AccessControl {
 			if (hasExpired(bonds[i]) && !bonds[i].tapped) {
 				tapBond(_user, i); // prevents the abuse of squeezing profit from same bond more than once
 				(uint256 payoutSeuro, uint256 profitSeuro) = calculateBond(bonds[i]);
-				int256 payoutTok = toStandardTokens(payoutSeuro);
-				int256 profitTok = toStandardTokens(profitSeuro);
+				uint256 payoutTok = toStandardTokens(payoutSeuro);
+				uint256 profitTok = toStandardTokens(profitSeuro);
 				increaseProfitAmount(_user, profitTok);
 				increaseClaimAmount(_user, payoutTok);
 				decrementActiveBonds(_user);
@@ -207,16 +209,15 @@ contract BondStorage is AccessControl {
 		return getUserBonds(_user)[index];
 	}
 
-	function getProfit(address _user) public view virtual returns (int256) {
+	function getProfit(address _user) public view virtual returns (uint256) {
 		return issuedBonds[_user].profitAmount;
 	}
 
 	// Defunds the claim the user has by receiving TST tokens equal to the claim value left.
 	// This function has to be connected to a middle / cache layer.
-	function defundClaim(address _user, int256 deduct) public onlyOwner {
-		int256 currClaim = issuedBonds[_user].claimAmount;
-		int256 newClaim = currClaim - deduct;
-		require(newClaim < currClaim, "inv-negative-sub");
+	function defundClaim(address _user, uint256 deduct) public onlyOwner {
+		uint256 currClaim = issuedBonds[_user].claimAmount;
+		uint256 newClaim = currClaim - deduct;
 		issuedBonds[_user].claimAmount = newClaim;
 	}
 }
