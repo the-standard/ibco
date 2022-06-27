@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 import "contracts/SEuro.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 
+import "hardhat/console.sol";
+
 contract BondingCurve {
     struct Bucket {
         uint32 index;
@@ -59,12 +61,7 @@ contract BondingCurve {
         bucketPricesCache[_bucketIndex] = _bucketPrice;
     }
 
-    function updateBucketAndCalculatePrice(uint256 _euroAmount) external returns (uint256) {
-        updateCurrentBucket();
-        return calculatePrice(_euroAmount);
-    }
-
-    function calculatePrice(uint256 _euroAmount) private returns (uint256) {
+    function calculatePrice(uint256 _euroAmount) public returns (uint256) {
         uint256 _sEuroTotal = 0;
         uint256 remainingEuros = _euroAmount;
         uint32 bucketIndex = currentBucket.index;
@@ -85,7 +82,7 @@ contract BondingCurve {
         return _sEuroTotal;
     }
 
-    function updateCurrentBucket() private {
+    function updateCurrentBucket() public {
         uint32 bucketIndex = uint32(seuro.totalSupply() / bucketSize);
         currentBucket = Bucket(bucketIndex, getBucketPrice(bucketIndex));
         delete bucketPricesCache[bucketIndex];
