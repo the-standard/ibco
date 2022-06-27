@@ -22,6 +22,8 @@ const TWO_MILLION = ethers.utils.parseEther('2000000');
 const TEN_MILLION = ethers.utils.parseEther('10000000');
 const MOST_STABLE_FEE = 500;
 const ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
+const STANDARD_TOKENS_PER_EUR = 20; // 1 TST = 0.05 EUR
+const DECIMALS = 10 ** 18;
 var rates = {
   "HALF_PC": 500,
   "FIVE_PC": 5000,
@@ -175,12 +177,15 @@ describe('BondingEvent', async () => {
 		  await helperFastForwardTime(52 * ONE_WEEK_IN_SECONDS);
 		  await helperUpdateBondStatus();
 
-		  let expectedReward = etherStr('200000');
-		  let actualReward = (await helperGetProfit()).toString();
+		  const seuroProfit = 200000;
+		  let expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
+		  let actualReward = ((await helperGetProfit()) / DECIMALS).toString();
 		  expect(actualReward).to.equal(expectedReward);
 		});
 
 		it('bonds multiple times with various maturities and updates active/inactive bonds correctly', async () => {
+		  let seuroProfit;
+		  await TokenGateway.connect(owner).setOperatorAddress(BStorage.address);
 		  await BondingEvent.connect(customer).bond(
 			TWO_MILLION, TWO_MILLION, USDT_ADDRESS, durations["ONE_WEEK"], rates["FIVE_PC"]
 		  );
@@ -202,8 +207,9 @@ describe('BondingEvent', async () => {
 		  await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
 		  await helperUpdateBondStatus();
 
-		  expectedReward = etherStr('100000');
-		  actualReward = (await helperGetProfit()).toString();
+		  seuroProfit = 100000;
+		  expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
+		  actualReward = (await helperGetProfit() / DECIMALS).toString();
 		  expect(actualReward).to.equal(expectedReward);
 		  expectedActiveBonds = 2;
 		  actualActiveBonds = await helperGetActiveBonds();
@@ -212,8 +218,9 @@ describe('BondingEvent', async () => {
 		  await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
 		  await helperUpdateBondStatus();
 
-		  expectedReward = etherStr('220000');
-		  actualReward = (await helperGetProfit()).toString();
+		  seuroProfit = 220000;
+		  expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
+		  actualReward = (await helperGetProfit() / DECIMALS).toString();
 		  expect(actualReward).to.equal(expectedReward);
 		  expectedActiveBonds = 1;
 		  actualActiveBonds = await helperGetActiveBonds();
@@ -222,8 +229,9 @@ describe('BondingEvent', async () => {
 		  await helperFastForwardTime(2 * ONE_WEEK_IN_SECONDS);
 		  await helperUpdateBondStatus();
 
-		  expectedReward = etherStr('420000');
-		  actualReward = (await helperGetProfit()).toString();
+		  seuroProfit = 420000;
+		  expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
+		  actualReward = (await helperGetProfit() / DECIMALS).toString();
 		  expect(actualReward).to.equal(expectedReward);
 		  expectedActiveBonds = 0;
 		  actualActiveBonds = await helperGetActiveBonds();
