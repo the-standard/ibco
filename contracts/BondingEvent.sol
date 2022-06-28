@@ -59,6 +59,11 @@ contract BondingEvent is AccessControl {
 		require(hasRole(WHITELIST_BONDING_EVENT, msg.sender), "invalid-user");
 	}
 
+	modifier onlyOperator {
+		require(msg.sender == operatorAddress, "err-not-operator");
+		_;
+	}
+
 	modifier isNotInit {
 		_isNotInit();
 		_;
@@ -133,10 +138,8 @@ contract BondingEvent is AccessControl {
 	}
 
 	function addLiquidity(LiquidityPair memory lp)
-	public isInit
+	private isInit onlyOperator
 	returns (uint256, uint128, uint256, uint256) {
-		require(msg.sender == operatorAddress, "err-not-operator");
-
 		(address token0, address token1) = getAscendingPair(lp.otherAddress);
 		
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
@@ -196,9 +199,7 @@ contract BondingEvent is AccessControl {
 		address _otherAddress,
 		uint256 _maturityInWeeks,
 		uint256 _rate
-	) public isInit {
-		require(msg.sender == operatorAddress, "err-not-operator");
-
+	) public isInit onlyOperator {
 		LiquidityPair memory lp = LiquidityPair(_user, _amountSeuro, _amountOther, _otherAddress);
 		// information about the liquidity position after it has been successfully added
 		(uint256 tokenId, uint128 liquidity, uint256 amountSeuro, uint256 amountOther) = addLiquidity(lp);
