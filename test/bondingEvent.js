@@ -15,7 +15,7 @@ const encodePriceSqrt = (reserve1, reserve0) => {
   )
 }
 
-let owner, customer, SEuro, TST, USDT, BStorage, BAPIs;
+let owner, customer, SEuro, TST, USDT, BStorage;
 let USDT_ADDRESS, CUSTOMER_ADDR;
 const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 var etherBalances = {
@@ -162,10 +162,6 @@ describe('BondingEvent', async () => {
 		async function helperFastForwardTime(seconds) {
 		  ethers.provider.send('evm_increaseTime', [ seconds ]);
 		  ethers.provider.send('evm_mine');
-		}
-
-		function etherStr(amountStr) {
-		  return ethers.utils.parseEther(amountStr).toString();
 		}
 
 		it('bonds sEURO and USDT for 52 weeks and receives correct reward', async () => {
