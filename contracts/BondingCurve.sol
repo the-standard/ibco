@@ -4,8 +4,6 @@ pragma solidity ^0.8.0;
 import "contracts/SEuro.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 
-import "hardhat/console.sol";
-
 contract BondingCurve {
     struct Bucket {
         uint32 index;

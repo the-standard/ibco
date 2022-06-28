@@ -8,6 +8,7 @@ import "contracts/interfaces/WETH.sol";
 import "contracts/SEuro.sol";
 import "contracts/SEuroCalculator.sol";
 import "contracts/TokenManager.sol";
+import "contracts/BondingCurve.sol";
 
 contract SEuroOffering is Ownable {
     bool private active;
@@ -16,13 +17,15 @@ contract SEuroOffering is Ownable {
     address private seuro;
     SEuroCalculator private sEuroRateCalculator;    
     TokenManager private tokenManager;
+    BondingCurve private bondingCurve;
 
     event Swap(bytes32 _token, uint256 amountIn, uint256 amountOut);
 
-    constructor(address _seuro, address _sEuroRateCalculator, address _tokenManager) {
+    constructor(address _seuro, address _sEuroRateCalculator, address _tokenManager, address _bondingCurve) {
         seuro = _seuro;
         sEuroRateCalculator = SEuroCalculator(_sEuroRateCalculator);
         tokenManager = TokenManager(_tokenManager);
+        bondingCurve = BondingCurve(_bondingCurve);
     }
 
     function getEuros(uint256 _amount, address _chainlinkAddr, uint8 _chainlinkDec) private returns (uint256) {
@@ -51,6 +54,7 @@ contract SEuroOffering is Ownable {
         token.transferFrom(msg.sender, address(this), _amount);
         uint256 euros = getEuros(_amount, chainlinkAddr, chainlinkDec);
         SEuro(seuro).mint(msg.sender, euros);
+        bondingCurve.updateCurrentBucket();
         emit Swap(_token, _amount, euros);
     }
 
@@ -60,6 +64,7 @@ contract SEuroOffering is Ownable {
         weth.deposit{value: msg.value};
         uint256 euros = getEuros(msg.value, chainlinkAddr, chainlinkDec);
         SEuro(seuro).mint(msg.sender, euros);
+        bondingCurve.updateCurrentBucket();
         emit Swap(bytes32("ETH"), msg.value, euros);
     }
 

@@ -8,6 +8,9 @@ describe('SEuroOffering', async () => {
   const CL_ETH_USD_DEC = 8;
   const DAI_USD_CL = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
   const DAI_CL_DEC = 8;
+  const BUCKET_SIZE = ethers.utils.parseEther('100000');
+  const INITIAL_PRICE = ethers.utils.parseEther('0.8');
+  const MAX_SUPPLY = ethers.utils.parseEther('200000000');
   let SEuroOffering, SEuro, BondingCurve, SEuroCalculator, TokenManager, WETH, owner, user;
 
   async function buyWETH(signer, amount) {
@@ -28,6 +31,19 @@ describe('SEuroOffering', async () => {
     return await SEuroCalculator.callStatic.calculate(amount, DAI_USD_CL, DAI_CL_DEC);
   }
 
+  async function getBucketPrice(index) {
+    const BondingCurveBucketPrices = await (await ethers.getContractFactory('BondingCurveBucketPrices')).deploy(
+      SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE
+    );
+    return await BondingCurveBucketPrices.callStatic.getPriceOfBucket(index);
+  }
+
+  async function SEuroToEth(amount) {
+    const ChainlinkEurUsd = await ethers.getContractAt('Chainlink', '0xb49f677943BC038e9857d61E7d053CaA2C1734C1');
+    const ChainlinkUsdEth = await ethers.getContractAt('Chainlink', '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419');
+    return amount.mul((await ChainlinkEurUsd.latestRoundData()).answer).div((await ChainlinkUsdEth.latestRoundData()).answer);
+  }
+
   beforeEach(async () => {
     [owner, user] = await ethers.getSigners();
 
@@ -39,13 +55,10 @@ describe('SEuroOffering', async () => {
 
     WETH = await ethers.getContractAt('WETH', WETH_ADDRESS);
     SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
-    const INITIAL_PRICE = ethers.utils.parseEther('0.8');
-    const MAX_SUPPLY = ethers.utils.parseEther('200000000');
-    const BUCKET_SIZE = ethers.utils.parseEther('100000');
     BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
     SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address);
     TokenManager = await TokenManagerContract.deploy();
-    SEuroOffering = await SEuroOfferingContract.deploy(SEuro.address, SEuroCalculator.address, TokenManager.address);
+    SEuroOffering = await SEuroOfferingContract.deploy(SEuro.address, SEuroCalculator.address, TokenManager.address, BondingCurve.address);
 
     await SEuro.connect(owner).grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), SEuroOffering.address)
   });
@@ -133,6 +146,18 @@ describe('SEuroOffering', async () => {
         expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
       });
 
+      it('updates the price in bonding curve', async () => {
+        const amount = await SEuroToEth(BUCKET_SIZE);
+        await buyWETH(user, amount);
+        await WETH.connect(user).approve(SEuroOffering.address, amount);
+
+        await SEuroOffering.connect(user).swap(WETH_BYTES, amount);
+
+        const bucket = await BondingCurve.currentBucket();
+        expect(bucket.index).to.equal(1);
+        expect(bucket.price).to.equal(await getBucketPrice(1));
+      });
+
       describe('swapETH', async () => {
         it('swaps for eth', async () => {
           const toSwap = await ethers.utils.parseEther('1');
@@ -143,7 +168,16 @@ describe('SEuroOffering', async () => {
           await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs(ethBytes, toSwap, expectedEuros);
           const userSEuroBalance = await SEuro.balanceOf(user.address);
           expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
-        })
+        });
+
+        it('updates the price in bonding curve', async () => {
+          const amount = await SEuroToEth(BUCKET_SIZE);
+          await SEuroOffering.connect(user).swapETH({ value: amount });
+
+          const bucket = await BondingCurve.currentBucket();
+          expect(bucket.index).to.equal(1);
+          expect(bucket.price).to.equal(await getBucketPrice(1));
+        });
       });
     });
   });
