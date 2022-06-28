@@ -27,8 +27,8 @@ contract StandardTokenGateway is AccessControl {
 	// The amount of TST available to get as bond reward
 	uint256 public bondRewardPoolSupply;
 
-	// The operator address
-	address public operatorAddress;
+	// The storage address
+	address public storageAddress;
 
 	bytes32 public constant TST_TOKEN_GATEWAY = keccak256("TST_TOKEN_GATEWAY");
 
@@ -48,7 +48,7 @@ contract StandardTokenGateway is AccessControl {
 	}
 
 	modifier onlyStorageOwner {
-		require(msg.sender == operatorAddress, "err-not-storage-caller");
+		require(msg.sender == storageAddress, "err-not-storage-caller");
 		_;
 	}
 
@@ -65,9 +65,9 @@ contract StandardTokenGateway is AccessControl {
 		return bondRewardPoolSupply;
 	}
 
-	function setOperatorAddress(address _newAddress) public onlyGatewayOwner {
+	function setStorageAddress(address _newAddress) public onlyGatewayOwner {
 		require(_newAddress != address(0), "err-zero-address");
-		operatorAddress = _newAddress;
+		storageAddress = _newAddress;
 	}
 
 	function decreaseRewardSupply(uint256 _amount) public onlyStorageOwner {
