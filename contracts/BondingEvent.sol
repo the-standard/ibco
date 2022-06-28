@@ -125,13 +125,24 @@ contract BondingEvent is AccessControl {
 		init = true;
 	}
 
-	function addLiquidity(uint256 _amountSeuro, uint256 _amountOther, address _other) private returns (uint256, uint128, uint256, uint256) {
-		(address token0, address token1) = getAscendingPair(_other);
+	struct LiquidityPair {
+		address user;
+		uint256 amountSeuro;
+		uint256 amountOther;
+		address otherAddress;
+	}
 
+	function addLiquidity(LiquidityPair memory lp)
+	public isInit
+	returns (uint256, uint128, uint256, uint256) {
+		require(msg.sender == operatorAddress, "err-not-operator");
+
+		(address token0, address token1) = getAscendingPair(lp.otherAddress);
+		
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
 			token0 == SEURO_ADDRESS ?
-			(_amountSeuro, _amountOther, _amountSeuro, uint256(0)) :
-			(_amountOther, _amountSeuro, uint256(0), _amountSeuro);
+			(lp.amountSeuro, lp.amountOther, lp.amountSeuro, uint256(0)) :
+			(lp.amountOther, lp.amountSeuro, uint256(0), lp.amountSeuro);
 
 		// approve the contract to send the tokens to manager
 		TransferHelper.safeApprove(token0, address(manager), amount0Desired);
@@ -179,17 +190,19 @@ contract BondingEvent is AccessControl {
 	///                          At the end of maturity, the principal + accrued interest is paid out all at once in TST.
 	/// @param _rate The rate is represented as a 10,000-factor of each basis point so the most stable fee is 500 (= 0.05 pc)
 	function bond(
+		address _user,
 		uint256 _amountSeuro,
 		uint256 _amountOther,
 		address _otherAddress,
 		uint256 _maturityInWeeks,
 		uint256 _rate
 	) public isInit {
-		require(msg.sender == operatorAddress, "inv-sender");
+		require(msg.sender == operatorAddress, "err-not-operator");
 
+		LiquidityPair memory lp = LiquidityPair(_user, _amountSeuro, _amountOther, _otherAddress);
 		// information about the liquidity position after it has been successfully added
-		(uint256 tokenId, uint128 liquidity, uint256 amountSeuro, uint256 amountOther) = addLiquidity(_amountSeuro, _amountOther, _otherAddress);
+		(uint256 tokenId, uint128 liquidity, uint256 amountSeuro, uint256 amountOther) = addLiquidity(lp);
 		// begin bonding event
-		IBondStorage(bondStorageAddress).startBond(msg.sender, _amountSeuro, _rate, _maturityInWeeks, tokenId, liquidity, amountSeuro, amountOther);
+		IBondStorage(bondStorageAddress).startBond(_user, _amountSeuro, _rate, _maturityInWeeks, tokenId, liquidity, amountSeuro, amountOther);
 	}
 }
