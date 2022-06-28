@@ -32,10 +32,10 @@ describe('SEuroOffering', async () => {
   }
 
   async function getBucketPrice(index) {
-    const BondingCurveBucketPrices = await (await ethers.getContractFactory('BondingCurveBucketPrices')).deploy(
+    const TestBondingCurve = await (await ethers.getContractFactory('TestBondingCurve')).deploy(
       SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE
     );
-    return await BondingCurveBucketPrices.callStatic.getPriceOfBucket(index);
+    return await TestBondingCurve.callStatic.getPriceOfBucket(index);
   }
 
   async function SEuroToEth(amount) {

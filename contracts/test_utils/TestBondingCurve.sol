@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "contracts/BondingCurve.sol";
 
-contract BondingCurveBucketPrices is BondingCurve {
+contract TestBondingCurve is BondingCurve {
     constructor(
         address _seuro,
         uint256 _initialPrice,

@@ -3,7 +3,7 @@ const { expect } = require('chai');
 const { BigNumber } = require('ethers');
 
 describe('BondingCurve', async () => {
-  let BondingCurve, SEuro, BondingCurveBucketPrices;
+  let BondingCurve, SEuro, TestBondingCurve;
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
@@ -15,11 +15,11 @@ describe('BondingCurve', async () => {
     const SEuroContract = await ethers.getContractFactory('SEuro');
     SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
     BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
-    BondingCurveBucketPrices = await (await ethers.getContractFactory('BondingCurveBucketPrices')).deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
+    TestBondingCurve = await (await ethers.getContractFactory('TestBondingCurve')).deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   });
 
   const getBucketPrice = async (index) => {
-    return BondingCurveBucketPrices.callStatic.getPriceOfBucket(index);
+    return TestBondingCurve.callStatic.getPriceOfBucket(index);
   }
 
   const calculateSEuros = async (euros) => {
