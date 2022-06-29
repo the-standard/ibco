@@ -23,6 +23,6 @@ contract SEuroCalculator {
 
     function calculate(uint256 _amount, address _tokUsdCl, uint8 _tokUsdDec) external returns (uint256 rate) {
         uint256 euros = calculateBaseRate(_tokUsdCl, _tokUsdDec) * _amount / FIXED_POINT;
-        rate = bondingCurve.seuroValue(euros);
+        rate = bondingCurve.calculatePrice(euros);
     }
 }

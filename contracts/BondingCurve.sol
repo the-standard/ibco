@@ -37,7 +37,34 @@ contract BondingCurve {
         updateCurrentBucket();
     }
 
-    function getBucketPrice(uint32 _bucketIndex) private returns (uint256 _price) {
+    function calculatePrice(uint256 _euroAmount) external returns (uint256) {
+        uint256 _sEuroTotal = 0;
+        uint256 remainingEuros = _euroAmount;
+        uint32 bucketIndex = currentBucket.index;
+        uint256 bucketPrice = currentBucket.price;
+        while (remainingEuros > 0) {
+            uint256 remainingInSeuro = convertEuroToSeuro(remainingEuros, bucketPrice);
+            uint256 remainingCapacityInBucket = getRemainingCapacityInBucket(bucketIndex);
+            if (remainingInSeuro > remainingCapacityInBucket) {
+                _sEuroTotal += remainingCapacityInBucket;
+                remainingEuros -= convertSeuroToEuro(remainingCapacityInBucket, bucketPrice);
+                bucketIndex++;
+                bucketPrice = getBucketPrice(bucketIndex);
+                continue;
+            }
+            _sEuroTotal += remainingInSeuro;
+            remainingEuros = 0;
+        }
+        return _sEuroTotal;
+    }
+
+    function updateCurrentBucket() public {
+        uint32 bucketIndex = uint32(seuro.totalSupply() / bucketSize);
+        currentBucket = Bucket(bucketIndex, getBucketPrice(bucketIndex));
+        delete bucketPricesCache[bucketIndex];
+    }
+
+    function getBucketPrice(uint32 _bucketIndex) internal returns (uint256 _price) {
         if (_bucketIndex >= finalBucketIndex) return FINAL_PRICE;
         uint256 cachedPrice = bucketPricesCache[_bucketIndex];
         if (cachedPrice > 0) return cachedPrice;
@@ -51,40 +78,8 @@ contract BondingCurve {
         cacheBucketPrice(_bucketIndex, _price);
     }
 
-    function getMedianToken(uint32 _bucketIndex) private view returns (uint256) {
-        return _bucketIndex * bucketSize + bucketSize / 2;
-    }
-
-    function cacheBucketPrice(uint32 _bucketIndex, uint256 _bucketPrice) private {
-        bucketPricesCache[_bucketIndex] = _bucketPrice;
-    }
-
-    function seuroValue(uint256 _euroAmount) external returns (uint256) {
-        updateCurrentBucket();
-        uint256 sEuroTotal = 0;
-        uint256 remainingEuros = _euroAmount;
-        uint32 bucketIndex = currentBucket.index;
-        uint256 bucketPrice = currentBucket.price;
-        while (remainingEuros > 0) {
-            uint256 remainingInSeuro = convertEuroToSeuro(remainingEuros, bucketPrice);
-            uint256 remainingCapacityInBucket = getRemainingCapacityInBucket(bucketIndex);
-            if (remainingInSeuro > remainingCapacityInBucket) {
-                sEuroTotal += remainingCapacityInBucket;
-                remainingEuros -= convertSeuroToEuro(remainingCapacityInBucket, bucketPrice);
-                bucketIndex++;
-                bucketPrice = getBucketPrice(bucketIndex);
-            } else {
-                sEuroTotal += remainingInSeuro;
-                remainingEuros = 0;
-            }
-        }
-        return sEuroTotal;
-    }
-
-    function updateCurrentBucket() private {
-        uint32 bucketIndex = uint32(seuro.totalSupply() / bucketSize);
-        currentBucket = Bucket(bucketIndex, getBucketPrice(bucketIndex));
-        delete bucketPricesCache[bucketIndex];
+    function convertEuroToSeuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
+        return _amount * 10 ** 18 / _rate;
     }
 
     function getRemainingCapacityInBucket(uint32 _bucketIndex) private view returns(uint256) {
@@ -93,11 +88,15 @@ contract BondingCurve {
         return diff > bucketSize ? bucketSize : diff;
     }
 
-    function convertEuroToSeuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
-        return _amount * 10 ** 18 / _rate;
-    }
-
     function convertSeuroToEuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
         return _amount * _rate / 10 ** 18;
+    }
+
+    function getMedianToken(uint32 _bucketIndex) private view returns (uint256) {
+        return _bucketIndex * bucketSize + bucketSize / 2;
+    }
+
+    function cacheBucketPrice(uint32 _bucketIndex, uint256 _bucketPrice) private {
+        bucketPricesCache[_bucketIndex] = _bucketPrice;
     }
 }
