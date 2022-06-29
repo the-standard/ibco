@@ -27,36 +27,36 @@ describe('BondingCurve', async () => {
     it('gets the current value of given euros in terms of seuros', async () => {
       const euros = ethers.utils.parseEther('1000');
 
-      const seuros = await BondingCurve.callStatic.calculatePrice(euros);
+      const actualSEuros = await BondingCurve.callStatic.calculatePrice(euros);
 
       const expectedSeuros = euros.mul(DECIMALS).div(await getBucketPrice(0));
-      expect(seuros).to.equal(expectedSeuros);
+      expect(actualSEuros).to.equal(expectedSeuros);
     });
 
     it('should price some tokens from next bucket if transaction will cross bucket limit', async () => {
       // will force crossover to next bucket due to discount
       const euros = BUCKET_SIZE;
       
-      const seuros = await BondingCurve.callStatic.calculatePrice(euros);
+      const actualSEuros = await BondingCurve.callStatic.calculatePrice(euros);
 
       const firstBucketCapacityInEuros = (await getBucketPrice(0)).mul(BUCKET_SIZE).div(DECIMALS);
       const remainingEuros = euros.sub(firstBucketCapacityInEuros);
       const secondBucketSEuros = remainingEuros.mul(DECIMALS).div(await getBucketPrice(1));
       const expectedSEuros = BUCKET_SIZE.add(secondBucketSEuros);
-      expect(seuros).to.equal(expectedSEuros);
+      expect(actualSEuros).to.equal(expectedSEuros);
     });
 
     it('will cross two price buckets when calculating', async () => {
       const euros = BUCKET_SIZE.mul(2);
       
-      const seuros = await BondingCurve.callStatic.calculatePrice(euros);
+      const actualSEuros = await BondingCurve.callStatic.calculatePrice(euros);
 
       const firstBucketCapacityInEuros = (await getBucketPrice(0)).mul(BUCKET_SIZE).div(DECIMALS);
       const secondBucketCapacityInEuros = (await getBucketPrice(1)).mul(BUCKET_SIZE).div(DECIMALS);
       const remainingEuros = euros.sub(firstBucketCapacityInEuros).sub(secondBucketCapacityInEuros);
       const thirdBuckeSEuros = remainingEuros.mul(DECIMALS).div(await getBucketPrice(2));
       const expectedSEuros = BUCKET_SIZE.mul(2).add(thirdBuckeSEuros);
-      expect(seuros).to.equal(expectedSEuros);
+      expect(actualSEuros).to.equal(expectedSEuros);
     });
 
     it('will not exceed full price when max supply is met', async () => {
