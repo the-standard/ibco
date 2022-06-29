@@ -15,11 +15,11 @@ interface IBondStorage {
 
 contract BondingEvent is AccessControl {
 	// sEUR: the main leg of the currency pair
-	address public immutable sEuroToken;
+	address public immutable SEURO_ADDRESS;
 	// other: the other ERC-20 token
-	address public immutable otherToken;
+	address public immutable OTHER_ADDRESS;
 	// bond storage contract
-	address public bondStorage;
+	address public bondStorageAddress;
 	// controls the bonding event and manages the rates and maturities
 	address public operatorAddress;
 
@@ -39,11 +39,11 @@ contract BondingEvent is AccessControl {
 	// only contract owner can add the other currency leg
 	bytes32 public constant WHITELIST_BONDING_EVENT = keccak256("WHITELIST_BONDING_EVENT");
 
-	constructor(address _sEuro, address _otherToken, address _manager, address _bondStorage, address _operatorAddress) {
+	constructor(address _seuroAddress, address _otherAddress, address _manager, address _bondStorageAddress, address _operatorAddress) {
 		_setupRole(WHITELIST_BONDING_EVENT, msg.sender);
-		sEuroToken = _sEuro;
-		otherToken = _otherToken;
-		bondStorage = _bondStorage;
+		SEURO_ADDRESS = _seuroAddress;
+		OTHER_ADDRESS = _otherAddress;
+		bondStorageAddress = _bondStorageAddress;
 		operatorAddress = _operatorAddress;
 		tickLowerBound = -10000;
 		tickHigherBound = 10000;
@@ -57,6 +57,11 @@ contract BondingEvent is AccessControl {
 
 	function _onlyPoolOwner() private view {
 		require(hasRole(WHITELIST_BONDING_EVENT, msg.sender), "invalid-user");
+	}
+
+	modifier onlyOperator {
+		require(msg.sender == operatorAddress, "err-not-operator");
+		_;
 	}
 
 	modifier isNotInit {
@@ -78,7 +83,7 @@ contract BondingEvent is AccessControl {
 	}
 
 	function setStorageContract(address _newAddress) public onlyPoolOwner {
-		bondStorage = _newAddress;
+		bondStorageAddress = _newAddress;
 	}
 
 	function setOperator(address _newAddress) public onlyPoolOwner {
@@ -99,10 +104,10 @@ contract BondingEvent is AccessControl {
 	}
 
 	// Compares the Standard Euro token to another token and returns them in ascending order
-	function getAscendingPair(address _otherToken) private view returns (address token0, address token1) {
-		(token0, token1) = sEuroToken < _otherToken
-			? (sEuroToken, _otherToken)
-			: (_otherToken, sEuroToken);
+	function getAscendingPair(address _OTHER_ADDRESS) private view returns (address token0, address token1) {
+		(token0, token1) = SEURO_ADDRESS < _OTHER_ADDRESS
+			? (SEURO_ADDRESS, _OTHER_ADDRESS)
+			: (_OTHER_ADDRESS, SEURO_ADDRESS);
 	}
 
 	function isPoolInitialised() external view returns (bool) {
@@ -125,13 +130,22 @@ contract BondingEvent is AccessControl {
 		init = true;
 	}
 
-	function addLiquidity(uint256 _amountSeuro, uint256 _amountOther, address _other) private returns (uint256, uint128, uint256, uint256) {
-		(address token0, address token1) = getAscendingPair(_other);
+	struct LiquidityPair {
+		address user;
+		uint256 amountSeuro;
+		uint256 amountOther;
+		address otherAddress;
+	}
 
+	function addLiquidity(LiquidityPair memory lp)
+	private isInit onlyOperator
+	returns (uint256, uint128, uint256, uint256) {
+		(address token0, address token1) = getAscendingPair(lp.otherAddress);
+		
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
-			token0 == sEuroToken ?
-			(_amountSeuro, _amountOther, _amountSeuro, uint256(0)) :
-			(_amountOther, _amountSeuro, uint256(0), _amountSeuro);
+			token0 == SEURO_ADDRESS ?
+			(lp.amountSeuro, lp.amountOther, lp.amountSeuro, uint256(0)) :
+			(lp.amountOther, lp.amountSeuro, uint256(0), lp.amountSeuro);
 
 		// approve the contract to send the tokens to manager
 		TransferHelper.safeApprove(token0, address(manager), amount0Desired);
@@ -174,22 +188,22 @@ contract BondingEvent is AccessControl {
 	// due to the high gas costs (see https://docs.uniswap.org/protocol/reference/periphery/lens/Quoter).
 	/// @param _amountSeuro The amount of sEURO token to bond
 	/// @param _amountOther The amount of the other token to bond
-	/// @param _otherToken The address of the other token
+	/// @param _otherAddress The address of the other token
 	/// @param _maturityInWeeks The amount of weeks a bond is active.
 	///                          At the end of maturity, the principal + accrued interest is paid out all at once in TST.
 	/// @param _rate The rate is represented as a 10,000-factor of each basis point so the most stable fee is 500 (= 0.05 pc)
 	function bond(
+		address _user,
 		uint256 _amountSeuro,
 		uint256 _amountOther,
-		address _otherToken,
+		address _otherAddress,
 		uint256 _maturityInWeeks,
 		uint256 _rate
-	) public isInit {
-		require(msg.sender == operatorAddress, "inv-sender");
-
+	) public isInit onlyOperator {
+		LiquidityPair memory lp = LiquidityPair(_user, _amountSeuro, _amountOther, _otherAddress);
 		// information about the liquidity position after it has been successfully added
-		(uint256 tokenId, uint128 liquidity, uint256 amountSeuro, uint256 amountOther) = addLiquidity(_amountSeuro, _amountOther, _otherToken);
+		(uint256 tokenId, uint128 liquidity, uint256 amountSeuro, uint256 amountOther) = addLiquidity(lp);
 		// begin bonding event
-		IBondStorage(bondStorage).startBond(msg.sender, _amountSeuro, _rate, _maturityInWeeks, tokenId, liquidity, amountSeuro, amountOther);
+		IBondStorage(bondStorageAddress).startBond(_user, _amountSeuro, _rate, _maturityInWeeks, tokenId, liquidity, amountSeuro, amountOther);
 	}
 }
