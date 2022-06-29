@@ -5,9 +5,9 @@ The bonding event is the second stage in the IBCO process and takes place after 
 ### Contracts
 The contracts used in this stage are:
 
-- [BondingEvent.sol](../contracts/BondingEvent.sol): exposes the bonding API and adds liquidity before bonding takes place
-- [BondStorage.sol](../contracts/BondStorage.sol): contains the logic of calculating the bond reward and other relevant data
-- [StandardTokenGateway.sol](../contracts/StandardTokenGateway.sol): contains the price data that determines the reward amount
+- [BondingEvent.sol](../../contracts/BondingEvent.sol): exposes the bonding API and adds liquidity before bonding takes place
+- [BondStorage.sol](../../contracts/BondStorage.sol): contains the logic of calculating the bond reward and other relevant data
+- [StandardTokenGateway.sol](../../contracts/StandardTokenGateway.sol): contains the price data that determines the reward amount
 
 ### Relationship
 The relationship between the contracts is:
