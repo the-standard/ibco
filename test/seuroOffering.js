@@ -38,12 +38,6 @@ describe('SEuroOffering', async () => {
     return await TestBondingCurve.callStatic.getPriceOfBucket(index);
   }
 
-  async function SEuroToEth(amount) {
-    const ChainlinkEurUsd = await ethers.getContractAt('Chainlink', '0xb49f677943BC038e9857d61E7d053CaA2C1734C1');
-    const ChainlinkUsdEth = await ethers.getContractAt('Chainlink', '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419');
-    return amount.mul((await ChainlinkEurUsd.latestRoundData()).answer).div((await ChainlinkUsdEth.latestRoundData()).answer);
-  }
-
   beforeEach(async () => {
     [owner, user] = await ethers.getSigners();
 
@@ -64,6 +58,11 @@ describe('SEuroOffering', async () => {
   });
 
   describe('swap', async () => {
+    let PriceConverter;
+    
+    before(async () => {
+      PriceConverter = await (await ethers.getContractFactory('PriceConverter')).deploy();
+    });
 
     it('will not swap for eth if ibco not active', async () => {
       const toSwap = await ethers.utils.parseEther('1');
@@ -146,8 +145,8 @@ describe('SEuroOffering', async () => {
         expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
       });
 
-      it('updates the price in bonding curve', async () => {
-        const amount = await SEuroToEth(BUCKET_SIZE);
+      it('updates the price in bonding curve when bucket is crossed', async () => {
+        const amount = await PriceConverter.eurosToEth(BUCKET_SIZE);
         await buyWETH(user, amount);
         await WETH.connect(user).approve(SEuroOffering.address, amount);
 
@@ -170,8 +169,8 @@ describe('SEuroOffering', async () => {
           expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
         });
 
-        it('updates the price in bonding curve', async () => {
-          const amount = await SEuroToEth(BUCKET_SIZE);
+        it('updates the price in bonding curve when bucket is crossed', async () => {
+          const amount = await PriceConverter.eurosToEth(BUCKET_SIZE);
           await SEuroOffering.connect(user).swapETH({ value: amount });
 
           const bucket = await BondingCurve.currentBucket();
