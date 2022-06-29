@@ -35,28 +35,35 @@ describe('BondingCurve', async () => {
 
     it('should price some tokens from next bucket if transaction will cross bucket limit', async () => {
       // will force crossover to next bucket due to discount
-      const euros = BUCKET_SIZE;
+      const eurosSpent = BUCKET_SIZE;
       
-      const actualSEuros = await BondingCurve.callStatic.calculatePrice(euros);
+      const actualSEurosReceived = await BondingCurve.callStatic.calculatePrice(eurosSpent);
 
-      const firstBucketCapacityInEuros = (await getBucketPrice(0)).mul(BUCKET_SIZE).div(DECIMALS);
-      const remainingEuros = euros.sub(firstBucketCapacityInEuros);
+      // purchase buys whole capacity of first bucket
+      const sEurosFromFirstBucket = (await getBucketPrice(0)).mul(BUCKET_SIZE).div(DECIMALS);
+      const remainingEuros = eurosSpent.sub(sEurosFromFirstBucket);
+      // how many seuros the remaining euros buy from second bucket
       const secondBucketSEuros = remainingEuros.mul(DECIMALS).div(await getBucketPrice(1));
+      // total seuros bought should be one whole bucket + the amount bought from second bucket
       const expectedSEuros = BUCKET_SIZE.add(secondBucketSEuros);
-      expect(actualSEuros).to.equal(expectedSEuros);
+      expect(actualSEurosReceived).to.equal(expectedSEuros);
     });
 
     it('will cross two price buckets when calculating', async () => {
-      const euros = BUCKET_SIZE.mul(2);
+      // will force filling of two buckets, due to curve discount
+      const eurosSpent = BUCKET_SIZE.mul(2);
       
-      const actualSEuros = await BondingCurve.callStatic.calculatePrice(euros);
+      const actualSEurosReceived = await BondingCurve.callStatic.calculatePrice(eurosSpent);
 
+      // purchase buys whole capacity of first two buckets
       const firstBucketCapacityInEuros = (await getBucketPrice(0)).mul(BUCKET_SIZE).div(DECIMALS);
       const secondBucketCapacityInEuros = (await getBucketPrice(1)).mul(BUCKET_SIZE).div(DECIMALS);
-      const remainingEuros = euros.sub(firstBucketCapacityInEuros).sub(secondBucketCapacityInEuros);
+      const remainingEuros = eurosSpent.sub(firstBucketCapacityInEuros).sub(secondBucketCapacityInEuros);
+      // how many seuros the remaining euros buy from third bucket
       const thirdBuckeSEuros = remainingEuros.mul(DECIMALS).div(await getBucketPrice(2));
+      // total seuros bought should be two whole buckets + the amount bought from third bucket
       const expectedSEuros = BUCKET_SIZE.mul(2).add(thirdBuckeSEuros);
-      expect(actualSEuros).to.equal(expectedSEuros);
+      expect(actualSEurosReceived).to.equal(expectedSEuros);
     });
 
     it('will not exceed full price when max supply is met', async () => {
