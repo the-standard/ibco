@@ -7,6 +7,7 @@ describe('BondingCurve', async () => {
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
+  const DECIMALS = BigNumber.from(10).pow(18);
 
   beforeEach(async () => {
     [owner] = await ethers.getSigners();
@@ -22,32 +23,13 @@ describe('BondingCurve', async () => {
     return TestBondingCurve.callStatic.getPriceOfBucket(index);
   }
 
-  const calculateSEuros = async (euros) => {
-    let seuros = BigNumber.from(0);
-    let remainingEuros = euros;
-    let bucket = 0;
-    while (remainingEuros > 0) {
-      const bucketPrice = await getBucketPrice(bucket);
-      const euroBucketCapacity = BUCKET_SIZE.mul(bucketPrice).div(ethers.utils.parseEther('1'));
-      if (remainingEuros.gt(euroBucketCapacity)) {
-        seuros = seuros.add(BUCKET_SIZE);
-        remainingEuros = remainingEuros.sub(euroBucketCapacity);
-        bucket++;
-      } else {
-        seuros = seuros.add(remainingEuros.mul(ethers.utils.parseEther('1')).div(bucketPrice));
-        remainingEuros = 0;
-      }
-    }
-    return seuros;
-  }
-
-  describe('updateBucketAndCalculatePrice', async () => {
+  describe('calculatePrice', async () => {
     it('gets the current value of given euros in terms of seuros', async () => {
       const euros = ethers.utils.parseEther('1000');
 
       const seuros = await BondingCurve.callStatic.calculatePrice(euros);
 
-      const expectedSeuros = await calculateSEuros(euros);
+      const expectedSeuros = euros.mul(DECIMALS).div(await getBucketPrice(0));
       expect(seuros).to.equal(expectedSeuros);
     });
 
@@ -57,7 +39,10 @@ describe('BondingCurve', async () => {
       
       const seuros = await BondingCurve.callStatic.calculatePrice(euros);
 
-      const expectedSEuros = await calculateSEuros(euros);
+      const firstBucketCapacityInEuros = (await getBucketPrice(0)).mul(BUCKET_SIZE).div(DECIMALS);
+      const remainingEuros = euros.sub(firstBucketCapacityInEuros);
+      const secondBucketSEuros = remainingEuros.mul(DECIMALS).div(await getBucketPrice(1));
+      const expectedSEuros = BUCKET_SIZE.add(secondBucketSEuros);
       expect(seuros).to.equal(expectedSEuros);
     });
 
@@ -66,20 +51,15 @@ describe('BondingCurve', async () => {
       
       const seuros = await BondingCurve.callStatic.calculatePrice(euros);
 
-      const expectedSEuros = await calculateSEuros(euros);
+      const firstBucketCapacityInEuros = (await getBucketPrice(0)).mul(BUCKET_SIZE).div(DECIMALS);
+      const secondBucketCapacityInEuros = (await getBucketPrice(1)).mul(BUCKET_SIZE).div(DECIMALS);
+      const remainingEuros = euros.sub(firstBucketCapacityInEuros).sub(secondBucketCapacityInEuros);
+      const thirdBuckeSEuros = remainingEuros.mul(DECIMALS).div(await getBucketPrice(2));
+      const expectedSEuros = BUCKET_SIZE.mul(2).add(thirdBuckeSEuros);
       expect(seuros).to.equal(expectedSEuros);
     });
 
-    it('saves new bucket price when supply has changed', async () => {
-      await SEuro.mint(owner.address, BUCKET_SIZE);
-      await BondingCurve.updateCurrentBucket();
-
-      const newBucketPrice = (await BondingCurve.currentBucket()).price;
-
-      expect(newBucketPrice).to.equal(await getBucketPrice(1));
-    });
-
-    it('will not exceed full price', async () => {
+    it('will not exceed full price when max supply is met', async () => {
       await SEuro.mint(owner.address, MAX_SUPPLY);
       await BondingCurve.updateCurrentBucket();
       const euros = ethers.utils.parseEther('1');
@@ -87,6 +67,17 @@ describe('BondingCurve', async () => {
       const seuros = await BondingCurve.callStatic.calculatePrice(euros);
 
       expect(seuros).to.equal(euros);
+    });
+  });
+
+  describe('updateCurrentBucket', async () => {
+    it('saves new bucket price when supply has changed', async () => {
+      await SEuro.mint(owner.address, BUCKET_SIZE);
+      await BondingCurve.updateCurrentBucket();
+
+      const newBucketPrice = (await BondingCurve.currentBucket()).price;
+
+      expect(newBucketPrice).to.equal(await getBucketPrice(1));
     });
   });
 });
