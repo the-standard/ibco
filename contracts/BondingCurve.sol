@@ -10,6 +10,9 @@ contract BondingCurve {
         uint256 price;
     }
 
+    event Price(uint256 price);
+    event SEuroTotal(uint256 SEuroTotal);
+
     uint256 private constant FINAL_PRICE = 1_000_000_000_000_000_000;
     uint8 private constant J_NUMERATOR = 1;
     uint8 private constant J_DENOMINATOR = 5;
@@ -43,6 +46,7 @@ contract BondingCurve {
         uint32 bucketIndex = currentBucket.index;
         uint256 bucketPrice = currentBucket.price;
         while (remainingEuros > 0) {
+            emit Price(bucketPrice);
             uint256 remainingInSeuro = convertEuroToSeuro(remainingEuros, bucketPrice);
             uint256 remainingCapacityInBucket = getRemainingCapacityInBucket(bucketIndex);
             if (remainingInSeuro > remainingCapacityInBucket) {
@@ -55,7 +59,17 @@ contract BondingCurve {
             _sEuroTotal += remainingInSeuro;
             remainingEuros = 0;
         }
+        emit SEuroTotal(_sEuroTotal);
         return _sEuroTotal;
+    }
+
+    function calculatePrice2(uint256) external {
+        emit Price(1);
+        emit SEuroTotal(5);
+    }
+
+    function blah(uint256) external pure returns(uint256) {
+        return 6;
     }
 
     function updateCurrentBucket() public {
