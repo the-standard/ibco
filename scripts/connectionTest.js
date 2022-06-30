@@ -1,18 +1,18 @@
-const { ethers, network } = require('hardhat');
+const { ethers } = require('hardhat');
 const fs = require('fs');
+const addresses = JSON.parse(fs.readFileSync('deploymentAddresses.json'));
 
 async function main() {
-    const [user] = await ethers.getSigners()
-    const addresses = JSON.parse(fs.readFileSync('deploymentAddresses.json'))
-    const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
-    const curve = await BondingCurveContract.attach(addresses.BondingCurve);
-    console.log(await curve.connect(user).blah(5));
-    // const calculate = await curve.calculatePrice2(ethers.utils.parseEther('100'));
-    // const wait = await calculate.wait();
-    // console.log(calculate);
-    // console.log(wait);
-    // const events = calculate.events.filter(e => ['Price', 'SEuroTotal'].includes(e.event));
-    // console.log(events);
+  const [ owner, user ] = await ethers.getSigners();
+  const SEuroOffering = await ethers.getContractAt('SEuroOffering', addresses.SEuroOffering);
+  const SEuro = await ethers.getContractAt('SEuro', addresses.SEuro);
+  const BondingCurve = await ethers.getContractAt('BondingCurve', addresses.BondingCurve);
+  await SEuroOffering.connect(owner).activate();
+  console.log(await BondingCurve.currentBucket())
+  console.log(await SEuro.balanceOf(user.address));
+  await SEuroOffering.connect(user).swapETH({value: ethers.utils.parseEther('100')});
+  console.log(await SEuro.balanceOf(user.address));
+  console.log(await BondingCurve.currentBucket())
 }
 
 main()

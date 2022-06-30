@@ -1,4 +1,4 @@
-const { ethers, network } = require('hardhat');
+const { ethers } = require('hardhat');
 const fs = require('fs');
 
 const INITIAL_PRICE = ethers.utils.parseEther('0.8');
@@ -19,6 +19,9 @@ async function main() {
     await SEuroCalculator.deployed();
     await TokenManager.deployed();
     await SEuroOffering.deployed();
+
+    const minterRole = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE'));
+    await SEuro.grantRole(minterRole, SEuroOffering.address);
 
     const addresses = {
         SEuroOffering: SEuroOffering.address,
