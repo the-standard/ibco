@@ -5,3 +5,4 @@ cache
 artifacts
 coverage
 coverage.json
+scripts/deploymentArtifact.json
