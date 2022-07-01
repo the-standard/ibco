@@ -10,11 +10,10 @@ module.exports = {
   defaultNetwork: 'hardhat',
   networks: {
     hardhat: {
-      // forking: {
-      //   url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
-      // },
-      chainId: 1337,
-      timeout: 120000
+      forking: {
+        url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
+      },
+      chainId: 31337
     }
   }
 };

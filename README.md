@@ -45,3 +45,4 @@ make size
 ## Technical Documentation
 - [Stage 1](docs/stage-1)
 - [Stage 2](docs/stage-2)
+- [Deployment](docs/deployment)
