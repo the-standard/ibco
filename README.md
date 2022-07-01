@@ -44,3 +44,19 @@ make size
 
 ## Technical Documentation
 - [Stage 1](docs/stage-1)
+
+## Deployment
+There a few options for deploying the IBCO contracts.
+### Deployment for frontend development
+This script is deploys to a local fork of the mainnet, with "standard" parameters. It also prepares and activates the IBCO so that it is "customer-ready".
+
+Firstly, follow [installation](#installation) and [mainnet fork setup](#mainnet-fork-setup).
+
+Start a local network:
+```
+npx hardhat node
+```
+Run the frontend dev deployment script in the localhost network:
+```
+npx hardhat run --network localhost scripts/frontendReadyDeployment.js
+```
