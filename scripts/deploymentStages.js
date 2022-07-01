@@ -1,5 +1,6 @@
 const { ethers } = require('hardhat');
 const fs = require('fs');
+let addresses;
 
 const INITIAL_PRICE = ethers.utils.parseEther('0.8');
 const MAX_SUPPLY = ethers.utils.parseEther('200000000');
@@ -32,7 +33,7 @@ const deployContracts = async () => {
     await BondStorage.deployed();
     await BondingEvent.deployed();
 
-    return {
+    addresses = {
         SEuroOffering: SEuroOffering.address,
         SEuro: SEuro.address,
         SEuroCalculator: SEuroCalculator.address,
@@ -42,12 +43,13 @@ const deployContracts = async () => {
         BondStorage: BondStorage.address,
         StandardTokenGateway: StandardTokenGateway.address
     };
+
+    return addresses
 }
 
 const activateSEuroOffering = async () => {
-    const {contractAddresses} = JSON.parse(fs.readFileSync('scripts/deploymentArtifact.json'));
     const [owner] = await ethers.getSigners();
-    const SEuroOffering = await ethers.getContractAt('SEuroOffering', contractAddresses.SEuroOffering);
+    const SEuroOffering = await ethers.getContractAt('SEuroOffering', addresses.SEuroOffering);
     await SEuroOffering.connect(owner).activate();
 }
 
