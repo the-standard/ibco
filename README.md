@@ -48,7 +48,7 @@ make size
 ## Deployment
 There a few options for deploying the IBCO contracts.
 ### Deployment for frontend development
-This script deploys to a local fork of the mainnet, with "standard" parameters. It also prepares and activates the IBCO, so that it is "customer-ready".
+This script deploys to a local fork of the mainnet, with standard parameters. It also prepares and activates the IBCO, so that it is open and ready to use.
 
 Firstly, follow [installation](#installation) and [mainnet fork setup](#mainnet-fork-setup).
 
