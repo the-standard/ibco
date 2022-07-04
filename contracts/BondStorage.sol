@@ -91,7 +91,8 @@ contract BondStorage is AccessControl {
 		issuedBonds[_user].claimAmount = newClaim;
 	}
 
-	// Returns the total payout and the accrued interest ("profit") component separately
+	// Returns the total payout and the accrued interest ("profit") component separately.
+	// Both the payout and the profit is in sEURO.
 	function calculateBond(Bond memory bond) private pure returns (uint256, uint256) {
 		// basic (rate * principal) calculations
 		uint256 rateFactor = 100000; // due to the way we store interest rates
@@ -123,9 +124,10 @@ contract BondStorage is AccessControl {
 	function isBondingPossible(uint256 _principal, uint256 _rate, uint256 _maturityInWeeks) private view returns (bool, uint256) {
 		Bond memory dummyBond = Bond(_principal, _rate, _maturityInWeeks, false, PositionMetaData(0, 0, 0, 0));
 		(uint256 payout, ) = calculateBond(dummyBond);
+		uint256 tokenPayout = toStandardTokens(payout);
 		uint256 actualSupply = tokenGateway.getRewardSupply();
 		// if we are able to payout this bond in TST
-		return (payout < actualSupply, payout);
+		return (tokenPayout < actualSupply, tokenPayout);
 	}
 
 	function toStandardTokens(uint256 _amountSeuro) private view returns (uint256) {
@@ -213,11 +215,11 @@ contract BondStorage is AccessControl {
 		return issuedBonds[_user].profitAmount;
 	}
 
-	// Defunds the claim the user has by receiving TST tokens equal to the claim value left.
-	// This function has to be connected to a middle / cache layer.
-	function defundClaim(address _user, uint256 deduct) public onlyOwner {
-		uint256 currClaim = issuedBonds[_user].claimAmount;
-		uint256 newClaim = currClaim - deduct;
-		issuedBonds[_user].claimAmount = newClaim;
+	// Claims the payout in TST tokens by sending it to the user's wallet and resetting the claim to zero.
+	function claimReward() public {
+		address user = msg.sender;
+		uint256 rewardAmount = issuedBonds[user].claimAmount;
+		issuedBonds[user].claimAmount = 0;
+		tokenGateway.transferReward(user, rewardAmount);
 	}
 }
