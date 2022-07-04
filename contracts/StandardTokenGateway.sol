@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // StandardTokenGateway holds TSTs and acts as a standard token data feed with:
 // - price per token in EUR;
@@ -37,6 +38,10 @@ contract StandardTokenGateway is AccessControl {
 	// The amount of TST available to get as bond reward
 	uint256 public bondRewardPoolSupply;
 
+	// By default enabled.
+	// False when token transfers are disabled.
+	bool private isActive;
+
 	// The storage address
 	address public storageAddress;
 
@@ -51,6 +56,7 @@ contract StandardTokenGateway is AccessControl {
 		tokenPrice = 20; // 0.05 EUR
 		TST_MAX_AMOUNT = one_billion * decimals;
 		bondRewardPoolSupply = TST_MAX_AMOUNT / 2; // half the total supply is available as bond reward
+		isActive = true;
 	}
 
 	modifier onlyGatewayOwner {
@@ -63,6 +69,18 @@ contract StandardTokenGateway is AccessControl {
 		_;
 	}
 
+	modifier isActivated {
+		require(isActive == true, "err-in-maintenance");
+		_;
+	}
+
+	function deactivateSystem() public onlyGatewayOwner {
+		isActive = false;
+	}
+
+	function activateSystem() public onlyGatewayOwner {
+		isActive = true;
+	}
 
 	function setUnitPrice(uint256 _newPrice, bool _inversed) public onlyGatewayOwner {
 		tokenPrice = _newPrice;
@@ -101,5 +119,10 @@ contract StandardTokenGateway is AccessControl {
 	function increaseRewardSupply(uint256 _amount) public onlyStorageOwner {
 		require(bondRewardPoolSupply + _amount < TST_MAX_AMOUNT, "inc-supply-of");
 		bondRewardPoolSupply += _amount;
+	}
+
+	function transferReward(address _toUser, uint256 _amount) external onlyStorageOwner isActivated {
+		IERC20 token = IERC20(TOKEN_ADDRESS);
+		token.transfer(_toUser, _amount);
 	}
 }
