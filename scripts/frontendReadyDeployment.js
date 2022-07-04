@@ -6,12 +6,13 @@ const HARDHAT_DEFAULT_URL = 'http://127.0.0.1:8545/';
 
 async function main() {
   const contractAddresses = await deployContracts();
-  await contractsFrontendReady();
-  const [owner] = await ethers.getSigners();
+  let selectedAccounts = (await ethers.getSigners()).slice(0,10).map(account => account.address);
+  await contractsFrontendReady(selectedAccounts);
+  const [contractOwner] = selectedAccounts;
   const chainId = HARDHAT_DEFAULT_CHAIN;
   const serverURL = HARDHAT_DEFAULT_URL;
 
-  const artifact = { contractAddresses, contractOwner: owner.address, chainId, serverURL };
+  const artifact = { contractAddresses, contractOwner, chainId, serverURL, selectedAccounts };
   const json = JSON.stringify(artifact);
   fs.writeFileSync('scripts/deploymentArtifact.json', json);
 }
