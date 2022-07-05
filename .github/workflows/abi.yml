@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - abiapi-yo
-    # types: [closed]
+    types: [closed]
 
 env:
   INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
