@@ -18,6 +18,8 @@ jobs:
 
     # if: github.event.pull_request.merged == true
     steps:
+    - id: 'compile'
+      run: echo simon > README.md
     - id: 'auth'
       uses: 'google-github-actions/auth@v0'
       with:
