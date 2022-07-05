@@ -13,7 +13,7 @@ env:
   INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
 
 jobs:
-  build:
+  upload:
     runs-on: ubuntu-latest
 
     # if: github.event.pull_request.merged == true
@@ -23,9 +23,7 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: 16.x
-    - run: npm ci
-    - run: npx hardhat compile
-    - run: ls artifacts && mkdir abis && cp artifacts/contracts/**/*.json abis/
+    - run: npm ci && npx hardhat compile && mkdir abis && cp artifacts/contracts/**/*.json abis/
     - id: 'auth'
       uses: 'google-github-actions/auth@v0'
       with:
