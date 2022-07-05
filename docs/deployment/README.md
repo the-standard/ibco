@@ -15,4 +15,4 @@ Run the frontend dev deployment script in the localhost network:
 ```
 npx hardhat run --network localhost scripts/frontendReadyDeployment.js
 ```
-Compilation artifacts e.g. ABIs will be created in the `artifacts` directory. All the contract addresses, as well as the addresses of the local accounts and the chain ID of the blockchain, will be saved to `scripts/deploymentArtifact.json`.
+Compilation artifacts e.g. ABIs will be created in the `artifacts` directory. All the contract addresses, as well as the address of the contract owner and the chain ID of the blockchain, will be saved to `scripts/frontendDeploymentArtifact.json`.

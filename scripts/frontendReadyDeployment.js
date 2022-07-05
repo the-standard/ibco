@@ -14,7 +14,7 @@ async function main() {
 
   const artifact = { contractAddresses, contractOwner, chainId, serverURL };
   const json = JSON.stringify(artifact);
-  fs.writeFileSync('scripts/deploymentArtifact.json', json);
+  fs.writeFileSync('scripts/frontendDeploymentArtifact.json', json);
 }
 
 main()
