@@ -20,7 +20,7 @@ jobs:
     steps:
     - id: 'compile'
       uses: actions/setup-node@v3
-      run: npm ci && npx hardhat compile && ls && echo simon > README.md
+      - run: npm ci && npx hardhat compile && ls && echo simon > README.md
     - id: 'auth'
       uses: 'google-github-actions/auth@v0'
       with:
