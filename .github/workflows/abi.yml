@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - abiapi-yo
     types: [closed]
 
 env:
