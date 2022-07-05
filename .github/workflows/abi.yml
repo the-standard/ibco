@@ -3,7 +3,9 @@ name: Upload ABI CI
 on:
   pull_request:
     branches:
-      - deploy
+      - main
+      - deployment-scripts
+      - abiapi-yo
     types: [closed]
 
 env:
