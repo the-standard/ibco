@@ -1,0 +1,22 @@
+name: Upload ABI CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - deployment-scripts
+      - abiapi-yo
+    types: [closed]
+
+env:
+  INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    if: github.event.pull_request.merged == true
+    steps:
+      - run: echo "Who's who"
+
+
