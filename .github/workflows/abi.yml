@@ -19,7 +19,7 @@ jobs:
     # if: github.event.pull_request.merged == true
     steps:
     - id: 'compile'
-      run: npm ci && npx hardhat compile && ls && echo simon > README.md
+      run: npm install && npx hardhat compile && ls && echo simon > README.md
     - id: 'auth'
       uses: 'google-github-actions/auth@v0'
       with:
