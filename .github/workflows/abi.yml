@@ -18,8 +18,15 @@ jobs:
 
     # if: github.event.pull_request.merged == true
     steps:
-    - id: 'compile'
-      run: npm install && npx hardhat compile && ls && echo simon > README.md
+    - uses: actions/checkout@v3
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+    - run: npm ci
+    - run: npx hardhat test
+    # - id: 'compile'
+    #   run: npm install && npx hardhat compile && ls && echo simon > README.md
     - id: 'auth'
       uses: 'google-github-actions/auth@v0'
       with:
