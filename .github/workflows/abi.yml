@@ -3,7 +3,7 @@ name: Upload ABI CI
 on:
   pull_request:
     branches:
-      - deploy
+      - main
     types: [closed]
 
 env:
@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true
     steps:
       - run: echo "Who's who"
 
