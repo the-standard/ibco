@@ -1,7 +1,6 @@
 name: Upload ABI CI
 
 on:
-  push
   pull_request:
     branches:
       - main
