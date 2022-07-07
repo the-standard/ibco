@@ -141,20 +141,24 @@ contract BondingEvent is AccessControl {
 	private isInit onlyOperator
 	returns (uint256, uint128, uint256, uint256) {
 		(address token0, address token1) = getAscendingPair(lp.otherAddress);
-		
+
+		// Add 1% slippage tolerance by setting minimum of either pair as within this range
+		uint256 ninetyNinePercent = uint256(99 * 10 ** 12) / uint256(100 * 10 ** 12);
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
 			token0 == SEURO_ADDRESS ?
-			(lp.amountSeuro, lp.amountOther, lp.amountSeuro, uint256(0)) :
-			(lp.amountOther, lp.amountSeuro, uint256(0), lp.amountSeuro);
+			(lp.amountSeuro, lp.amountOther, lp.amountSeuro  * ninetyNinePercent, lp.amountOther * ninetyNinePercent) :
+			(lp.amountOther, lp.amountSeuro, lp.amountOther  * ninetyNinePercent, lp.amountSeuro * ninetyNinePercent);
 
 		// approve the contract to send the tokens to manager
 		TransferHelper.safeApprove(token0, address(manager), amount0Desired);
 		TransferHelper.safeApprove(token1, address(manager), amount1Desired);
 
 		// send the tokens from the sender's account to the contract account
-		TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0Min);
-		TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1Min);
+		TransferHelper.safeTransferFrom(token0, lp.user, address(this), amount0Desired);
+		TransferHelper.safeTransferFrom(token1, lp.user, address(this), amount1Desired);
 
+		// We are potentially keeping some tokens for now, not returning them if the market moved.
+		// Maybe a TODO? Or cost of doing business :)
 
 		INonfungiblePositionManager.MintParams memory params =
 			INonfungiblePositionManager.MintParams({
