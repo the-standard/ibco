@@ -128,10 +128,8 @@ describe('BondingEvent', async () => {
 	describe('bonding', async () => {
 	  context('pool initialised', async () => {
 		beforeEach(async () => {
-		  const SeurosPerUsdt = ethers.BigNumber.from(93).mul(ethers.BigNumber.from(10).pow(12));
-		  const price = SEUR_ADDRESS <  USDT_ADDRESS ?
-			encodePriceSqrt(100, SeurosPerUsdt) :
-			encodePriceSqrt(SeurosPerUsdt, 100);
+		  // Set price ratio between sEUR and USDT as 1:1
+		  let price = ethers.BigNumber.from(2).pow(96); // This corresponds to 1
 		  await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
 		  expect(await BondingEvent.isPoolInitialised()).to.equal(true);
 
@@ -141,6 +139,8 @@ describe('BondingEvent', async () => {
 		  await USDT.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
 		  await SEuro.connect(owner).approve(BondingEvent.address, etherBalances["HUNDRED_MILLION"]);
 		  await USDT.connect(owner).approve(BondingEvent.address, etherBalances["HUNDRED_MILLION"]);
+		  await SEuro.connect(customer).approve(BondingEvent.address, etherBalances["HUNDRED_MILLION"]);
+		  await USDT.connect(customer).approve(BondingEvent.address, etherBalances["HUNDRED_MILLION"]);
 		});
 
 		async function helperGetActiveBonds() {
