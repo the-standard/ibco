@@ -1,10 +1,17 @@
 const fs = require('fs');
-const { ethers } = require('hardhat');
+const { ethers, network } = require('hardhat');
 const { deployContracts } = require('./deploymentStages');
+
+const CHAINS = {rinkeby: 4}
 
 async function main() {
   const contractAddresses = await deployContracts();
-  console.log(await ethers.getSigners());
+  const [contractOwner] = (await ethers.getSigners()).map(account => account.address);
+  const chainId = CHAINS[network.name];
+  const serverURL = network.config.url;
+
+  const artifact = { contractAddresses, contractOwner, chainId, serverURL };
+  fs.writeFileSync('scripts/testnetDeploymentArtifact.json', JSON.stringify(artifact));
 }
 
 main()

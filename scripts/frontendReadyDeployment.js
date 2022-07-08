@@ -13,8 +13,7 @@ async function main() {
   const serverURL = HARDHAT_DEFAULT_URL;
 
   const artifact = { contractAddresses, contractOwner, chainId, serverURL };
-  const json = JSON.stringify(artifact);
-  fs.writeFileSync('scripts/frontendDeploymentArtifact.json', json);
+  fs.writeFileSync('scripts/frontendDeploymentArtifact.json', JSON.stringify(artifact));
 }
 
 main()
