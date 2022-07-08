@@ -86,8 +86,7 @@ contract BondStorage is AccessControl {
 	}
 
 	function increaseClaimAmount(address _user, uint256 latestAddition) private {
-		uint256 currAmount = issuedBonds[_user].claimAmount;
-		uint256 newClaim = currAmount + latestAddition;
+		uint256 newClaim = issuedBonds[_user].claimAmount + latestAddition;
 		issuedBonds[_user].claimAmount = newClaim;
 	}
 
@@ -96,10 +95,10 @@ contract BondStorage is AccessControl {
 	function calculateBond(Bond memory bond) private pure returns (uint256, uint256) {
 		// basic (rate * principal) calculations
 		uint256 rateFactor = 100000; // due to the way we store interest rates
-		uint256 ratePrincipal = SafeMath.mul(bond.rate, bond.principal);
-		uint256 nominator = SafeMath.add(bond.principal, ratePrincipal);
-		uint256 payout = SafeMath.div(nominator, rateFactor);
-		uint256 profit = SafeMath.div(ratePrincipal, rateFactor);
+		uint256 ratePrincipal = bond.rate * bond.principal;
+		uint256 nominator = bond.principal + ratePrincipal;
+		uint256 payout = nominator / rateFactor;
+		uint256 profit = ratePrincipal / rateFactor;
 		return (payout, profit);
 	}
 
@@ -145,15 +144,14 @@ contract BondStorage is AccessControl {
 
 	function startBond(
 		address _user,
-		uint256 _principal,
+		uint256 _amountSeuroPrincipal,
 		uint256 _rate,
 		uint256 _maturityInWeeks,
 		uint256 _tokenId,
 		uint128 _liquidity,
-		uint256 _amountSeuro,
 		uint256 _amountOther
 	) external {
-		(bool ok, uint256 futurePayout) = isBondingPossible(_principal, _rate, _maturityInWeeks);
+		(bool ok, uint256 futurePayout) = isBondingPossible(_amountSeuroPrincipal, _rate, _maturityInWeeks);
 		require(ok == true, "err-insuff-tst-supply");
 
 		uint256 maturityDate = maturityDateAfterWeeks(_maturityInWeeks);
@@ -166,8 +164,8 @@ contract BondStorage is AccessControl {
 		tokenGateway.decreaseRewardSupply(futurePayout);
 
 		// finalise record of bond
-		PositionMetaData memory data = PositionMetaData(_tokenId, _liquidity, _amountSeuro, _amountOther);
-		addBond(_user, _principal, _rate, maturityDate, data);
+		PositionMetaData memory data = PositionMetaData(_tokenId, _liquidity, _amountSeuroPrincipal, _amountOther);
+		addBond(_user, _amountSeuroPrincipal, _rate, maturityDate, data);
 		incrementActiveBonds(_user);
 	}
 
@@ -213,6 +211,10 @@ contract BondStorage is AccessControl {
 
 	function getProfit(address _user) public view virtual returns (uint256) {
 		return issuedBonds[_user].profitAmount;
+	}
+
+	function getClaimAmount(address _user) public view virtual returns (uint256) {
+		return issuedBonds[_user].claimAmount;
 	}
 
 	// Claims the payout in TST tokens by sending it to the user's wallet and resetting the claim to zero.

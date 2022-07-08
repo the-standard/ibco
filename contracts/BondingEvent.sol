@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 interface IBondStorage {
-	function startBond(address _user, uint256 _principal, uint256 _rate, uint256 _maturity, uint256 _tokenId, uint128 _liquidity, uint256 _amountSeuro, uint256 _amountOther) external;
+	function startBond(address _user, uint256 _principal, uint256 _rate, uint256 _maturity, uint256 _tokenId, uint128 _liquidity, uint256 _amountOther) external;
 }
 
 contract BondingEvent is AccessControl {
@@ -208,6 +208,6 @@ contract BondingEvent is AccessControl {
 		// information about the liquidity position after it has been successfully added
 		(uint256 tokenId, uint128 liquidity, uint256 amountSeuro, uint256 amountOther) = addLiquidity(lp);
 		// begin bonding event
-		IBondStorage(bondStorageAddress).startBond(_user, _amountSeuro, _rate, _maturityInWeeks, tokenId, liquidity, amountSeuro, amountOther);
+		IBondStorage(bondStorageAddress).startBond(_user, amountSeuro, _rate, _maturityInWeeks, tokenId, liquidity, amountOther);
 	}
 }
