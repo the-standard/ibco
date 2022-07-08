@@ -53,6 +53,7 @@ describe('BondingReward', async () => {
 		  await SEuro.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
 		  await USDT.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
 		  await TST.connect(owner).mint(TGateway.address, etherBalances["FIVE_HUNDRED_MILLION"]);
+		  await TGateway.connect(owner).updateRewardSupply();
 
 		  // approve the bonding contract to move customer sEUR and USDT funds
 		  await SEuro.connect(customer).approve(EVENT_ADDRESS, etherBalances["HUNDRED_MILLION"]);
@@ -110,7 +111,6 @@ describe('BondingReward', async () => {
 		  let actualLeftover = (await TST.balanceOf(TGateway.address) / DECIMALS).toString();
 		  let expectedLeftover = ( (500 * 10 ** 6) - (44 * 10 ** 6) ).toString();
 		  expect(actualLeftover).to.equal(expectedLeftover);
-
 		});
 	  });
 	});

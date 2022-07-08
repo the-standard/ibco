@@ -102,6 +102,10 @@ describe('BondingEvent', async () => {
 		  await USDT.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
 		  await USDT.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
 
+		  // fill token gateway with TST as rewards
+		  await TST.connect(owner).mint(TokenGateway.address, etherBalances["FIVE_HUNDRED_MILLION"]);
+		  await TokenGateway.connect(owner).updateRewardSupply();
+
 		  // approve contract to spend customer funds
 		  await SEuro.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
 		  await USDT.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
