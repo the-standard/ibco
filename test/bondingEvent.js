@@ -96,22 +96,15 @@ describe('BondingEvent', async () => {
 		  await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
 		  expect(await BondingEvent.isPoolInitialised()).to.equal(true);
 
-		  let tx1 = await SEuro.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
-		  let tx2 = await USDT.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
-		  let tx3 = await SEuro.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
-		  let tx4 = await USDT.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
-		  let tx5 = await SEuro.connect(owner).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
-		  let tx6 = await USDT.connect(owner).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
-		  let tx7 = await SEuro.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
-		  let tx8 = await USDT.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
-		  tx1.wait();
-		  tx2.wait();
-		  tx3.wait();
-		  tx4.wait();
-		  tx5.wait();
-		  tx6.wait();
-		  tx7.wait();
-		  tx8.wait();
+		  // mint balances
+		  await SEuro.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
+		  await SEuro.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
+		  await USDT.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
+		  await USDT.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
+
+		  // approve contract to spend customer funds
+		  await SEuro.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
+		  await USDT.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
 		});
 
 		async function helperGetActiveBonds() {
@@ -136,7 +129,6 @@ describe('BondingEvent', async () => {
 		}
 
 		it('bonds sEURO and USDT for 52 weeks and receives correct reward', async () => {
-
 		  await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
 		  await BondingEvent.connect(owner).bond(
 			CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["ONE_YR_WEEKS"], rates["TEN_PC"],

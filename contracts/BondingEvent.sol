@@ -149,11 +149,11 @@ contract BondingEvent is AccessControl {
 			(lp.amountSeuro, lp.amountOther, lp.amountSeuro  * ninetyNinePercent, lp.amountOther * ninetyNinePercent) :
 			(lp.amountOther, lp.amountSeuro, lp.amountOther  * ninetyNinePercent, lp.amountSeuro * ninetyNinePercent);
 
-		// approve the contract to send the tokens to manager
+		// approve the position manager
 		TransferHelper.safeApprove(token0, address(manager), amount0Desired);
 		TransferHelper.safeApprove(token1, address(manager), amount1Desired);
 
-		// send the tokens from the sender's account to the contract account
+		// send the tokens from the user to the contract
 		TransferHelper.safeTransferFrom(token0, lp.user, address(this), amount0Desired);
 		TransferHelper.safeTransferFrom(token1, lp.user, address(this), amount1Desired);
 
