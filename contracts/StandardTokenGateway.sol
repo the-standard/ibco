@@ -121,7 +121,7 @@ contract StandardTokenGateway is AccessControl {
 		bondRewardPoolSupply += _amount;
 	}
 
-	function transferReward(address _toUser, uint256 _amount) external onlyStorageOwner isActivated {
+	function transferReward(address _toUser, uint256 _amount) external onlyStorageOwner isActivated enoughBalance(_amount) {
 		IERC20 token = IERC20(TOKEN_ADDRESS);
 		token.transfer(_toUser, _amount);
 	}
