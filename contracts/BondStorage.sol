@@ -96,10 +96,9 @@ contract BondStorage is AccessControl {
 		// basic (rate * principal) calculations
 		uint256 rateFactor = 100000; // due to the way we store interest rates
 		uint256 ratePrincipal = bond.rate * bond.principal;
-		uint256 nominator = bond.principal + ratePrincipal;
-		uint256 payout = nominator / rateFactor;
 		uint256 profit = ratePrincipal / rateFactor;
-		return (payout, profit);
+		uint256 fullPayout = bond.principal + profit;
+		return (fullPayout, profit);
 	}
 
 	function incrementActiveBonds(address _user) private {
@@ -183,15 +182,24 @@ contract BondStorage is AccessControl {
 
 		// check each bond to see if it has expired.
 		// we do the O(n) solution and check each bond at every refresh
-		// TODO: to optimise later with more clever sorting algo
 		for (uint i = 0; i < bonds.length; i++) {
 			if (hasExpired(bonds[i]) && !bonds[i].tapped) {
 				tapBond(_user, i); // prevents the abuse of squeezing profit from same bond more than once
-				(uint256 payoutSeuro, uint256 profitSeuro) = calculateBond(bonds[i]);
-				uint256 payoutTok = toStandardTokens(payoutSeuro);
+
+				// here we calculate how much we are paying out in sEUR in total and the
+				// profit component, also in sEUR.
+				(uint256 totalPayoutSeuro, uint256 profitSeuro) = calculateBond(bonds[i]);
+				uint256 payoutTok = toStandardTokens(totalPayoutSeuro);
 				uint256 profitTok = toStandardTokens(profitSeuro);
+
+				// increase the user's accumulated profit. only for show or as "fun to know"
 				increaseProfitAmount(_user, profitTok);
+
+				// add the total payout in tokens as a claim. this is the principal in sEURO converted
+				// to TST and the profit in sEUR converted to TST.
 				increaseClaimAmount(_user, payoutTok);
+
+				// one less bond active since this has expired
 				decrementActiveBonds(_user);
 			}
 		}
