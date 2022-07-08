@@ -16,3 +16,17 @@ Run the frontend dev deployment script in the localhost network:
 npx hardhat run --network localhost scripts/frontendReadyDeployment.js
 ```
 Compilation artifacts e.g. ABIs will be created in the `artifacts` directory. All the contract addresses, as well as the address of the contract owner and the chain ID of the blockchain, will be saved to `scripts/frontendDeploymentArtifact.json`.
+
+
+## Deployment to Rinkeby testnet
+This script deploys to the Rinkeby testnet, with standard parameters.
+
+Firstly, follow [installation](../../README.md#installation).
+
+Connect an account to this deployment - probably not an account that you active use for mainnet transactions. Add a private key from one of your existing accounts to the `.env` file (or create one if you don't have one already in this project), assigning it to the variable `TEST_ACCOUNT_PRIVATE_KEY`.
+
+Run the testnet deployment script in the rinkeby network:
+```
+npx hardhat run --network rinkeby scripts/testnetDeployment.js
+```
+All the contract addresses, the network chain ID and URL etc will be added to the `testnetDeploymentArtifact.json`.
