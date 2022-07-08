@@ -55,7 +55,7 @@ contract StandardTokenGateway is AccessControl {
 		isProduction = TOKEN_ADDRESS == TST_ADDRESS;
 		tokenPrice = 20; // 0.05 EUR
 		TST_MAX_AMOUNT = one_billion * decimals;
-		bondRewardPoolSupply = TST_MAX_AMOUNT / 2; // half the total supply is available as bond reward
+		bondRewardPoolSupply = 0;
 		isActive = true;
 	}
 
@@ -87,14 +87,14 @@ contract StandardTokenGateway is AccessControl {
 		inversed = _inversed;
 	}
 
-	function getContractBalance() public view returns (uint256) {
-		address localAddress = address(this);
+	function updateRewardSupply() public {
 		IERC20 token = IERC20(TOKEN_ADDRESS);
-		return token.balanceOf(localAddress);
+		bondRewardPoolSupply = token.balanceOf(address(this));
 	}
 
 	modifier enoughBalance(uint256 _toSend) {
-		require(getContractBalance() > _toSend, "err-insufficient-tokens");
+		uint256 currBalance = IERC20(TOKEN_ADDRESS).balanceOf(address(this));
+		require(currBalance > _toSend, "err-insufficient-tokens");
 		_;
 	}
 
@@ -111,14 +111,9 @@ contract StandardTokenGateway is AccessControl {
 		storageAddress = _newAddress;
 	}
 
-	function decreaseRewardSupply(uint256 _amount) public onlyStorageOwner {
+	function decreaseRewardSupply(uint256 _amount) public onlyStorageOwner enoughBalance(_amount) {
 		require(bondRewardPoolSupply - _amount > 0, "dec-supply-uf");
 		bondRewardPoolSupply -= _amount;
-	}
-
-	function increaseRewardSupply(uint256 _amount) public onlyStorageOwner {
-		require(bondRewardPoolSupply + _amount < TST_MAX_AMOUNT, "inc-supply-of");
-		bondRewardPoolSupply += _amount;
 	}
 
 	function transferReward(address _toUser, uint256 _amount) external onlyStorageOwner isActivated enoughBalance(_amount) {
