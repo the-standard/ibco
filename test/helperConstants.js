@@ -6,6 +6,7 @@ var etherBalances = {
   "FOUR_MILLION": ethers.utils.parseEther('4000000'),
   "FIFTY_MILLION": ethers.utils.parseEther('50000000'),
   "HUNDRED_MILLION": ethers.utils.parseEther('100000000'),
+  "FIVE_HUNDRED_MILLION": ethers.utils.parseEther('500000000'),
   "ONE_BILLION": ethers.utils.parseEther('1000000000'),
 };
 const MOST_STABLE_FEE = 500;
