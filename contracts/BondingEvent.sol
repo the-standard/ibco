@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 interface IBondStorage {
-	function startBond(address _user, uint256 _principal, uint256 _rate, uint256 _maturity, uint256 _tokenId, uint128 _liquidity, uint256 _amountSeuro, uint256 _amountOther) external;
+	function startBond(address _user, uint256 _principal, uint256 _rate, uint256 _maturity, uint256 _tokenId, uint128 _liquidity, uint256 _amountOther) external;
 }
 
 contract BondingEvent is AccessControl {
@@ -141,20 +141,24 @@ contract BondingEvent is AccessControl {
 	private isInit onlyOperator
 	returns (uint256, uint128, uint256, uint256) {
 		(address token0, address token1) = getAscendingPair(lp.otherAddress);
-		
+
+		// Add 1% slippage tolerance by setting minimum of either pair as within this range
+		uint256 ninetyNinePercent = uint256(99 * 10 ** 12) / uint256(100 * 10 ** 12);
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
 			token0 == SEURO_ADDRESS ?
-			(lp.amountSeuro, lp.amountOther, lp.amountSeuro, uint256(0)) :
-			(lp.amountOther, lp.amountSeuro, uint256(0), lp.amountSeuro);
+			(lp.amountSeuro, lp.amountOther, lp.amountSeuro  * ninetyNinePercent, lp.amountOther * ninetyNinePercent) :
+			(lp.amountOther, lp.amountSeuro, lp.amountOther  * ninetyNinePercent, lp.amountSeuro * ninetyNinePercent);
 
-		// approve the contract to send the tokens to manager
+		// approve the position manager
 		TransferHelper.safeApprove(token0, address(manager), amount0Desired);
 		TransferHelper.safeApprove(token1, address(manager), amount1Desired);
 
-		// send the tokens from the sender's account to the contract account
-		TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0Min);
-		TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1Min);
+		// send the tokens from the user to the contract
+		TransferHelper.safeTransferFrom(token0, lp.user, address(this), amount0Desired);
+		TransferHelper.safeTransferFrom(token1, lp.user, address(this), amount1Desired);
 
+		// We are potentially keeping some tokens for now, not returning them if the market moved.
+		// Maybe a TODO? Or cost of doing business :)
 
 		INonfungiblePositionManager.MintParams memory params =
 			INonfungiblePositionManager.MintParams({
@@ -204,6 +208,6 @@ contract BondingEvent is AccessControl {
 		// information about the liquidity position after it has been successfully added
 		(uint256 tokenId, uint128 liquidity, uint256 amountSeuro, uint256 amountOther) = addLiquidity(lp);
 		// begin bonding event
-		IBondStorage(bondStorageAddress).startBond(_user, _amountSeuro, _rate, _maturityInWeeks, tokenId, liquidity, amountSeuro, amountOther);
+		IBondStorage(bondStorageAddress).startBond(_user, amountSeuro, _rate, _maturityInWeeks, tokenId, liquidity, amountOther);
 	}
 }
