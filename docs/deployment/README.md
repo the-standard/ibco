@@ -23,7 +23,7 @@ This script deploys to the Rinkeby testnet, with standard parameters.
 
 Firstly, follow [installation](../../README.md#installation).
 
-Connect an account to this deployment - probably not an account that you active use for mainnet transactions. Add a private key from one of your existing accounts to the `.env` file (or create one if you don't have one already in this project), assigning it to the variable `TEST_ACCOUNT_PRIVATE_KEY`.
+Connect a test account to this deployment and not an account that is used on mainnet. Add a private key from one of your existing accounts to the `.env` file (or create one if you don't have one already in this project), assigning it to the variable `TEST_ACCOUNT_PRIVATE_KEY`.
 
 Run the testnet deployment script in the rinkeby network:
 ```
