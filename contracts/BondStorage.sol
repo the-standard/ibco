@@ -86,20 +86,19 @@ contract BondStorage is AccessControl {
 	}
 
 	function increaseClaimAmount(address _user, uint256 latestAddition) private {
-		uint256 currAmount = issuedBonds[_user].claimAmount;
-		uint256 newClaim = currAmount + latestAddition;
+		uint256 newClaim = issuedBonds[_user].claimAmount + latestAddition;
 		issuedBonds[_user].claimAmount = newClaim;
 	}
 
-	// Returns the total payout and the accrued interest ("profit") component separately
+	// Returns the total payout and the accrued interest ("profit") component separately.
+	// Both the payout and the profit is in sEURO.
 	function calculateBond(Bond memory bond) private pure returns (uint256, uint256) {
 		// basic (rate * principal) calculations
 		uint256 rateFactor = 100000; // due to the way we store interest rates
-		uint256 ratePrincipal = SafeMath.mul(bond.rate, bond.principal);
-		uint256 nominator = SafeMath.add(bond.principal, ratePrincipal);
-		uint256 payout = SafeMath.div(nominator, rateFactor);
-		uint256 profit = SafeMath.div(ratePrincipal, rateFactor);
-		return (payout, profit);
+		uint256 ratePrincipal = bond.rate * bond.principal;
+		uint256 profit = ratePrincipal / rateFactor;
+		uint256 fullPayout = bond.principal + profit;
+		return (fullPayout, profit);
 	}
 
 	function incrementActiveBonds(address _user) private {
@@ -123,9 +122,10 @@ contract BondStorage is AccessControl {
 	function isBondingPossible(uint256 _principal, uint256 _rate, uint256 _maturityInWeeks) private view returns (bool, uint256) {
 		Bond memory dummyBond = Bond(_principal, _rate, _maturityInWeeks, false, PositionMetaData(0, 0, 0, 0));
 		(uint256 payout, ) = calculateBond(dummyBond);
+		uint256 tokenPayout = toStandardTokens(payout);
 		uint256 actualSupply = tokenGateway.getRewardSupply();
 		// if we are able to payout this bond in TST
-		return (payout < actualSupply, payout);
+		return (tokenPayout < actualSupply, tokenPayout);
 	}
 
 	function toStandardTokens(uint256 _amountSeuro) private view returns (uint256) {
@@ -143,15 +143,14 @@ contract BondStorage is AccessControl {
 
 	function startBond(
 		address _user,
-		uint256 _principal,
+		uint256 _amountSeuroPrincipal,
 		uint256 _rate,
 		uint256 _maturityInWeeks,
 		uint256 _tokenId,
 		uint128 _liquidity,
-		uint256 _amountSeuro,
 		uint256 _amountOther
 	) external {
-		(bool ok, uint256 futurePayout) = isBondingPossible(_principal, _rate, _maturityInWeeks);
+		(bool ok, uint256 futurePayout) = isBondingPossible(_amountSeuroPrincipal, _rate, _maturityInWeeks);
 		require(ok == true, "err-insuff-tst-supply");
 
 		uint256 maturityDate = maturityDateAfterWeeks(_maturityInWeeks);
@@ -164,8 +163,8 @@ contract BondStorage is AccessControl {
 		tokenGateway.decreaseRewardSupply(futurePayout);
 
 		// finalise record of bond
-		PositionMetaData memory data = PositionMetaData(_tokenId, _liquidity, _amountSeuro, _amountOther);
-		addBond(_user, _principal, _rate, maturityDate, data);
+		PositionMetaData memory data = PositionMetaData(_tokenId, _liquidity, _amountSeuroPrincipal, _amountOther);
+		addBond(_user, _amountSeuroPrincipal, _rate, maturityDate, data);
 		incrementActiveBonds(_user);
 	}
 
@@ -183,15 +182,24 @@ contract BondStorage is AccessControl {
 
 		// check each bond to see if it has expired.
 		// we do the O(n) solution and check each bond at every refresh
-		// TODO: to optimise later with more clever sorting algo
 		for (uint i = 0; i < bonds.length; i++) {
 			if (hasExpired(bonds[i]) && !bonds[i].tapped) {
 				tapBond(_user, i); // prevents the abuse of squeezing profit from same bond more than once
-				(uint256 payoutSeuro, uint256 profitSeuro) = calculateBond(bonds[i]);
-				uint256 payoutTok = toStandardTokens(payoutSeuro);
+
+				// here we calculate how much we are paying out in sEUR in total and the
+				// profit component, also in sEUR.
+				(uint256 totalPayoutSeuro, uint256 profitSeuro) = calculateBond(bonds[i]);
+				uint256 payoutTok = toStandardTokens(totalPayoutSeuro);
 				uint256 profitTok = toStandardTokens(profitSeuro);
+
+				// increase the user's accumulated profit. only for show or as "fun to know"
 				increaseProfitAmount(_user, profitTok);
+
+				// add the total payout in tokens as a claim. this is the principal in sEURO converted
+				// to TST and the profit in sEUR converted to TST.
 				increaseClaimAmount(_user, payoutTok);
+
+				// one less bond active since this has expired
 				decrementActiveBonds(_user);
 			}
 		}
@@ -213,11 +221,15 @@ contract BondStorage is AccessControl {
 		return issuedBonds[_user].profitAmount;
 	}
 
-	// Defunds the claim the user has by receiving TST tokens equal to the claim value left.
-	// This function has to be connected to a middle / cache layer.
-	function defundClaim(address _user, uint256 deduct) public onlyOwner {
-		uint256 currClaim = issuedBonds[_user].claimAmount;
-		uint256 newClaim = currClaim - deduct;
-		issuedBonds[_user].claimAmount = newClaim;
+	function getClaimAmount(address _user) public view virtual returns (uint256) {
+		return issuedBonds[_user].claimAmount;
+	}
+
+	// Claims the payout in TST tokens by sending it to the user's wallet and resetting the claim to zero.
+	function claimReward() public {
+		address user = msg.sender;
+		uint256 rewardAmount = issuedBonds[user].claimAmount;
+		issuedBonds[user].claimAmount = 0;
+		tokenGateway.transferReward(user, rewardAmount);
 	}
 }
