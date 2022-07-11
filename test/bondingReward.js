@@ -70,10 +70,8 @@ describe('BondingReward', async () => {
 		}
 
 		it('successfully transfers TSTs to the user and adjusts gateway contract', async () => {
-		  let actualClaim, expectedClaim, seuroProfit, bond, actualStandardBal, expectedStandardBalance;
+		  let actualClaim, expectedClaim, bond, actualStandardBal;
 
-		  let eurBal = await SEuro.connect(customer).balanceOf(CUSTOMER_ADDR);
-		  let usdBal = await USDT.connect(customer).balanceOf(CUSTOMER_ADDR);
 		  await TGateway.connect(owner).setStorageAddress(BStorage.address);
 		  await BondingEvent.connect(owner).bond(
 			CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["ONE_WEEK"], rates["TEN_PC"]
