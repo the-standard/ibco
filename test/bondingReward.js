@@ -77,7 +77,8 @@ describe('BondingReward', async () => {
 			CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["ONE_WEEK"], rates["TEN_PC"]
 		  );
 		  bond = await BStorage.getBondAt(CUSTOMER_ADDR, 0);
-		  expect(bond.principal / DECIMALS).to.equal(2000000);
+		  let principal = 2000000;
+		  expect(bond.principal / DECIMALS).to.equal(principal);
 
 		  actualClaim = await BStorage.getClaimAmount(CUSTOMER_ADDR);
 		  expect(actualClaim).to.equal(0);
@@ -89,7 +90,9 @@ describe('BondingReward', async () => {
 
 		  await BStorage.connect(customer).refreshBondStatus(CUSTOMER_ADDR);
 
-		  expectedClaim = (2200000 * STANDARD_TOKENS_PER_EUR).toString();
+		  let profitSeuro = principal * 1.1; // ten percent rate
+		  let profitStandard = profitSeuro * STANDARD_TOKENS_PER_EUR;
+		  expectedClaim = profitStandard.toString();
 		  // claim has been properly registered in bond backend
 		  actualClaim = (await BStorage.getClaimAmount(CUSTOMER_ADDR) / DECIMALS).toString();
 		  expect(actualClaim).to.equal(expectedClaim);
@@ -107,7 +110,8 @@ describe('BondingReward', async () => {
 		  expect(actualClaim).to.equal('0');
 
 		  let actualLeftover = (await TST.balanceOf(TGateway.address) / DECIMALS).toString();
-		  let expectedLeftover = ( (500 * 10 ** 6) - (44 * 10 ** 6) ).toString();
+		  let maximumRewardSupply = 500 * 10 ** 6;
+		  let expectedLeftover = (maximumRewardSupply - profitStandard).toString();
 		  expect(actualLeftover).to.equal(expectedLeftover);
 		});
 	  });
