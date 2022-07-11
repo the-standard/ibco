@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, encodePriceSqrt } = require('./helperConstants.js');
+const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, encodePriceSqrt, helperFastForwardTime } = require('./common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
 let owner, customer, SEuro, TST, USDT, BStorage;
@@ -59,11 +59,6 @@ describe('BondingReward', async () => {
 		  await SEuro.connect(customer).approve(EVENT_ADDRESS, etherBalances["HUNDRED_MILLION"]);
 		  await USDT.connect(customer).approve(EVENT_ADDRESS, etherBalances["HUNDRED_MILLION"]);
 		});
-
-		async function helperFastForwardTime(seconds) {
-		  ethers.provider.send('evm_increaseTime', [ seconds ]);
-		  ethers.provider.send('evm_mine');
-		}
 
 		async function balanceTST() {
 		  return TST.balanceOf(CUSTOMER_ADDR);

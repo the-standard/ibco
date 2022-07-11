@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STANDARD_TOKENS_PER_EUR, encodePriceSqrt } = require('./helperConstants.js');
+const { POSITION_MANAGER_ADDRESS, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime } = require('./common.js');
 
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
@@ -125,11 +125,6 @@ describe('BondingEvent', async () => {
 
 		async function helperGetProfit() {
 		  return BStorage.getProfit(CUSTOMER_ADDR);
-		}
-
-		async function helperFastForwardTime(seconds) {
-		  ethers.provider.send('evm_increaseTime', [ seconds ]);
-		  ethers.provider.send('evm_mine');
 		}
 
 		it('bonds sEURO and USDT for 52 weeks and receives correct reward', async () => {
