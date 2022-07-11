@@ -30,7 +30,7 @@
     "dotenv": "^16.0.0",
     "ethereum-waffle": "^3.4.4",
     "ethers": "^5.6.1",
-    "hardhat": "^2.10.0",
+    "hardhat": "2.10.0",
     "open-zeppelin-latest": "npm:@openzeppelin/contracts@4.6.0"
   },
   "dependencies": {
