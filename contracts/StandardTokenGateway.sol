@@ -15,6 +15,9 @@ contract StandardTokenGateway is AccessControl {
 	// Address to the contract with a maximum supply of 1 billion tokens
 	address public immutable TOKEN_ADDRESS;
 
+	// Reward token
+	IERC20 private immutable TOKEN;
+
 	// Address to the sEURO contract with a varying supply
 	address public immutable SEUR_ADDRESS;
 
@@ -50,6 +53,7 @@ contract StandardTokenGateway is AccessControl {
 	constructor(address _tokenAddress, address _seuroToken) {
 		_setupRole(TST_TOKEN_GATEWAY, msg.sender);
 		TOKEN_ADDRESS = _tokenAddress;
+		TOKEN = IERC20(TOKEN_ADDRESS);
 		SEUR_ADDRESS = _seuroToken;
 		inversed = true;
 		isProduction = TOKEN_ADDRESS == TST_ADDRESS;
@@ -88,12 +92,11 @@ contract StandardTokenGateway is AccessControl {
 	}
 
 	function updateRewardSupply() public {
-		IERC20 token = IERC20(TOKEN_ADDRESS);
-		bondRewardPoolSupply = token.balanceOf(address(this));
+		bondRewardPoolSupply = TOKEN.balanceOf(address(this));
 	}
 
 	modifier enoughBalance(uint256 _toSend) {
-		uint256 currBalance = IERC20(TOKEN_ADDRESS).balanceOf(address(this));
+		uint256 currBalance = TOKEN.balanceOf(address(this));
 		require(currBalance > _toSend, "err-insufficient-tokens");
 		_;
 	}
@@ -117,7 +120,6 @@ contract StandardTokenGateway is AccessControl {
 	}
 
 	function transferReward(address _toUser, uint256 _amount) external onlyStorageOwner isActivated enoughBalance(_amount) {
-		IERC20 token = IERC20(TOKEN_ADDRESS);
-		token.transfer(_toUser, _amount);
+		TOKEN.transfer(_toUser, _amount);
 	}
 }
