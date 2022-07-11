@@ -15,7 +15,7 @@ contract TokenManager is Ownable {
     }
 
     constructor(address _wethAddress, address _ethUsdCL, uint8 _ethUsdCLDec) {
-        addAcceptedTokens(_wethAddress, _ethUsdCL, _ethUsdCLDec);
+        addDefaultTokens(_wethAddress, _ethUsdCL, _ethUsdCLDec);
     }
 
     function get(bytes32 _name) external view returns(address addr, address chainlinkAddr, uint8 chainlinkDec) {
@@ -23,7 +23,7 @@ contract TokenManager is Ownable {
         return (token.addr, token.chainlinkAddr, token.chainlinkDec);
     }
 
-    function addAcceptedTokens(address _wethAddress, address _ethUsdCL, uint8 _ethUsdCLDec) private {
+    function addDefaultTokens(address _wethAddress, address _ethUsdCL, uint8 _ethUsdCLDec) private {
         addAcceptedToken(bytes32("WETH"), _wethAddress, _ethUsdCL, _ethUsdCLDec);
     }
 
