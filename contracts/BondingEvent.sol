@@ -3,15 +3,12 @@ pragma solidity ^0.8.0;
 
 import "contracts/uniswap/INonfungiblePositionManager.sol";
 import "contracts/BondStorage.sol";
+import "contracts/interfaces/API.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-
-interface IBondStorage {
-	function startBond(address _user, uint256 _principal, uint256 _rate, uint256 _maturity, uint256 _tokenId, uint128 _liquidity, uint256 _amountOther) external;
-}
 
 contract BondingEvent is AccessControl {
 	// sEUR: the main leg of the currency pair
