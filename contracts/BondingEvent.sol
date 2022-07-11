@@ -196,18 +196,30 @@ contract BondingEvent is AccessControl {
 	/// @param _maturityInWeeks The amount of weeks a bond is active.
 	///                          At the end of maturity, the principal + accrued interest is paid out all at once in TST.
 	/// @param _rate The rate is represented as a 10,000-factor of each basis point so the most stable fee is 500 (= 0.05 pc)
-	function bond(
+	function _bond(
 		address _user,
 		uint256 _amountSeuro,
 		uint256 _amountOther,
 		address _otherAddress,
 		uint256 _maturityInWeeks,
 		uint256 _rate
-	) public isInit onlyOperator {
+	) private isInit onlyOperator {
 		LiquidityPair memory lp = LiquidityPair(_user, _amountSeuro, _amountOther, _otherAddress);
 		// information about the liquidity position after it has been successfully added
 		(uint256 tokenId, uint128 liquidity, uint256 amountSeuro, uint256 amountOther) = addLiquidity(lp);
 		// begin bonding event
 		IBondStorage(bondStorageAddress).startBond(_user, amountSeuro, _rate, _maturityInWeeks, tokenId, liquidity, amountOther);
+	}
+
+	// For interface purposes due to modifiers above
+	function bond(
+		address _user,
+		uint256 _amountSeuro,
+		uint256 _amountOther,
+		address _otherAddress,
+		uint256 _weeks,
+		uint256 _rate
+	) external {
+		_bond(_user, _amountSeuro, _amountOther, _otherAddress, _weeks, _rate);
 	}
 }
