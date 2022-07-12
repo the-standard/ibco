@@ -64,7 +64,6 @@ contract OperatorStage2 is AccessControl {
 	}
 
 	function claim() public {
-		(bool success, ) = storageAddress.delegatecall(abi.encodeWithSignature("claimReward()"));
-		require(success == true, "err-claim-failed-505");
+		bondStorage.claimReward(msg.sender);
 	}
 }
