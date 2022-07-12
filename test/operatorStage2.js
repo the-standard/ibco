@@ -62,34 +62,21 @@ describe('Stage 2', async () => {
 		  await OP2.connect(owner).setGateway(TGateway.address);
 		});
 
-		async function balanceTST() {
-		  return TST.balanceOf(CUSTOMER_ADDR);
+		async function formatCustomerBalance() {
+		  return ((await TST.balanceOf(CUSTOMER_ADDR)) / DECIMALS).toString();
 		}
 
-		async function helperUpdateBondStatus() {
-		  return BStorage.connect(customer).refreshBondStatus(CUSTOMER_ADDR);
-		}
-
-		async function helperGetBondAt(index) {
-		  return BStorage.getBondAt(CUSTOMER_ADDR, index);
-		}
-
-		it('[final price] rewards with TST successfully', async () => {
-		  let actualClaim, expectedClaim, bond, actualStandardBal, expectedStandardBal;
-
-		  let price = ethers.BigNumber.from(2).pow(96); // assumed sEUR/EUR = 1.0 and USD/EUR = 1.0;
-		  await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
-
-
-		  await OP2.connect(owner).newBond(
-			  CUSTOMER_ADDR, etherBalances["125K"], etherBalances["125K"], USDT_ADDRESS, durations["ONE_WEEK"], rates["TWENTY_PC"]
+		async function testingSuite(seuroAmount, otherAmount, rate) {
+		  OP2.connect(owner).newBond(
+			  CUSTOMER_ADDR, seuroAmount, otherAmount, USDT_ADDRESS, durations["ONE_WEEK"], rate
 		  );
-		
-		  await helperUpdateBondStatus();
-		  actualStandardBal = await balanceTST();
-		  expect(actualStandardBal).to.equal(0);
 
-		  let firstBond = await helperGetBondAt(0);
+		  BStorage.connect(customer).refreshBondStatus(CUSTOMER_ADDR);
+
+		  let actualBalance = await formatCustomerBalance();
+		  expect(actualBalance).to.equal('0');
+
+		  let firstBond = await BStorage.getBondAt(CUSTOMER_ADDR, 0);
 		  let actualPrincipal = firstBond.principal;
 		  let actualRate = firstBond.rate;
 		  expect(actualPrincipal).to.equal(etherBalances["125K"]);
@@ -98,17 +85,24 @@ describe('Stage 2', async () => {
 		  await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
 		  await OP2.connect(customer).refreshBond(CUSTOMER_ADDR);
 		  await BStorage.connect(customer).claimReward();
+		}
 
-		  let principal = 125000;
-		  let twentyPercentRate = 1.2;
-		  let profitSeuro = principal * twentyPercentRate;
-		  let profitStandard = profitSeuro * STANDARD_TOKENS_PER_EUR; // 3 million TST
-		  expectedStandardBal = profitStandard.toString();
-		  actualStandardBal = (await balanceTST() / DECIMALS).toString();
+		async function expectedTokBalance(principal, rateMultiplier) {
+		  let profitSeuro = principal * rateMultiplier;
+		  let expectedStandardBal = (profitSeuro * STANDARD_TOKENS_PER_EUR).toString();
+		  let actualStandardBal = await formatCustomerBalance();
 		  expect(actualStandardBal).to.equal(expectedStandardBal);
+		}
+
+		it('[final price (1.0)] rewards with TST successfully', async () => {
+		  let price = ethers.BigNumber.from(2).pow(96); // assumed sEUR/EUR = 1.0 and USD/EUR = 1.0;
+		  await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
+
+		  await testingSuite(etherBalances["125K"], etherBalances["125K"], rates["TWENTY_PC"]);
+		  await expectedTokBalance(125000, 1.2);
 		});
 
-		it('[initial price] rewards with TST successfully', async () => {
+		it('[initial price (0.8)] rewards with TST successfully', async () => {
 		  let seuroPerUsd = 1.25; // assumes sEUR/EUR = 0.8 and USD/EUR = 1.0
 		  let usdPrice = 1;
 		  let price = SEUR_ADDRESS < USDT_ADDRESS ?
