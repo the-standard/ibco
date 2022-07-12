@@ -226,7 +226,7 @@ contract BondStorage is AccessControl {
 	}
 
 	// Claims the payout in TST tokens by sending it to the user's wallet and resetting the claim to zero.
-	function claimReward() external {
+	function claimReward() public {
 		address user = msg.sender;
 		uint256 rewardAmount = issuedBonds[user].claimAmount;
 		issuedBonds[user].claimAmount = 0;
