@@ -143,8 +143,8 @@ contract BondingEvent is AccessControl {
 		uint256 ninetyNinePercent = uint256(99 * 10 ** 12) / uint256(100 * 10 ** 12);
 		(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min) =
 			token0 == SEURO_ADDRESS ?
-			(lp.amountSeuro, lp.amountOther, lp.amountSeuro  * ninetyNinePercent, lp.amountOther * ninetyNinePercent) :
-			(lp.amountOther, lp.amountSeuro, lp.amountOther  * ninetyNinePercent, lp.amountSeuro * ninetyNinePercent);
+			(lp.amountSeuro, lp.amountOther, lp.amountSeuro, lp.amountOther * ninetyNinePercent) :
+			(lp.amountOther, lp.amountSeuro, lp.amountOther  * ninetyNinePercent, lp.amountSeuro);
 
 		// approve the position manager
 		TransferHelper.safeApprove(token0, address(manager), amount0Desired);
