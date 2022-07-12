@@ -84,7 +84,7 @@ describe('Stage 2', async () => {
 
 		  await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
 		  await OP2.connect(customer).refreshBond(CUSTOMER_ADDR);
-		  await BStorage.connect(customer).claimReward();
+		  await OP2.connect(customer).claim();
 		}
 
 		async function expectedTokBalance(principal, rateMultiplier) {

@@ -96,7 +96,7 @@ describe('BondingReward', async () => {
 		  actualStandardBal = await balanceTST();
 		  expect(actualStandardBal).to.equal(0);
 		  // claim the reward!
-		  await BStorage.connect(customer).claimReward();
+		  await BStorage.connect(customer).claimReward(CUSTOMER_ADDR);
 		  // verify that reward is at user now
 		  actualStandardBal = (await balanceTST() / DECIMALS).toString();
 		  expect(actualStandardBal).to.equal(expectedClaim);
