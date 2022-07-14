@@ -36,7 +36,7 @@ describe('BondingCurve', async () => {
     it('should price some tokens from next bucket if transaction will cross bucket limit', async () => {
       // will force crossover to next bucket due to discount
       const eurosSpent = BUCKET_SIZE;
-      
+
       const actualSEurosReceived = await BondingCurve.callStatic.calculatePrice(eurosSpent);
 
       // purchase buys whole capacity of first bucket
@@ -52,7 +52,7 @@ describe('BondingCurve', async () => {
     it('will cross two price buckets when calculating', async () => {
       // will force filling of two buckets, due to curve discount
       const eurosSpent = BUCKET_SIZE.mul(2);
-      
+
       const actualSEurosReceived = await BondingCurve.callStatic.calculatePrice(eurosSpent);
 
       // purchase buys whole capacity of first two buckets
