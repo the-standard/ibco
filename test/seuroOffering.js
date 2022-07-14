@@ -61,7 +61,7 @@ describe('SEuroOffering', async () => {
 
   describe('swap', async () => {
     let PriceConverter;
-    
+
     before(async () => {
       PriceConverter = await (await ethers.getContractFactory('PriceConverter')).deploy();
     });
