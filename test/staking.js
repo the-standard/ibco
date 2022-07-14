@@ -25,7 +25,57 @@ beforeEach(async () => {
   SEUR_ADDRESS = SEuro.address;
   CUSTOMER_ADDR = customer.address;
   OWNER_ADDR = owner.address;
+
+
 });
 
 describe('Staking', async () => {
-}
+  it('opens the pool and sets all the variables', async () => {
+    const StakingContract = await ethers.getContractFactory('Staking');
+    Staking = await StakingContract.deploy("Staking", "STS");
+
+    expect(await Staking.name()).to.eq("Staking");
+    expect(await Staking.symbol()).to.eq("STS");
+    expect(await Staking.active()).to.eq(false);
+    expect(await Staking.startTime()).to.eq(0);
+    expect(await Staking.endTime()).to.eq(0);
+    expect(await Staking.duration()).to.eq(0);
+  });
+
+  it('activates the pool', async () => {
+  });
+
+  it('disables the pool', async () => {
+  });
+
+  it('destroys the pool and all the tokens!!!', async () => {
+  });
+
+  it('mints a token and creates a position', async () => {
+  });
+
+  it('will not close and settle because the pool aint finished', async () => {
+  });
+
+  it('closes and settles the pool', async () => {
+  });
+  
+  it('adds seuro to the pool', async () => {
+  });
+
+  it('removes seuro from the pool', async () => {
+  });
+
+  it('removes tst from the pool', async () => {
+  });
+
+  it('creates the position', async () => {
+  });
+
+  it('fetches the position for an address', async () => {
+  });
+
+  it('adds tst to an existing position', async () => {
+  });
+
+});
