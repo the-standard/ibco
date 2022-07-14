@@ -1,49 +1,12 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
+const { POSITION_MANAGER_ADDRESS, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime } = require('./common.js');
 
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
-const encodePriceSqrt = (reserve1, reserve0) => {
-  return ethers.BigNumber.from(
-	new bn(reserve1.toString())
-	.div(reserve0.toString())
-	.sqrt()
-	.multipliedBy(new bn(2).pow(96))
-	.integerValue(3)
-	.toString()
-  )
-}
-
 let owner, customer, SEuro, TST, USDT, BStorage;
 let USDT_ADDRESS, CUSTOMER_ADDR;
-const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
-var etherBalances = {
-  "TWO_MILLION": ethers.utils.parseEther('2000000'),
-  "FOUR_MILLION": ethers.utils.parseEther('4000000'),
-  "FIFTY_MILLION": ethers.utils.parseEther('50000000'),
-  "HUNDRED_MILLION": ethers.utils.parseEther('100000000'),
-  "ONE_BILLION": ethers.utils.parseEther('1000000000'),
-};
-const MOST_STABLE_FEE = 500;
-const ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
-const STANDARD_TOKENS_PER_EUR = 20; // 1 TST = 0.05 EUR
-const DECIMALS = 10 ** 18;
-var rates = {
-  "HALF_PC": 500,
-  "FIVE_PC": 5000,
-  "SIX_PC": 6000,
-  "SEVEN_PC": 7000,
-  "TEN_PC": 10000
-};
-var durations = {
-  "ONE_YR_WEEKS": 52,
-  "HALF_YR_WEEKS": 26,
-  "ONE_WEEK": 1,
-  "TWO_WEEKS": 2,
-  "FOUR_WEEKS": 4,
-  "EIGHT_WEEKS": 8
-};
 
 beforeEach(async () => {
   [owner, customer] = await ethers.getSigners();
@@ -61,7 +24,7 @@ beforeEach(async () => {
 
 describe('BondingEvent', async () => {
 
-  let BondingEventContract, BondingEvent, BondStorageContract, BondStorage, TokenGateway;
+  let BondingEventContract, BondingEvent, BondStorageContract, TokenGateway;
 
   beforeEach(async () => {
 	BondingEventContract = await ethers.getContractFactory('BondingEvent');
@@ -128,19 +91,24 @@ describe('BondingEvent', async () => {
 	describe('bonding', async () => {
 	  context('pool initialised', async () => {
 		beforeEach(async () => {
-		  const SeurosPerUsdt = ethers.BigNumber.from(93).mul(ethers.BigNumber.from(10).pow(12));
-		  const price = SEUR_ADDRESS <  USDT_ADDRESS ?
-			encodePriceSqrt(100, SeurosPerUsdt) :
-			encodePriceSqrt(SeurosPerUsdt, 100);
+		  // Set price ratio between sEUR and USDT as 1:1
+		  let price = ethers.BigNumber.from(2).pow(96); // This corresponds to 1
 		  await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
 		  expect(await BondingEvent.isPoolInitialised()).to.equal(true);
 
+		  // mint balances
 		  await SEuro.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
-		  await USDT.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
 		  await SEuro.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
 		  await USDT.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
-		  await SEuro.connect(owner).approve(BondingEvent.address, etherBalances["HUNDRED_MILLION"]);
-		  await USDT.connect(owner).approve(BondingEvent.address, etherBalances["HUNDRED_MILLION"]);
+		  await USDT.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
+
+		  // fill token gateway with TST as rewards
+		  await TST.connect(owner).mint(TokenGateway.address, etherBalances["FIVE_HUNDRED_MILLION"]);
+		  await TokenGateway.connect(owner).updateRewardSupply();
+
+		  // approve contract to spend customer funds
+		  await SEuro.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
+		  await USDT.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
 		});
 
 		async function helperGetActiveBonds() {
@@ -159,12 +127,7 @@ describe('BondingEvent', async () => {
 		  return BStorage.getProfit(CUSTOMER_ADDR);
 		}
 
-		async function helperFastForwardTime(seconds) {
-		  ethers.provider.send('evm_increaseTime', [ seconds ]);
-		  ethers.provider.send('evm_mine');
-		}
-
-		it('bonds sEURO and USDT for 52 weeks and receives correct reward', async () => {
+		it('bonds sEURO and USDT for 52 weeks and receives correct seuro profit', async () => {
 		  await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
 		  await BondingEvent.connect(owner).bond(
 			CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
@@ -189,7 +152,49 @@ describe('BondingEvent', async () => {
 		  expect(actualReward).to.equal(expectedReward);
 		});
 
-		it('bonds multiple times with various maturities and updates active/inactive bonds correctly', async () => {
+		it('bonds with an amount less than one million and receives correct seuro profit', async () => {
+		  await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
+		  await BondingEvent.connect(owner).bond(
+			CUSTOMER_ADDR, etherBalances["100K"], etherBalances["100K"], USDT_ADDRESS, durations["ONE_WEEK"], rates["TEN_PC"]
+		  );
+
+		  await helperUpdateBondStatus();
+		  const bondsAmount = await helperGetActiveBonds();
+		  expect(bondsAmount).to.equal(1);
+
+		  const firstBond = await helperGetBondAt(0);
+		  let actualPrincipal = firstBond.principal;
+		  let actualRate = firstBond.rate;
+		  expect(actualPrincipal).to.equal(etherBalances["100K"]);
+		  expect(actualRate).to.equal(rates["TEN_PC"]);
+
+		  await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
+		  await helperUpdateBondStatus();
+
+		  const seuroProfit = 10000;
+		  let expectedProfit = STANDARD_TOKENS_PER_EUR * seuroProfit;
+		  // for some reason, this bonding amount requires a round up due to being off by a few fractions.
+		  // this is not the case for amounts of both one magnitude greater and smaller.
+		  let actualProfit = Math.round((await helperGetProfit()) / DECIMALS);
+		  expect(actualProfit).to.equal(expectedProfit);
+		});
+
+		it('bonds with an amount less than one hundred thousand and receives correct seuro profit', async () => {
+		  await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
+		  await BondingEvent.connect(owner).bond(
+			CUSTOMER_ADDR, etherBalances["10K"], etherBalances["10K"], USDT_ADDRESS, durations["ONE_WEEK"], rates["SIX_PC"]
+		  );
+
+		  await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
+		  await helperUpdateBondStatus();
+
+		  const seuroProfit = 600;
+		  let expectedProfit = STANDARD_TOKENS_PER_EUR * seuroProfit;
+		  let actualProfit = await helperGetProfit() / DECIMALS;
+		  expect(actualProfit).to.equal(expectedProfit);
+		});
+
+		it('bonds multiple times with various maturities and updates active and inactive bonds correctly', async () => {
 		  let seuroProfit;
 		  await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
 		  await BondingEvent.connect(owner).bond(

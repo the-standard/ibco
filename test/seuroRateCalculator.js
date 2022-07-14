@@ -7,6 +7,8 @@ describe('SEuroCalculator', async () => {
   const CL_ETH_USD_DEC = 8;
   const CL_DAI_USD = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
   const CL_DAI_USD_DEC = 8;
+  const EUR_USD_CL = '0xb49f677943BC038e9857d61E7d053CaA2C1734C1';
+  const EUR_USD_CL_DEC = 8;
   const CALCULATOR_FIXED_POINT = BigNumber.from(10).pow(BigNumber.from(18));
   let SEuroCalculator, BondingCurve;
 
@@ -19,7 +21,7 @@ describe('SEuroCalculator', async () => {
     const BUCKET_SIZE = ethers.utils.parseEther('100000');
     BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
     const SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');
-    SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address);
+    SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, EUR_USD_CL, EUR_USD_CL_DEC);
   });
 
   async function getBaseEurRate(clTokUsd) {
