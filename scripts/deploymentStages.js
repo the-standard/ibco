@@ -1,7 +1,7 @@
 const { ethers, network } = require('hardhat');
 const fs = require('fs');
 let addresses;
-let DummyTST, DummyUSDT;
+let DummyTST, DummyUSDT, SEuro;
 
 const INITIAL_PRICE = ethers.utils.parseEther('0.8');
 const MAX_SUPPLY = ethers.utils.parseEther('200000000');
@@ -18,11 +18,11 @@ const deployContracts = async () => {
     const { externalContracts } = JSON.parse(fs.readFileSync('scripts/deploymentConfig.json'))[network.name];
 
     DummyTST = await (await ethers.getContractFactory('DUMMY')).deploy('Standard Token', 'TST', 0);
-    await completed(DummyTST, 'TST')
+    await completed(DummyTST, 'TST');
     DummyUSDT = await (await ethers.getContractFactory('DUMMY')).deploy('Tether', 'USDT', 0);
-    await completed(DummyUSDT, 'USDT')
-    const SEuro = await (await ethers.getContractFactory('SEuro')).deploy('sEURO', 'SEUR', []);
-    await completed(SEuro, 'SEuro')
+    await completed(DummyUSDT, 'USDT');
+    SEuro = await (await ethers.getContractFactory('SEuro')).deploy('sEURO', 'SEUR', []);
+    await completed(SEuro, 'SEuro');
     const BondingCurve = await (await ethers.getContractFactory('BondingCurve')).deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
     await completed(BondingCurve, 'BondingCurve')
     const SEuroCalculator = await (await ethers.getContractFactory('SEuroCalculator')).deploy(BondingCurve.address, externalContracts.eurUsdCl.address, externalContracts.eurUsdCl.dec);
@@ -78,7 +78,16 @@ const contractsFrontendReady = async (accounts) => {
     await mintTokensForAccount(accounts);
 }
 
+const mintUsers = async(addresses) => {
+    const million = ethers.utils.parseEther('1000000');
+    await SEuro.mint(addresses[0], million);
+    await DummyUSDT.mint(addresses[0], million);
+    await SEuro.mint(addresses[1], million);
+    await DummyUSDT.mint(addresses[1], million);
+}
+
 module.exports = {
     deployContracts,
-    contractsFrontendReady
+    contractsFrontendReady,
+    mintUsers
 }

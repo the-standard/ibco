@@ -104,7 +104,7 @@ contract BondingEvent is AccessControl {
 	}
 
 	// Compares the Standard Euro token to another token and returns them in ascending order
-	function getAscendingPair(address _OTHER_ADDRESS) private view returns (address token0, address token1) {
+	function getAscendingPair(address _OTHER_ADDRESS) public view returns (address token0, address token1) {
 		(token0, token1) = SEURO_ADDRESS < _OTHER_ADDRESS
 			? (SEURO_ADDRESS, _OTHER_ADDRESS)
 			: (_OTHER_ADDRESS, SEURO_ADDRESS);
