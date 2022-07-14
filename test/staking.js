@@ -2,9 +2,7 @@ const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
 
-let owner, customer, SEuro, TST;
-
-let OWNER_ADDR, CUSTOMER_ADDR;
+let owner, user, SEuro, TST;
 
 let durations = {
   "ONE_YR_WEEKS": 52,
@@ -16,23 +14,20 @@ let durations = {
 };
 
 beforeEach(async () => {
-  [owner, customer] = await ethers.getSigners();
+  [owner, user] = await ethers.getSigners();
   const SEuroContract = await ethers.getContractFactory('SEuro');
   const ERC20Contract = await ethers.getContractFactory('DUMMY');
   SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
   TST = await ERC20Contract.deploy('TST', 'TST', ethers.utils.parseEther('10000000'));
   TST_ADDRESS = TST.address;
   SEUR_ADDRESS = SEuro.address;
-  CUSTOMER_ADDR = customer.address;
-  OWNER_ADDR = owner.address;
-
-
+  let StakingContract;
 });
 
 describe('Staking', async () => {
   it('opens the pool and sets all the variables', async () => {
-    const StakingContract = await ethers.getContractFactory('Staking');
-    Staking = await StakingContract.deploy("Staking", "STS");
+    StakingContract = await ethers.getContractFactory('Staking');
+    const Staking = await StakingContract.deploy("Staking", "STS");
 
     expect(await Staking.name()).to.eq("Staking");
     expect(await Staking.symbol()).to.eq("STS");
@@ -43,39 +38,64 @@ describe('Staking', async () => {
   });
 
   it('activates the pool', async () => {
+    StakingContract = await ethers.getContractFactory('Staking');
+    const Staking = await StakingContract.deploy("Staking", "STS");
+
+    let activate = Staking.connect(user).activate(1000,2000);
+    await expect(activate).to.be.revertedWith('Ownable: caller is not the owner')
+
+    // should have start < end
+    activate = Staking.activate(2000,1000)
+    await expect(activate).to.be.revertedWith('err-start-end');
+
+    // should work
+    await Staking.activate(1000,2000);
+    
+    expect(await Staking.active()).to.eq(true);
+    expect(await Staking.startTime()).to.eq(1000);
+    expect(await Staking.endTime()).to.eq(2000);
+    expect(await Staking.duration()).to.eq(1000);
   });
 
-  it('disables the pool', async () => {
-  });
+  // it('disables the pool', async () => {
+  // });
 
-  it('destroys the pool and all the tokens!!!', async () => {
-  });
+  // it('destroys the pool and all the tokens!!!', async () => {
+  // });
 
-  it('mints a token and creates a position', async () => {
-  });
+  // it('cannot mint a token because the pool aint started', async () => {
+  // });
 
-  it('will not close and settle because the pool aint finished', async () => {
-  });
+  // it('cannot mint a token because the pool doesnt have enough liquidity', async () => {
+  // });
 
-  it('closes and settles the pool', async () => {
-  });
+  // it('mints a token and creates a position', async () => {
+  // });
+
+  // it('will not close and settle because the pool aint finished', async () => {
+  // });
+
+  // it('closes and settles the pool', async () => {
+  // });
   
-  it('adds seuro to the pool', async () => {
-  });
+  // it('adds seuro to the pool', async () => {
+  // });
 
-  it('removes seuro from the pool', async () => {
-  });
+  // it('removes seuro from the pool', async () => {
+  //   // checks ownership too
+  // });
 
-  it('removes tst from the pool', async () => {
-  });
+  // it('removes tst from the pool', async () => {
+  //   // checks ownership too
+  // });
 
-  it('creates the position', async () => {
-  });
+  // it('creates the position', async () => {
+  // });
 
-  it('fetches the position for an address', async () => {
-  });
+  // it('fetches the position for an address', async () => {
+  // });
 
-  it('adds tst to an existing position', async () => {
-  });
+  // it('adds tst to an existing position', async () => {
+  // });
 
 });
