@@ -18,29 +18,25 @@ const encodePriceSqrt = (reserve1, reserve0) => {
 let owner, customer, SEuro, TST, USDT, BStorage;
 let USDT_ADDRESS, CUSTOMER_ADDR;
 const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
-
-let etherBalances = {
+var etherBalances = {
   "TWO_MILLION": ethers.utils.parseEther('2000000'),
   "FOUR_MILLION": ethers.utils.parseEther('4000000'),
   "FIFTY_MILLION": ethers.utils.parseEther('50000000'),
   "HUNDRED_MILLION": ethers.utils.parseEther('100000000'),
   "ONE_BILLION": ethers.utils.parseEther('1000000000'),
 };
-
 const MOST_STABLE_FEE = 500;
 const ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
 const STANDARD_TOKENS_PER_EUR = 20; // 1 TST = 0.05 EUR
 const DECIMALS = 10 ** 18;
-
-let rates = {
+var rates = {
   "HALF_PC": 500,
   "FIVE_PC": 5000,
   "SIX_PC": 6000,
   "SEVEN_PC": 7000,
   "TEN_PC": 10000
 };
-
-let durations = {
+var durations = {
   "ONE_YR_WEEKS": 52,
   "HALF_YR_WEEKS": 26,
   "ONE_WEEK": 1,
