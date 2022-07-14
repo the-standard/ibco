@@ -2,6 +2,11 @@ const bn = require('bignumber.js');
 
 var POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 var etherBalances = {
+  "8K": ethers.utils.parseEther('8000'),
+  "10K": ethers.utils.parseEther('10000'),
+  "80K": ethers.utils.parseEther('80000'),
+  "100K": ethers.utils.parseEther('100000'),
+  "125K": ethers.utils.parseEther('125000'),
   "TWO_MILLION": ethers.utils.parseEther('2000000'),
   "FOUR_MILLION": ethers.utils.parseEther('4000000'),
   "FIFTY_MILLION": ethers.utils.parseEther('50000000'),
@@ -18,7 +23,8 @@ var rates = {
   "FIVE_PC": 5000,
   "SIX_PC": 6000,
   "SEVEN_PC": 7000,
-  "TEN_PC": 10000
+  "TEN_PC": 10000,
+  "TWENTY_PC": 20000,
 };
 var durations = {
   "ONE_YR_WEEKS": 52,
@@ -43,6 +49,11 @@ const encodePriceSqrt = (reserve1, reserve0) => {
   )
 }
 
+async function helperFastForwardTime(seconds) {
+  ethers.provider.send('evm_increaseTime', [ seconds ]);
+  ethers.provider.send('evm_mine');
+}
+
 
 module.exports = {
   POSITION_MANAGER_ADDRESS,
@@ -53,6 +64,7 @@ module.exports = {
   DECIMALS,
   rates,
   durations,
-  encodePriceSqrt
+  encodePriceSqrt,
+  helperFastForwardTime
 }
 
