@@ -1,35 +1,76 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime } = require('./common.js');
 
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
-let owner, customer, SEuro, TST, USDT, BStorage;
-let USDT_ADDRESS, CUSTOMER_ADDR;
-
-beforeEach(async () => {
-  [owner, customer] = await ethers.getSigners();
-  const SEuroContract = await ethers.getContractFactory('SEuro');
-  const ERC20Contract = await ethers.getContractFactory('DUMMY');
-  SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
-  USDT = await ERC20Contract.deploy('USDT', 'USDT', ethers.utils.parseEther('100000000'));
-  TST = await ERC20Contract.deploy('TST', 'TST', ethers.utils.parseEther('10000000'));
-  USDT_ADDRESS = USDT.address;
-  TST_ADDRESS = TST.address;
-  SEUR_ADDRESS = SEuro.address;
-  CUSTOMER_ADDR = customer.address;
-  OWNER_ADDR = owner.address;
-});
+let owner, customer, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, OperatorStage2, BondingEventContract;
 
 describe('BondingEvent', async () => {
 
-  let BondingEventContract, BondingEvent, BondStorageContract, TokenGateway;
 
   beforeEach(async () => {
+    [owner, customer] = await ethers.getSigners();
     BondingEventContract = await ethers.getContractFactory('BondingEvent');
-    BondStorageContract = await ethers.getContractFactory('BondStorage');
-    TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
+    const SEuroContract = await ethers.getContractFactory('SEuro');
+    const ERC20Contract = await ethers.getContractFactory('DUMMY');
+    const BondStorageContract = await ethers.getContractFactory('BondStorage');
+    const TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
+    const OperatorStage2Contract = await ethers.getContractFactory('OperatorStage2');
+    SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
+    TST = await ERC20Contract.deploy('TST', 'TST', ethers.utils.parseEther('10000000'));
+    USDT = await ERC20Contract.deploy('USDT', 'USDT', ethers.utils.parseEther('100000000'));
+    TokenGateway = await TokenGatewayContract.deploy(TST.address, SEuro.address);
+    BondStorage = await BondStorageContract.deploy(TokenGateway.address);
+    OperatorStage2 = await OperatorStage2Contract.deploy();
+  });
+
+  const deployBondingEvent = async () => {
+    // -400 tick approx. 0.96 USDT per SEUR
+    // 3600 tick approx. 1.43 USDT per SEUR
+    // 400 and -3600 are the inverse of these prices
+    const pricing = SEuro.address < USDT.address ?
+      {
+        initial: encodePriceSqrt(114, 100),
+        lowerTick: -400,
+        upperTick: 3600
+      } :
+      {
+        initial: encodePriceSqrt(100, 114),
+        lowerTick: -3600,
+        upperTick: 400,
+      }
+    
+    BondingEvent = await BondingEventContract.deploy(
+      SEuro.address, USDT.address, POSITION_MANAGER_ADDRESS, BondStorage.address,
+      OperatorStage2.address, pricing.initial, pricing.lowerTick, pricing.upperTick, MOST_STABLE_FEE
+    );
+  };
+
+  describe('initialisation', async () => {
+    it.only('initialises the pool with the given price', async () => {
+      await deployBondingEvent();
+
+      expect(await BondingEvent.pool()).not.to.equal(ethers.constants.AddressZero);
+      expect(await BondingEvent.tickSpacing()).to.equal(STABLE_TICK_SPACING);
+    });
+  });
+
+
+
+
+  //
+  //
+  //
+  // --------------------------------------
+  //
+  //
+  //
+
+  let BondStorageContract;
+
+  beforeEach(async () => {
   });
 
   describe('initialise bonding event', async () => {

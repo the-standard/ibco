@@ -15,6 +15,7 @@ var etherBalances = {
   "ONE_BILLION": ethers.utils.parseEther('1000000000'),
 };
 const MOST_STABLE_FEE = 500;
+const STABLE_TICK_SPACING = 10;
 const ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
 const STANDARD_TOKENS_PER_EUR = 20; // 1 TST = 0.05 EUR
 const DECIMALS = 10 ** 18;
@@ -59,6 +60,7 @@ module.exports = {
   POSITION_MANAGER_ADDRESS,
   etherBalances,
   MOST_STABLE_FEE,
+  STABLE_TICK_SPACING,
   ONE_WEEK_IN_SECONDS,
   STANDARD_TOKENS_PER_EUR,
   DECIMALS,
