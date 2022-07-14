@@ -31,10 +31,6 @@ contract StandardTokenGateway is AccessControl {
 	// Enabled when the price is less than 1
 	bool public inversed;
 
-	// True if the contract is connected to mainnet TST token contract.
-	// Set to false for testing purposes.
-	bool immutable isProduction;
-
 	// The amount of TST tokens that are to be paid out in the future.
 	uint256 public pendingPayout;
 
@@ -56,7 +52,6 @@ contract StandardTokenGateway is AccessControl {
 		TOKEN = IERC20(TOKEN_ADDRESS);
 		SEUR_ADDRESS = _seuroToken;
 		inversed = true;
-		isProduction = TOKEN_ADDRESS == TST_ADDRESS;
 		tokenPrice = 20; // 0.05 EUR
 		TST_MAX_AMOUNT = one_billion * decimals;
 		bondRewardPoolSupply = 0;

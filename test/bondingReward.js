@@ -1,10 +1,10 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, encodePriceSqrt } = require('./helperConstants.js');
+const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime } = require('./common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
-let owner, customer, SEuro, TST, USDT, BStorage;
+let owner, customer, SEuro, TST, USDT;
 let USDT_ADDRESS, CUSTOMER_ADDR;
 
 beforeEach(async () => {
@@ -60,11 +60,6 @@ describe('BondingReward', async () => {
 		  await USDT.connect(customer).approve(EVENT_ADDRESS, etherBalances["HUNDRED_MILLION"]);
 		});
 
-		async function helperFastForwardTime(seconds) {
-		  ethers.provider.send('evm_increaseTime', [ seconds ]);
-		  ethers.provider.send('evm_mine');
-		}
-
 		async function balanceTST() {
 		  return TST.balanceOf(CUSTOMER_ADDR);
 		}
@@ -101,7 +96,7 @@ describe('BondingReward', async () => {
 		  actualStandardBal = await balanceTST();
 		  expect(actualStandardBal).to.equal(0);
 		  // claim the reward!
-		  await BStorage.connect(customer).claimReward();
+		  await BStorage.connect(customer).claimReward(CUSTOMER_ADDR);
 		  // verify that reward is at user now
 		  actualStandardBal = (await balanceTST() / DECIMALS).toString();
 		  expect(actualStandardBal).to.equal(expectedClaim);
