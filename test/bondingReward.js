@@ -1,10 +1,10 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, encodePriceSqrt, helperFastForwardTime } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime } = require('./common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
-let owner, customer, SEuro, TST, USDT, BStorage;
+let owner, customer, SEuro, TST, USDT;
 let USDT_ADDRESS, CUSTOMER_ADDR;
 
 beforeEach(async () => {

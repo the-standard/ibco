@@ -24,7 +24,7 @@ beforeEach(async () => {
 
 describe('BondingEvent', async () => {
 
-  let BondingEventContract, BondingEvent, BondStorageContract, BondStorage, TokenGateway;
+  let BondingEventContract, BondingEvent, BondStorageContract, TokenGateway;
 
   beforeEach(async () => {
 	BondingEventContract = await ethers.getContractFactory('BondingEvent');
