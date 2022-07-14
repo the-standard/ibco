@@ -1,39 +1,46 @@
-const { ethers } = require('hardhat');
+const { ethers, network } = require('hardhat');
+const fs = require('fs');
 let addresses;
 let DummyTST, DummyUSDT;
 
 const INITIAL_PRICE = ethers.utils.parseEther('0.8');
 const MAX_SUPPLY = ethers.utils.parseEther('200000000');
 const BUCKET_SIZE = ethers.utils.parseEther('100000');
-const UNISWAP_LIQ_MANAGER = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 const OPERATOR_ADDRESS = ethers.constants.AddressZero; // update this when we have the operator
 
+const completed = async (contract, name) => {
+    console.log(`${name} deploying ...`)
+    await contract.deployed();
+    console.log(`${name} deployed !`)
+}
+
 const deployContracts = async () => {
+    const { externalContracts } = JSON.parse(fs.readFileSync('scripts/deploymentConfig.json'))[network.name];
+
     DummyTST = await (await ethers.getContractFactory('DUMMY')).deploy('Standard Token', 'TST', 0);
+    await completed(DummyTST, 'TST')
     DummyUSDT = await (await ethers.getContractFactory('DUMMY')).deploy('Tether', 'USDT', 0);
+    await completed(DummyUSDT, 'USDT')
     const SEuro = await (await ethers.getContractFactory('SEuro')).deploy('sEURO', 'SEUR', []);
+    await completed(SEuro, 'SEuro')
     const BondingCurve = await (await ethers.getContractFactory('BondingCurve')).deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
-    const SEuroCalculator = await (await ethers.getContractFactory('SEuroCalculator')).deploy(BondingCurve.address);
-    const TokenManager = await (await ethers.getContractFactory('TokenManager')).deploy();
+    await completed(BondingCurve, 'BondingCurve')
+    const SEuroCalculator = await (await ethers.getContractFactory('SEuroCalculator')).deploy(BondingCurve.address, externalContracts.eurUsdCl.address, externalContracts.eurUsdCl.dec);
+    await completed(SEuroCalculator, 'SEuroCalculator')
+    const TokenManager = await (await ethers.getContractFactory('TokenManager')).deploy(externalContracts.weth, externalContracts.ethUsdCl.address, externalContracts.ethUsdCl.dec);
+    await completed(TokenManager, 'TokenManager')
     const SEuroOffering = await (await ethers.getContractFactory('SEuroOffering')).deploy(
         SEuro.address, SEuroCalculator.address, TokenManager.address, BondingCurve.address
     );
+    await completed(SEuroOffering, 'SEuroOffering')
     const StandardTokenGateway = await (await ethers.getContractFactory('StandardTokenGateway')).deploy(DummyTST.address, SEuro.address);
+    await completed(StandardTokenGateway, 'StandardTokenGateway')
     const BondStorage = await (await ethers.getContractFactory('BondStorage')).deploy(StandardTokenGateway.address);
+    await completed(BondStorage, 'BondStorage')
     const BondingEvent = await (await ethers.getContractFactory('BondingEvent')).deploy(
-        SEuro.address, DummyUSDT.address, UNISWAP_LIQ_MANAGER, BondStorage.address, OPERATOR_ADDRESS
+        SEuro.address, DummyUSDT.address, externalContracts.uniswapLiquidityManager, BondStorage.address, OPERATOR_ADDRESS
     );
-
-    await DummyTST.deployed();
-    await DummyUSDT.deployed();
-    await SEuro.deployed();
-    await BondingCurve.deployed();
-    await SEuroCalculator.deployed();
-    await TokenManager.deployed();
-    await SEuroOffering.deployed();
-    await StandardTokenGateway.deployed();
-    await BondStorage.deployed();
-    await BondingEvent.deployed();
+    await completed(BondingEvent, 'BondingEvent')
 
     addresses = {
         SEuroOffering: SEuroOffering.address,

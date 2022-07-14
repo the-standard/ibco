@@ -6,13 +6,16 @@ import "contracts/interfaces/Chainlink.sol";
 
 contract SEuroCalculator {
     uint256 public constant FIXED_POINT = 1_000_000_000_000_000_000;
-    address public constant EUR_USD_CL = 0xb49f677943BC038e9857d61E7d053CaA2C1734C1;
-    uint8 public constant EUR_USD_CL_DEC = 8;
+
+    address public immutable EUR_USD_CL;
+    uint8 public immutable EUR_USD_CL_DEC;
 
     BondingCurve private bondingCurve;
 
-    constructor(address _bondingCurve) {
+    constructor(address _bondingCurve, address _eurUsdCl, uint8 _eurUsdDec) {
         bondingCurve = BondingCurve(_bondingCurve);
+        EUR_USD_CL = _eurUsdCl;
+        EUR_USD_CL_DEC = _eurUsdDec;
     }
 
     function calculateBaseRate(address _tokUsdCl, uint8 _tokUsdDec) private view returns (uint256) {

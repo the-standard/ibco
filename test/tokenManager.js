@@ -15,7 +15,7 @@ describe('TokenManager', async () => {
   beforeEach(async () => {
     [owner, user] = await ethers.getSigners();
     const TokenManagerContract = await ethers.getContractFactory('TokenManager');
-    TokenManager = await TokenManagerContract.deploy();
+    TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, WETH_USD_CL, WETH_CL_DEC);
   });
 
   it('gets list of accepted tokens', async () => {
