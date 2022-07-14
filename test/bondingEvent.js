@@ -27,228 +27,228 @@ describe('BondingEvent', async () => {
   let BondingEventContract, BondingEvent, BondStorageContract, TokenGateway;
 
   beforeEach(async () => {
-	BondingEventContract = await ethers.getContractFactory('BondingEvent');
-	BondStorageContract = await ethers.getContractFactory('BondStorage');
-	TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
+    BondingEventContract = await ethers.getContractFactory('BondingEvent');
+    BondStorageContract = await ethers.getContractFactory('BondStorage');
+    TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
   });
 
   describe('initialise bonding event', async () => {
-	it('has not initialised pool', async () => {
-	  BondingEvent = await BondingEventContract.deploy(SEUR_ADDRESS, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, /* dummy address */ USDT_ADDRESS, CUSTOMER_ADDR);
-	  expect(await BondingEvent.isPoolInitialised()).to.equal(false);
-	});
+    it('has not initialised pool', async () => {
+      BondingEvent = await BondingEventContract.deploy(SEUR_ADDRESS, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, /* dummy address */ USDT_ADDRESS, CUSTOMER_ADDR);
+      expect(await BondingEvent.isPoolInitialised()).to.equal(false);
+    });
   });
 
   context('bonding event deployed', async () => {
-	beforeEach(async () => {
-	  TokenGateway = await TokenGatewayContract.deploy(TST_ADDRESS, SEUR_ADDRESS);
-	  BStorage = await BondStorageContract.deploy(TokenGateway.address);
-	  BondingEvent = await BondingEventContract.deploy(
-		SEUR_ADDRESS, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address, OWNER_ADDR
-	  );
-	});
+    beforeEach(async () => {
+      TokenGateway = await TokenGatewayContract.deploy(TST_ADDRESS, SEUR_ADDRESS);
+      BStorage = await BondStorageContract.deploy(TokenGateway.address);
+      BondingEvent = await BondingEventContract.deploy(
+        SEUR_ADDRESS, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address, OWNER_ADDR
+      );
+    });
 
-	describe('initialise pool', async () => {
-	  it('initialises and changes the tick range for the pool', async () => {
-		let low, high;
-		const price = encodePriceSqrt(100, 93);
-		expect(await BondingEvent.isPoolInitialised()).to.equal(false);
-		await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
-		expect(await BondingEvent.isPoolInitialised()).to.equal(true);
+    describe('initialise pool', async () => {
+      it('initialises and changes the tick range for the pool', async () => {
+        let low, high;
+        const price = encodePriceSqrt(100, 93);
+        expect(await BondingEvent.isPoolInitialised()).to.equal(false);
+        await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
+        expect(await BondingEvent.isPoolInitialised()).to.equal(true);
 
-		low = await helperGetLowTickBound();
-		high = await helperGetHighTickBound();
-		expect(low).to.equal(-10000);
-		expect(high).to.equal(10000);
-		await BondingEvent.adjustTick(-25000, 25000);
-		low = await helperGetLowTickBound();
-		high = await helperGetHighTickBound();
-		expect(low).to.equal(-25000);
-		expect(high).to.equal(25000);
+        low = await helperGetLowTickBound();
+        high = await helperGetHighTickBound();
+        expect(low).to.equal(-10000);
+        expect(high).to.equal(10000);
+        await BondingEvent.adjustTick(-25000, 25000);
+        low = await helperGetLowTickBound();
+        high = await helperGetHighTickBound();
+        expect(low).to.equal(-25000);
+        expect(high).to.equal(25000);
 
-		await expect(BondingEvent.adjustTick(-9999999999, 10000)).to.be.throw;
-		await expect(BondingEvent.adjustTick(10000, 9999999999)).to.be.throw;
-		await expect(BondingEvent.adjustTick(-10001, 10000)).to.be.throw;
-		await expect(BondingEvent.adjustTick(-10000, 10001)).to.be.throw;
-		await expect(BondingEvent.adjustTick(0, 10000)).to.be.reverted;
-		await expect(BondingEvent.adjustTick(10000, 0)).to.be.reverted;
-		await expect(BondingEvent.adjustTick(1, 10000)).to.be.reverted;
-		await expect(BondingEvent.adjustTick(10000, 1)).to.be.reverted;
-	  });
+        await expect(BondingEvent.adjustTick(-9999999999, 10000)).to.be.throw;
+        await expect(BondingEvent.adjustTick(10000, 9999999999)).to.be.throw;
+        await expect(BondingEvent.adjustTick(-10001, 10000)).to.be.throw;
+        await expect(BondingEvent.adjustTick(-10000, 10001)).to.be.throw;
+        await expect(BondingEvent.adjustTick(0, 10000)).to.be.reverted;
+        await expect(BondingEvent.adjustTick(10000, 0)).to.be.reverted;
+        await expect(BondingEvent.adjustTick(1, 10000)).to.be.reverted;
+        await expect(BondingEvent.adjustTick(10000, 1)).to.be.reverted;
+      });
 
-	  async function helperGetLowTickBound() {
-		let lower = await BondingEvent.tickLowerBound();
-		return lower;
-	  }
+      async function helperGetLowTickBound() {
+        let lower = await BondingEvent.tickLowerBound();
+        return lower;
+      }
 
-	  async function helperGetHighTickBound() {
-		let higher = BondingEvent.tickHigherBound();
-		return higher;
-	  }
+      async function helperGetHighTickBound() {
+        let higher = BondingEvent.tickHigherBound();
+        return higher;
+      }
 
-	});
+    });
 
-	describe('bonding', async () => {
-	  context('pool initialised', async () => {
-		beforeEach(async () => {
-		  // Set price ratio between sEUR and USDT as 1:1
-		  let price = ethers.BigNumber.from(2).pow(96); // This corresponds to 1
-		  await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
-		  expect(await BondingEvent.isPoolInitialised()).to.equal(true);
+    describe('bonding', async () => {
+      context('pool initialised', async () => {
+        beforeEach(async () => {
+          // Set price ratio between sEUR and USDT as 1:1
+          let price = ethers.BigNumber.from(2).pow(96); // This corresponds to 1
+          await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
+          expect(await BondingEvent.isPoolInitialised()).to.equal(true);
 
-		  // mint balances
-		  await SEuro.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
-		  await SEuro.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
-		  await USDT.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
-		  await USDT.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
+          // mint balances
+          await SEuro.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
+          await SEuro.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
+          await USDT.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
+          await USDT.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
 
-		  // fill token gateway with TST as rewards
-		  await TST.connect(owner).mint(TokenGateway.address, etherBalances["FIVE_HUNDRED_MILLION"]);
-		  await TokenGateway.connect(owner).updateRewardSupply();
+          // fill token gateway with TST as rewards
+          await TST.connect(owner).mint(TokenGateway.address, etherBalances["FIVE_HUNDRED_MILLION"]);
+          await TokenGateway.connect(owner).updateRewardSupply();
 
-		  // approve contract to spend customer funds
-		  await SEuro.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
-		  await USDT.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
-		});
+          // approve contract to spend customer funds
+          await SEuro.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
+          await USDT.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
+        });
 
-		async function helperGetActiveBonds() {
-		  return BStorage.getActiveBonds(CUSTOMER_ADDR);
-		}
+        async function helperGetActiveBonds() {
+          return BStorage.getActiveBonds(CUSTOMER_ADDR);
+        }
 
-		async function helperGetBondAt(index) {
-		  return BStorage.getBondAt(CUSTOMER_ADDR, index);
-		}
+        async function helperGetBondAt(index) {
+          return BStorage.getBondAt(CUSTOMER_ADDR, index);
+        }
 
-		async function helperUpdateBondStatus() {
-		  return BStorage.connect(customer).refreshBondStatus(CUSTOMER_ADDR);
-		}
+        async function helperUpdateBondStatus() {
+          return BStorage.connect(customer).refreshBondStatus(CUSTOMER_ADDR);
+        }
 
-		async function helperGetProfit() {
-		  return BStorage.getProfit(CUSTOMER_ADDR);
-		}
+        async function helperGetProfit() {
+          return BStorage.getProfit(CUSTOMER_ADDR);
+        }
 
-		it('bonds sEURO and USDT for 52 weeks and receives correct seuro profit', async () => {
-		  await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
-		  await BondingEvent.connect(owner).bond(
-			CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
-		  );
+        it('bonds sEURO and USDT for 52 weeks and receives correct seuro profit', async () => {
+          await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
+          await BondingEvent.connect(owner).bond(
+            CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
+          );
 
-		  await helperUpdateBondStatus();
-		  const bondsAmount = await helperGetActiveBonds();
-		  expect(bondsAmount).to.equal(1);
+          await helperUpdateBondStatus();
+          const bondsAmount = await helperGetActiveBonds();
+          expect(bondsAmount).to.equal(1);
 
-		  const firstBond = await helperGetBondAt(0);
-		  let actualPrincipal = firstBond.principal;
-		  let actualRate = firstBond.rate;
-		  expect(actualPrincipal).to.equal(etherBalances["TWO_MILLION"]);
-		  expect(actualRate).to.equal(rates["TEN_PC"]);
+          const firstBond = await helperGetBondAt(0);
+          let actualPrincipal = firstBond.principal;
+          let actualRate = firstBond.rate;
+          expect(actualPrincipal).to.equal(etherBalances["TWO_MILLION"]);
+          expect(actualRate).to.equal(rates["TEN_PC"]);
 
-		  await helperFastForwardTime(52 * ONE_WEEK_IN_SECONDS);
-		  await helperUpdateBondStatus();
+          await helperFastForwardTime(52 * ONE_WEEK_IN_SECONDS);
+          await helperUpdateBondStatus();
 
-		  const seuroProfit = 200000;
-		  let expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
-		  let actualReward = ((await helperGetProfit()) / DECIMALS).toString();
-		  expect(actualReward).to.equal(expectedReward);
-		});
+          const seuroProfit = 200000;
+          let expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
+          let actualReward = ((await helperGetProfit()) / DECIMALS).toString();
+          expect(actualReward).to.equal(expectedReward);
+        });
 
-		it('bonds with an amount less than one million and receives correct seuro profit', async () => {
-		  await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
-		  await BondingEvent.connect(owner).bond(
-			CUSTOMER_ADDR, etherBalances["100K"], etherBalances["100K"], USDT_ADDRESS, durations["ONE_WEEK"], rates["TEN_PC"]
-		  );
+        it('bonds with an amount less than one million and receives correct seuro profit', async () => {
+          await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
+          await BondingEvent.connect(owner).bond(
+            CUSTOMER_ADDR, etherBalances["100K"], etherBalances["100K"], USDT_ADDRESS, durations["ONE_WEEK"], rates["TEN_PC"]
+          );
 
-		  await helperUpdateBondStatus();
-		  const bondsAmount = await helperGetActiveBonds();
-		  expect(bondsAmount).to.equal(1);
+          await helperUpdateBondStatus();
+          const bondsAmount = await helperGetActiveBonds();
+          expect(bondsAmount).to.equal(1);
 
-		  const firstBond = await helperGetBondAt(0);
-		  let actualPrincipal = firstBond.principal;
-		  let actualRate = firstBond.rate;
-		  expect(actualPrincipal).to.equal(etherBalances["100K"]);
-		  expect(actualRate).to.equal(rates["TEN_PC"]);
+          const firstBond = await helperGetBondAt(0);
+          let actualPrincipal = firstBond.principal;
+          let actualRate = firstBond.rate;
+          expect(actualPrincipal).to.equal(etherBalances["100K"]);
+          expect(actualRate).to.equal(rates["TEN_PC"]);
 
-		  await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-		  await helperUpdateBondStatus();
+          await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
+          await helperUpdateBondStatus();
 
-		  const seuroProfit = 10000;
-		  let expectedProfit = STANDARD_TOKENS_PER_EUR * seuroProfit;
-		  // for some reason, this bonding amount requires a round up due to being off by a few fractions.
-		  // this is not the case for amounts of both one magnitude greater and smaller.
-		  let actualProfit = Math.round((await helperGetProfit()) / DECIMALS);
-		  expect(actualProfit).to.equal(expectedProfit);
-		});
+          const seuroProfit = 10000;
+          let expectedProfit = STANDARD_TOKENS_PER_EUR * seuroProfit;
+          // for some reason, this bonding amount requires a round up due to being off by a few fractions.
+          // this is not the case for amounts of both one magnitude greater and smaller.
+          let actualProfit = Math.round((await helperGetProfit()) / DECIMALS);
+          expect(actualProfit).to.equal(expectedProfit);
+        });
 
-		it('bonds with an amount less than one hundred thousand and receives correct seuro profit', async () => {
-		  await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
-		  await BondingEvent.connect(owner).bond(
-			CUSTOMER_ADDR, etherBalances["10K"], etherBalances["10K"], USDT_ADDRESS, durations["ONE_WEEK"], rates["SIX_PC"]
-		  );
+        it('bonds with an amount less than one hundred thousand and receives correct seuro profit', async () => {
+          await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
+          await BondingEvent.connect(owner).bond(
+            CUSTOMER_ADDR, etherBalances["10K"], etherBalances["10K"], USDT_ADDRESS, durations["ONE_WEEK"], rates["SIX_PC"]
+          );
 
-		  await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-		  await helperUpdateBondStatus();
+          await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
+          await helperUpdateBondStatus();
 
-		  const seuroProfit = 600;
-		  let expectedProfit = STANDARD_TOKENS_PER_EUR * seuroProfit;
-		  let actualProfit = await helperGetProfit() / DECIMALS;
-		  expect(actualProfit).to.equal(expectedProfit);
-		});
+          const seuroProfit = 600;
+          let expectedProfit = STANDARD_TOKENS_PER_EUR * seuroProfit;
+          let actualProfit = await helperGetProfit() / DECIMALS;
+          expect(actualProfit).to.equal(expectedProfit);
+        });
 
-		it('bonds multiple times with various maturities and updates active and inactive bonds correctly', async () => {
-		  let seuroProfit;
-		  await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
-		  await BondingEvent.connect(owner).bond(
-			CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["ONE_WEEK"], rates["FIVE_PC"]
-		  );
-		  await BondingEvent.connect(owner).bond(
-			CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["TWO_WEEKS"], rates["SIX_PC"]
-		  );
-		  await BondingEvent.connect(owner).bond(
-			CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["FOUR_WEEKS"], rates["TEN_PC"]
-		  );
+        it('bonds multiple times with various maturities and updates active and inactive bonds correctly', async () => {
+          let seuroProfit;
+          await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
+          await BondingEvent.connect(owner).bond(
+            CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["ONE_WEEK"], rates["FIVE_PC"]
+          );
+          await BondingEvent.connect(owner).bond(
+            CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["TWO_WEEKS"], rates["SIX_PC"]
+          );
+          await BondingEvent.connect(owner).bond(
+            CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["FOUR_WEEKS"], rates["TEN_PC"]
+          );
 
-		  let expectedActiveBonds = 3;
-		  let actualActiveBonds = await helperGetActiveBonds();
-		  expect(actualActiveBonds).to.equal(expectedActiveBonds);
+          let expectedActiveBonds = 3;
+          let actualActiveBonds = await helperGetActiveBonds();
+          expect(actualActiveBonds).to.equal(expectedActiveBonds);
 
-		  let expectedReward = '0';
-		  let actualReward = (await helperGetProfit()).toString();
-		  expect(actualReward).to.equal(expectedReward);
+          let expectedReward = '0';
+          let actualReward = (await helperGetProfit()).toString();
+          expect(actualReward).to.equal(expectedReward);
 
-		  await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-		  await helperUpdateBondStatus();
+          await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
+          await helperUpdateBondStatus();
 
-		  seuroProfit = 100000;
-		  expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
-		  actualReward = (await helperGetProfit() / DECIMALS).toString();
-		  expect(actualReward).to.equal(expectedReward);
-		  expectedActiveBonds = 2;
-		  actualActiveBonds = await helperGetActiveBonds();
-		  expect(actualActiveBonds).to.equal(expectedActiveBonds);
+          seuroProfit = 100000;
+          expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
+          actualReward = (await helperGetProfit() / DECIMALS).toString();
+          expect(actualReward).to.equal(expectedReward);
+          expectedActiveBonds = 2;
+          actualActiveBonds = await helperGetActiveBonds();
+          expect(actualActiveBonds).to.equal(expectedActiveBonds);
 
-		  await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-		  await helperUpdateBondStatus();
+          await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
+          await helperUpdateBondStatus();
 
-		  seuroProfit = 220000;
-		  expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
-		  actualReward = (await helperGetProfit() / DECIMALS).toString();
-		  expect(actualReward).to.equal(expectedReward);
-		  expectedActiveBonds = 1;
-		  actualActiveBonds = await helperGetActiveBonds();
-		  expect(actualActiveBonds).to.equal(expectedActiveBonds);
+          seuroProfit = 220000;
+          expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
+          actualReward = (await helperGetProfit() / DECIMALS).toString();
+          expect(actualReward).to.equal(expectedReward);
+          expectedActiveBonds = 1;
+          actualActiveBonds = await helperGetActiveBonds();
+          expect(actualActiveBonds).to.equal(expectedActiveBonds);
 
-		  await helperFastForwardTime(2 * ONE_WEEK_IN_SECONDS);
-		  await helperUpdateBondStatus();
+          await helperFastForwardTime(2 * ONE_WEEK_IN_SECONDS);
+          await helperUpdateBondStatus();
 
-		  seuroProfit = 420000;
-		  expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
-		  actualReward = (await helperGetProfit() / DECIMALS).toString();
-		  expect(actualReward).to.equal(expectedReward);
-		  expectedActiveBonds = 0;
-		  actualActiveBonds = await helperGetActiveBonds();
-		  expect(actualActiveBonds).to.equal(expectedActiveBonds);
-		});
-	  });
-	});
+          seuroProfit = 420000;
+          expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
+          actualReward = (await helperGetProfit() / DECIMALS).toString();
+          expect(actualReward).to.equal(expectedReward);
+          expectedActiveBonds = 0;
+          actualActiveBonds = await helperGetActiveBonds();
+          expect(actualActiveBonds).to.equal(expectedActiveBonds);
+        });
+      });
+    });
   });
 });
