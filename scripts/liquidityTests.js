@@ -1,7 +1,7 @@
 const { BigNumber } = require('ethers');
 const fs = require('fs');
-const { ethers, network } = require('hardhat');
-const { encodePriceSqrt } = require('../test/helperConstants');
+const { ethers } = require('hardhat');
+const { encodePriceSqrt } = require('../test/common');
 
 let LiqTest, SEuro, Other, user;
 
@@ -46,17 +46,17 @@ async function main() {
 
     await mintUser(ethers.utils.parseEther('1000000'));
     
-    const sqrtPrice = SEuro.address < Other.address ? encodePriceSqrt(114943, 100000) : encodePriceSqrt(100000, 114943);
+    const sqrtPrice = SEuro.address < Other.address ? encodePriceSqrt(114, 100) : encodePriceSqrt(100, 114);
     await initialisePoolAtPrice(sqrtPrice);
     
     console.log(await getPoolState());
 
-    const amountSEuro = ethers.utils.parseEther('1000');
-    const amountOther = await getOtherAmount(amountSEuro, -2230, -490);
+    const amountSEuro = ethers.utils.parseEther('10000');
+    const amountOther = await getOtherAmount(amountSEuro, -3000, 400);
     console.log(amountOther)
-    await SEuro.approve(LiqTest.address, amountSEuro)
-    await Other.approve(LiqTest.address, amountOther)
-    await addLiquidity(amountSEuro, amountOther, -2230, -490);
+    // await SEuro.approve(LiqTest.address, amountSEuro)
+    // await Other.approve(LiqTest.address, amountOther)
+    // await addLiquidity(amountSEuro, amountOther, -2230, -490);
 }
 
 main()

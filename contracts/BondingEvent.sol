@@ -20,9 +20,10 @@ contract BondingEvent is AccessControl {
     address public bondStorageAddress;
     // controls the bonding event and manages the rates and maturities
     address public operatorAddress;
-	address public pool;
+	IUniswapV3Pool public pool;
 
     INonfungiblePositionManager private immutable manager;
+    IRatioCalculator private immutable ratioCalculator;
 
     // https://docs.uniswap.org/protocol/reference/core/libraries/Tick
     int24 public lowerTickDefault;
@@ -47,6 +48,7 @@ contract BondingEvent is AccessControl {
         address _manager,
         address _bondStorageAddress,
         address _operatorAddress,
+		address _ratioCalculatorAddress,
         uint160 _initialPrice,
         int24 _lowerTickDefault,
         int24 _upperTickDefault,
@@ -61,6 +63,7 @@ contract BondingEvent is AccessControl {
         upperTickDefault = _upperTickDefault;
 		FEE = _fee;
         manager = INonfungiblePositionManager(_manager);
+		ratioCalculator = IRatioCalculator(_ratioCalculatorAddress);
 		initialisePool(_initialPrice, _fee);
     }
 
@@ -124,13 +127,14 @@ contract BondingEvent is AccessControl {
         uint24 _fee
     ) private {
         (address token0, address token1) = getAscendingPair();
-        pool = manager.createAndInitializePoolIfNecessary(
+        address poolAddress = manager.createAndInitializePoolIfNecessary(
             token0,
             token1,
             _fee,
             _price
         );
-        tickSpacing = IUniswapV3Pool(pool).tickSpacing();
+		pool = IUniswapV3Pool(poolAddress);
+        tickSpacing = pool.tickSpacing();
     }
 
     struct LiquidityPair {
@@ -275,4 +279,11 @@ contract BondingEvent is AccessControl {
     ) external {
         _bond(_user, _amountSeuro, _amountOther, _weeks, _rate);
     }
+
+	function getOtherAmount(uint256 _amountSEuro) external view returns (uint256) {
+        (uint160 price,,,,,,) = pool.slot0();
+        (address token0,) = getAscendingPair();
+        bool seuroIsToken0 = token0 == SEURO_ADDRESS;
+        return ratioCalculator.getRatioForSEuro(_amountSEuro, price, lowerTickDefault, upperTickDefault, seuroIsToken0);
+	}
 }

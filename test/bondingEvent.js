@@ -5,7 +5,7 @@ const { POSITION_MANAGER_ADDRESS, DECIMALS, etherBalances, rates, durations, ONE
 
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
-let owner, customer, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, OperatorStage2, BondingEventContract;
+let owner, customer, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, BondingEventContract, RatioCalculator;
 
 describe('BondingEvent', async () => {
 
@@ -17,43 +17,104 @@ describe('BondingEvent', async () => {
     const ERC20Contract = await ethers.getContractFactory('DUMMY');
     const BondStorageContract = await ethers.getContractFactory('BondStorage');
     const TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
-    const OperatorStage2Contract = await ethers.getContractFactory('OperatorStage2');
+    const RatioCalculatorContract = await ethers.getContractFactory('RatioCalculator');
     SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
     TST = await ERC20Contract.deploy('TST', 'TST', ethers.utils.parseEther('10000000'));
     USDT = await ERC20Contract.deploy('USDT', 'USDT', ethers.utils.parseEther('100000000'));
     TokenGateway = await TokenGatewayContract.deploy(TST.address, SEuro.address);
     BondStorage = await BondStorageContract.deploy(TokenGateway.address);
-    OperatorStage2 = await OperatorStage2Contract.deploy();
+    RatioCalculator = await RatioCalculatorContract.deploy();
   });
 
   const deployBondingEvent = async () => {
-    // -400 tick approx. 0.96 USDT per SEUR
-    // 3600 tick approx. 1.43 USDT per SEUR
-    // 400 and -3600 are the inverse of these prices
+    // tick -400 approx. 0.96 USDT per SEUR
+    // tick 3000 approx. 1.35 USDT per SEUR
+    // 400 and -3000 are the inverse of these prices
     const pricing = SEuro.address < USDT.address ?
       {
         initial: encodePriceSqrt(114, 100),
         lowerTick: -400,
-        upperTick: 3600
+        upperTick: 3000
       } :
       {
         initial: encodePriceSqrt(100, 114),
-        lowerTick: -3600,
+        lowerTick: -3000,
         upperTick: 400,
       }
     
     BondingEvent = await BondingEventContract.deploy(
       SEuro.address, USDT.address, POSITION_MANAGER_ADDRESS, BondStorage.address,
-      OperatorStage2.address, pricing.initial, pricing.lowerTick, pricing.upperTick, MOST_STABLE_FEE
+      owner.address, RatioCalculator.address, pricing.initial, pricing.lowerTick,
+      pricing.upperTick, MOST_STABLE_FEE
     );
   };
 
   describe('initialisation', async () => {
-    it.only('initialises the pool with the given price', async () => {
+    it('initialises the pool with the given price', async () => {
       await deployBondingEvent();
 
       expect(await BondingEvent.pool()).not.to.equal(ethers.constants.AddressZero);
       expect(await BondingEvent.tickSpacing()).to.equal(STABLE_TICK_SPACING);
+    });
+  });
+
+  context('initialised', async () => {
+    beforeEach(async () => {
+      await deployBondingEvent();
+    });
+
+    const helperUpdateBondStatus = async () => {
+      await BondStorage.connect(customer).refreshBondStatus(customer.address);
+    }
+
+    const helperGetActiveBonds = async () => {
+      return await BondStorage.getActiveBonds(customer.address);
+    }
+
+    const helperGetBondAt = async (index) => {
+      return await BondStorage.getBondAt(CUSTOMER_ADDR, index);
+    }
+
+    const helperGetProfit = async () => {
+      return await BondStorage.getProfit(CUSTOMER_ADDR);
+    }
+
+    describe.only('calculating ratio', async () => {
+      it('calculates the required amount of USDT for given sEURO', async () => {
+        const amountSEuro = etherBalances['10K'];
+        const requiredUSDT = (await BondingEvent.getOtherAmount(amountSEuro)) / DECIMALS;
+        const roundedUSDT = Math.round(requiredUSDT);
+        // comes from uniswap ui
+        const expectedUSDT = 11534;
+        expect(roundedUSDT).to.equal(expectedUSDT);
+      });
+    });
+
+    describe('bond', async () => {
+      it('bonds sEURO and USDT for 52 weeks and receives correct seuro profit', async () => {
+        await TokenGateway.connect(owner).setStorageAddress(BondStorage.address);
+        await BondingEvent.connect(owner).bond(
+          customer.address, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], durations["ONE_YR_WEEKS"], rates["TEN_PC"],
+        );
+
+        await helperUpdateBondStatus();
+        const bondsAmount = await helperGetActiveBonds();
+        expect(bondsAmount).to.equal(1);
+
+        const firstBond = await helperGetBondAt(0);
+        let actualPrincipal = firstBond.principal;
+        let actualRate = firstBond.rate;
+        expect(actualPrincipal).to.equal(etherBalances["TWO_MILLION"]);
+        expect(actualRate).to.equal(rates["TEN_PC"]);
+
+        await helperFastForwardTime(52 * ONE_WEEK_IN_SECONDS);
+        await helperUpdateBondStatus();
+
+        const seuroProfit = 200000;
+        let expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
+        let actualReward = ((await helperGetProfit()) / DECIMALS).toString();
+        expect(actualReward).to.equal(expectedReward);
+      });
     });
   });
 
@@ -151,22 +212,6 @@ describe('BondingEvent', async () => {
           await SEuro.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
           await USDT.connect(customer).approve(BondingEvent.address, etherBalances["FIFTY_MILLION"]);
         });
-
-        async function helperGetActiveBonds() {
-          return BStorage.getActiveBonds(CUSTOMER_ADDR);
-        }
-
-        async function helperGetBondAt(index) {
-          return BStorage.getBondAt(CUSTOMER_ADDR, index);
-        }
-
-        async function helperUpdateBondStatus() {
-          return BStorage.connect(customer).refreshBondStatus(CUSTOMER_ADDR);
-        }
-
-        async function helperGetProfit() {
-          return BStorage.getProfit(CUSTOMER_ADDR);
-        }
 
         it('bonds sEURO and USDT for 52 weeks and receives correct seuro profit', async () => {
           await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
