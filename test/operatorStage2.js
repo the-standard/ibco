@@ -63,7 +63,7 @@ describe('Stage 2', async () => {
 		});
 
 		async function formatCustomerBalance() {
-		  return ((await TST.balanceOf(CUSTOMER_ADDR)) / DECIMALS).toString();
+		  return (await TST.balanceOf(CUSTOMER_ADDR)).div(DECIMALS).toString();
 		}
 
 		async function testingSuite(seuroAmount, otherAmount, rate) {

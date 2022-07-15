@@ -1,4 +1,6 @@
 const bn = require('bignumber.js');
+const { ethers } = require('hardhat');
+const { BigNumber } = ethers;
 
 var POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 var etherBalances = {
@@ -18,7 +20,7 @@ const MOST_STABLE_FEE = 500;
 const STABLE_TICK_SPACING = 10;
 const ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
 const STANDARD_TOKENS_PER_EUR = 20; // 1 TST = 0.05 EUR
-const DECIMALS = 10 ** 18;
+const DECIMALS = BigNumber.from(10).pow(18);
 var rates = {
   "HALF_PC": 500,
   "FIVE_PC": 5000,

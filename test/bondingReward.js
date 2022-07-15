@@ -73,7 +73,7 @@ describe('BondingReward', async () => {
 		  );
 		  bond = await BStorage.getBondAt(CUSTOMER_ADDR, 0);
 		  let principal = 2000000;
-		  expect(bond.principal / DECIMALS).to.equal(principal);
+		  expect(bond.principal.div(DECIMALS)).to.equal(principal);
 
 		  actualClaim = await BStorage.getClaimAmount(CUSTOMER_ADDR);
 		  expect(actualClaim).to.equal(0);
@@ -89,7 +89,7 @@ describe('BondingReward', async () => {
 		  let profitStandard = profitSeuro * STANDARD_TOKENS_PER_EUR;
 		  expectedClaim = profitStandard.toString();
 		  // claim has been properly registered in bond backend
-		  actualClaim = (await BStorage.getClaimAmount(CUSTOMER_ADDR) / DECIMALS).toString();
+		  actualClaim = (await BStorage.getClaimAmount(CUSTOMER_ADDR)).div(DECIMALS).toString();
 		  expect(actualClaim).to.equal(expectedClaim);
 
 		  // verify TST balance is zero
@@ -98,13 +98,13 @@ describe('BondingReward', async () => {
 		  // claim the reward!
 		  await BStorage.connect(customer).claimReward(CUSTOMER_ADDR);
 		  // verify that reward is at user now
-		  actualStandardBal = (await balanceTST() / DECIMALS).toString();
+		  actualStandardBal = (await balanceTST()).div(DECIMALS).toString();
 		  expect(actualStandardBal).to.equal(expectedClaim);
 		  // verify that there is no claim anymore
-		  actualClaim = (await BStorage.getClaimAmount(CUSTOMER_ADDR) / DECIMALS).toString();
+		  actualClaim = (await BStorage.getClaimAmount(CUSTOMER_ADDR)).div(DECIMALS).toString();
 		  expect(actualClaim).to.equal('0');
 
-		  let actualLeftover = (await TST.balanceOf(TGateway.address) / DECIMALS).toString();
+		  let actualLeftover = (await TST.balanceOf(TGateway.address)).div(DECIMALS).toString();
 		  let maximumRewardSupply = 500 * 10 ** 6;
 		  let expectedLeftover = (maximumRewardSupply - profitStandard).toString();
 		  expect(actualLeftover).to.equal(expectedLeftover);

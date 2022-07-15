@@ -33,7 +33,7 @@ contract BondingEvent is AccessControl {
     int24 public tickSpacing;
 
     // Emitted when a user adds liquidity.
-    event mintPosition(
+    event MintPosition(
         address user,
         uint256 nft,
         uint128 liquidity,
@@ -223,12 +223,11 @@ contract BondingEvent is AccessControl {
             uint256 amount1
         ) = manager.mint(params);
 
-        // stack to deep as of now. TODO: check this downstream instead
-        //if (amount0 == _amountOther) (amount0, amount1) = (amount1, amount0);
+        emit MintPosition(msg.sender, tokenId, liquidity, amount0, amount1);
 
-        emit mintPosition(msg.sender, tokenId, liquidity, amount0, amount1);
-
-        return (tokenId, liquidity, amount0, amount1);
+		return token0 == SEURO_ADDRESS ?
+			(tokenId, liquidity, amount0, amount1) : 
+			(tokenId, liquidity, amount1, amount0);
     }
 
     // We assume that there is a higher layer solution which helps to fetch the latest price as a quote.

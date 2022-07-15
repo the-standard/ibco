@@ -82,7 +82,7 @@ describe('BondingEvent', async () => {
     describe('calculating ratio', async () => {
       it('calculates the required amount of USDT for given sEURO', async () => {
         const amountSEuro = etherBalances['10K'];
-        const requiredUSDT = (await BondingEvent.getOtherAmount(amountSEuro)) / DECIMALS;
+        const requiredUSDT = (await BondingEvent.getOtherAmount(amountSEuro)).div(DECIMALS);
         const roundedUSDT = Math.round(requiredUSDT);
         // comes from uniswap ui
         const expectedUSDT = 11534;
@@ -120,9 +120,7 @@ describe('BondingEvent', async () => {
         const firstBond = await helperGetBondAt(0);
         let actualPrincipal = firstBond.principal;
         let actualRate = firstBond.rate;
-        // TODO sanity check how much principal profit etc should be
-        // is it in tst and based on the converted amount of seuro and converted amount of usdt?
-        // expect(actualPrincipal).to.equal(etherBalances["TWO_MILLION"]);
+        expect(actualPrincipal).to.equal(etherBalances["TWO_MILLION"]);
         expect(actualRate).to.equal(rates["TEN_PC"]);
 
         await helperFastForwardTime(52 * ONE_WEEK_IN_SECONDS);
@@ -130,9 +128,8 @@ describe('BondingEvent', async () => {
 
         const seuroProfit = 200000;
         let expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
-        let actualReward = ((await helperGetProfit()) / DECIMALS).toString();
-        // see TODO above
-        // expect(actualReward).to.equal(expectedReward);
+        let actualReward = ((await helperGetProfit()).div(DECIMALS)).toString();
+        expect(actualReward).to.equal(expectedReward);
       });
 
       it('bonds with an amount less than one million and receives correct seuro profit', async () => {
@@ -153,7 +150,7 @@ describe('BondingEvent', async () => {
         let actualPrincipal = firstBond.principal;
         let actualRate = firstBond.rate;
         // TODO how should principal be calculated?
-        // expect(actualPrincipal).to.equal(etherBalances["100K"]);
+        expect(actualPrincipal).to.equal(etherBalances["100K"]);
         expect(actualRate).to.equal(rates["TEN_PC"]);
 
         await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
@@ -161,11 +158,27 @@ describe('BondingEvent', async () => {
 
         const seuroProfit = 10000;
         let expectedProfit = STANDARD_TOKENS_PER_EUR * seuroProfit;
-        // for some reason, this bonding amount requires a round up due to being off by a few fractions.
-        // this is not the case for amounts of both one magnitude greater and smaller.
-        let actualProfit = Math.round((await helperGetProfit()) / DECIMALS);
-        // TODO how should profit be calculated?
-        // expect(actualProfit).to.equal(expectedProfit);
+        let actualProfit = (await helperGetProfit()).div(DECIMALS);
+        expect(actualProfit).to.equal(expectedProfit);
+      });
+
+      it('bonds with an amount less than one hundred thousand and receives correct seuro profit', async () => {
+        await TokenGateway.connect(owner).setStorageAddress(BondStorage.address);
+        const amountSEuro = etherBalances['10K'];
+        const amountOther = await BondingEvent.getOtherAmount(amountSEuro);
+        await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
+        await USDT.connect(customer).approve(BondingEvent.address, amountOther);
+        await BondingEvent.connect(owner).bond(
+          customer.address, amountSEuro, amountOther, durations["ONE_WEEK"], rates["SIX_PC"]
+        );
+
+        await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
+        await helperUpdateBondStatus();
+
+        const seuroProfit = 600;
+        let expectedProfit = STANDARD_TOKENS_PER_EUR * seuroProfit;
+        let actualProfit = (await helperGetProfit()).div(DECIMALS);
+        expect(actualProfit).to.equal(expectedProfit);
       });
     });
   });
@@ -177,21 +190,18 @@ describe('BondingEvent', async () => {
   //
   //
   // --------------------------------------
+  // TODO:
+  // - test adjusting ticks
+  // - test liquidity position created
+  // - test different liquidity positions created
+  // - make sure the principals / profits on bonds are correct, and based on both amounts sent in
+  // - fee collection?
+  // - transfer nft?
+  // - transfer nft?
+  // --------------------------------------
   //
   //
   //
-
-  let BondStorageContract;
-
-  beforeEach(async () => {
-  });
-
-  describe('initialise bonding event', async () => {
-    it('has not initialised pool', async () => {
-      BondingEvent = await BondingEventContract.deploy(SEUR_ADDRESS, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, /* dummy address */ USDT_ADDRESS, CUSTOMER_ADDR);
-      expect(await BondingEvent.isPoolInitialised()).to.equal(false);
-    });
-  });
 
   context('bonding event deployed', async () => {
     beforeEach(async () => {
@@ -245,21 +255,6 @@ describe('BondingEvent', async () => {
     describe('bonding', async () => {
       context('pool initialised', async () => {
 
-        it('bonds with an amount less than one hundred thousand and receives correct seuro profit', async () => {
-          await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
-          await BondingEvent.connect(owner).bond(
-            CUSTOMER_ADDR, etherBalances["10K"], etherBalances["10K"], USDT_ADDRESS, durations["ONE_WEEK"], rates["SIX_PC"]
-          );
-
-          await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-          await helperUpdateBondStatus();
-
-          const seuroProfit = 600;
-          let expectedProfit = STANDARD_TOKENS_PER_EUR * seuroProfit;
-          let actualProfit = await helperGetProfit() / DECIMALS;
-          expect(actualProfit).to.equal(expectedProfit);
-        });
-
         it('bonds multiple times with various maturities and updates active and inactive bonds correctly', async () => {
           let seuroProfit;
           await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
@@ -286,7 +281,7 @@ describe('BondingEvent', async () => {
 
           seuroProfit = 100000;
           expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
-          actualReward = (await helperGetProfit() / DECIMALS).toString();
+          actualReward = ((await helperGetProfit()).div(DECIMALS)).toString();
           expect(actualReward).to.equal(expectedReward);
           expectedActiveBonds = 2;
           actualActiveBonds = await helperGetActiveBonds();
