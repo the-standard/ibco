@@ -15,15 +15,11 @@ contract RatioCalculator {
     }
 
     function getToken0Amount(uint256 _amountSEuro, uint160 _price, uint160 _lower, uint160 _upper) private view returns (uint256) {
-        // uint128 liquidity = LiquidityAmounts.getLiquidityForAmount1(_price, _upper, _amountSEuro);
-        // return LiquidityAmounts.getAmount0ForLiquidity(_lower, _price, liquidity);
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmount1(_lower, _price, _amountSEuro);
         return LiquidityAmounts.getAmount0ForLiquidity(_price, _upper, liquidity);
     }
 
     function getToken1Amount(uint256 _amountSEuro, uint160 _price, uint160 _lower, uint160 _upper) private view returns (uint256) {
-        // uint128 liquidity = LiquidityAmounts.getLiquidityForAmount0(_lower, _price, _amountSEuro);
-        // return LiquidityAmounts.getAmount1ForLiquidity(_price, _upper, liquidity);
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmount0(_price, _upper, _amountSEuro);
         return LiquidityAmounts.getAmount1ForLiquidity(_lower, _price, liquidity);
     }
