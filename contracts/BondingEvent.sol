@@ -106,7 +106,6 @@ contract BondingEvent is AccessControl {
         );
         require(newHigher <= 887270, "tick-max-exceeded");
         require(newLower >= -887270, "tick-min-exceeded");
-        require(newHigher != 0 && newLower != 0, "tick-val-zero");
     }
 
     // Compares the Standard Euro token to another token and returns them in ascending order

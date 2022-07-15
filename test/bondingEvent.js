@@ -1,11 +1,11 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK } = require('./common.js');
 
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
-let owner, customer, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, BondingEventContract, RatioCalculator;
+let owner, customer, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, BondingEventContract, RatioCalculator, pricing;
 
 describe('BondingEvent', async () => {
 
@@ -30,7 +30,7 @@ describe('BondingEvent', async () => {
     // tick -400 approx. 0.96 USDT per SEUR
     // tick 3000 approx. 1.35 USDT per SEUR
     // 400 and -3000 are the inverse of these prices
-    const pricing = SEuro.address < USDT.address ?
+    pricing = SEuro.address < USDT.address ?
       {
         initial: encodePriceSqrt(114, 100),
         lowerTick: -400,
@@ -89,9 +89,25 @@ describe('BondingEvent', async () => {
       });
     });
 
-    // describe('tick defaults', async () => {
+    describe('tick defaults', async () => {
+      it('updates lower and upper default ticks', async () => {
+        const {lowerTick, upperTick} = pricing;
 
-    // });
+        await expect(BondingEvent.connect(customer).adjustTickDefaults(-10, 10)).to.be.revertedWith('invalid-user');
+        await expect(BondingEvent.adjustTickDefaults(-15, 10)).to.be.revertedWith('tick-mod-spacing-nonzero');
+        await expect(BondingEvent.adjustTickDefaults(-10, MAX_TICK + 10)).to.be.revertedWith('tick-max-exceeded');
+        await expect(BondingEvent.adjustTickDefaults(MIN_TICK - 10, 10)).to.be.revertedWith('tick-min-exceeded');
+      
+        expect(await BondingEvent.lowerTickDefault()).to.equal(lowerTick);
+        expect(await BondingEvent.upperTickDefault()).to.equal(upperTick);
+
+        const newLower = -10;
+        const newUpper = 10;
+        await BondingEvent.adjustTickDefaults(newLower, newUpper);
+        expect(await BondingEvent.lowerTickDefault()).to.equal(newLower);
+        expect(await BondingEvent.upperTickDefault()).to.equal(newUpper);
+      })
+    });
 
     describe('bond', async () => {
       beforeEach(async () => {
@@ -245,8 +261,6 @@ describe('BondingEvent', async () => {
   });
 
 
-
-
   //
   //
   //
@@ -257,60 +271,9 @@ describe('BondingEvent', async () => {
   // - test different liquidity positions created
   // - make sure the principals / profits on bonds are correct, and based on both amounts sent in
   // - fee collection?
-  // - transfer nft?
-  // - transfer nft?
+  // - transfer nfts?
   // --------------------------------------
   //
   //
   //
-
-  context('bonding event deployed', async () => {
-    beforeEach(async () => {
-      TokenGateway = await TokenGatewayContract.deploy(TST_ADDRESS, SEUR_ADDRESS);
-      BStorage = await BondStorageContract.deploy(TokenGateway.address);
-      BondingEvent = await BondingEventContract.deploy(
-        SEUR_ADDRESS, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address, OWNER_ADDR
-      );
-    });
-
-    describe('initialise pool', async () => {
-      xit('initialises and changes the tick range for the pool', async () => {
-        let low, high;
-        const price = encodePriceSqrt(100, 93);
-        expect(await BondingEvent.isPoolInitialised()).to.equal(false);
-        await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
-        expect(await BondingEvent.isPoolInitialised()).to.equal(true);
-
-        low = await helperGetLowTickBound();
-        high = await helperGetHighTickBound();
-        expect(low).to.equal(-10000);
-        expect(high).to.equal(10000);
-        await BondingEvent.adjustTick(-25000, 25000);
-        low = await helperGetLowTickBound();
-        high = await helperGetHighTickBound();
-        expect(low).to.equal(-25000);
-        expect(high).to.equal(25000);
-
-        await expect(BondingEvent.adjustTick(-9999999999, 10000)).to.be.throw;
-        await expect(BondingEvent.adjustTick(10000, 9999999999)).to.be.throw;
-        await expect(BondingEvent.adjustTick(-10001, 10000)).to.be.throw;
-        await expect(BondingEvent.adjustTick(-10000, 10001)).to.be.throw;
-        await expect(BondingEvent.adjustTick(0, 10000)).to.be.reverted;
-        await expect(BondingEvent.adjustTick(10000, 0)).to.be.reverted;
-        await expect(BondingEvent.adjustTick(1, 10000)).to.be.reverted;
-        await expect(BondingEvent.adjustTick(10000, 1)).to.be.reverted;
-      });
-
-      async function helperGetLowTickBound() {
-        let lower = await BondingEvent.tickLowerBound();
-        return lower;
-      }
-
-      async function helperGetHighTickBound() {
-        let higher = BondingEvent.tickHigherBound();
-        return higher;
-      }
-
-    });
-  });
 });
