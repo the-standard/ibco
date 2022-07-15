@@ -180,6 +180,64 @@ describe('BondingEvent', async () => {
         let actualProfit = (await helperGetProfit()).div(DECIMALS);
         expect(actualProfit).to.equal(expectedProfit);
       });
+
+      it('bonds multiple times with various maturities and updates active and inactive bonds correctly', async () => {
+        await TokenGateway.connect(owner).setStorageAddress(BondStorage.address);
+        const amountSEuro = etherBalances['TWO_MILLION'];
+        const amountOther = await BondingEvent.getOtherAmount(amountSEuro);
+        await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro.mul(3));
+        await USDT.connect(customer).approve(BondingEvent.address, amountOther.mul(3));
+        await BondingEvent.connect(owner).bond(
+          customer.address, amountSEuro, amountOther, durations["ONE_WEEK"], rates["FIVE_PC"]
+        );
+        await BondingEvent.connect(owner).bond(
+          customer.address, amountSEuro, amountOther, durations["TWO_WEEKS"], rates["SIX_PC"]
+        );
+        await BondingEvent.connect(owner).bond(
+          customer.address, amountSEuro, amountOther, durations["FOUR_WEEKS"], rates["TEN_PC"]
+        );
+
+        let expectedActiveBonds = 3;
+        let actualActiveBonds = await helperGetActiveBonds();
+        expect(actualActiveBonds).to.equal(expectedActiveBonds);
+
+        let expectedReward = '0';
+        let actualReward = (await helperGetProfit()).toString();
+        expect(actualReward).to.equal(expectedReward);
+
+        await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
+        await helperUpdateBondStatus();
+
+        let seuroProfit = 100000;
+        expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
+        actualReward = ((await helperGetProfit()).div(DECIMALS)).toString();
+        expect(actualReward).to.equal(expectedReward);
+        expectedActiveBonds = 2;
+        actualActiveBonds = await helperGetActiveBonds();
+        expect(actualActiveBonds).to.equal(expectedActiveBonds);
+
+        await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
+        await helperUpdateBondStatus();
+
+        seuroProfit = 220000;
+        expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
+        actualReward = (await helperGetProfit() / DECIMALS).toString();
+        expect(actualReward).to.equal(expectedReward);
+        expectedActiveBonds = 1;
+        actualActiveBonds = await helperGetActiveBonds();
+        expect(actualActiveBonds).to.equal(expectedActiveBonds);
+
+        await helperFastForwardTime(2 * ONE_WEEK_IN_SECONDS);
+        await helperUpdateBondStatus();
+
+        seuroProfit = 420000;
+        expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
+        actualReward = (await helperGetProfit() / DECIMALS).toString();
+        expect(actualReward).to.equal(expectedReward);
+        expectedActiveBonds = 0;
+        actualActiveBonds = await helperGetActiveBonds();
+        expect(actualActiveBonds).to.equal(expectedActiveBonds);
+      });
     });
   });
 
@@ -250,66 +308,6 @@ describe('BondingEvent', async () => {
         return higher;
       }
 
-    });
-
-    describe('bonding', async () => {
-      context('pool initialised', async () => {
-
-        it('bonds multiple times with various maturities and updates active and inactive bonds correctly', async () => {
-          let seuroProfit;
-          await TokenGateway.connect(owner).setStorageAddress(BStorage.address);
-          await BondingEvent.connect(owner).bond(
-            CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["ONE_WEEK"], rates["FIVE_PC"]
-          );
-          await BondingEvent.connect(owner).bond(
-            CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["TWO_WEEKS"], rates["SIX_PC"]
-          );
-          await BondingEvent.connect(owner).bond(
-            CUSTOMER_ADDR, etherBalances["TWO_MILLION"], etherBalances["TWO_MILLION"], USDT_ADDRESS, durations["FOUR_WEEKS"], rates["TEN_PC"]
-          );
-
-          let expectedActiveBonds = 3;
-          let actualActiveBonds = await helperGetActiveBonds();
-          expect(actualActiveBonds).to.equal(expectedActiveBonds);
-
-          let expectedReward = '0';
-          let actualReward = (await helperGetProfit()).toString();
-          expect(actualReward).to.equal(expectedReward);
-
-          await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-          await helperUpdateBondStatus();
-
-          seuroProfit = 100000;
-          expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
-          actualReward = ((await helperGetProfit()).div(DECIMALS)).toString();
-          expect(actualReward).to.equal(expectedReward);
-          expectedActiveBonds = 2;
-          actualActiveBonds = await helperGetActiveBonds();
-          expect(actualActiveBonds).to.equal(expectedActiveBonds);
-
-          await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-          await helperUpdateBondStatus();
-
-          seuroProfit = 220000;
-          expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
-          actualReward = (await helperGetProfit() / DECIMALS).toString();
-          expect(actualReward).to.equal(expectedReward);
-          expectedActiveBonds = 1;
-          actualActiveBonds = await helperGetActiveBonds();
-          expect(actualActiveBonds).to.equal(expectedActiveBonds);
-
-          await helperFastForwardTime(2 * ONE_WEEK_IN_SECONDS);
-          await helperUpdateBondStatus();
-
-          seuroProfit = 420000;
-          expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
-          actualReward = (await helperGetProfit() / DECIMALS).toString();
-          expect(actualReward).to.equal(expectedReward);
-          expectedActiveBonds = 0;
-          actualActiveBonds = await helperGetActiveBonds();
-          expect(actualActiveBonds).to.equal(expectedActiveBonds);
-        });
-      });
     });
   });
 });
