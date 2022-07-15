@@ -78,16 +78,16 @@ const contractsFrontendReady = async (accounts) => {
     await mintTokensForAccount(accounts);
 }
 
-const mintUsers = async(addresses) => {
+const mintUser = async(address) => {
     const million = ethers.utils.parseEther('1000000');
-    await SEuro.mint(addresses[0], million);
-    await DummyUSDT.mint(addresses[0], million);
-    await SEuro.mint(addresses[1], million);
-    await DummyUSDT.mint(addresses[1], million);
+    await SEuro.mint(address, million);
+    await DummyUSDT.mint(address, million);
+    await SEuro.mint(address, million);
+    await DummyUSDT.mint(address, million);
 }
 
 module.exports = {
     deployContracts,
     contractsFrontendReady,
-    mintUsers
+    mintUser
 }
