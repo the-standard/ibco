@@ -5,7 +5,7 @@ build:
 		@npx hardhat compile
 
 test:
-		@npx hardhat test --parallel
+		@npx hardhat test
 
 clean:
 		@rm -rf node_modules/ && npm install
