@@ -137,7 +137,6 @@ contract BondingEvent is AccessControl {
         address user;
         uint256 amountSeuro;
         uint256 amountOther;
-        address otherAddress;
     }
 
     function addLiquidity(LiquidityPair memory lp)
@@ -232,7 +231,6 @@ contract BondingEvent is AccessControl {
     // due to the high gas costs (see https://docs.uniswap.org/protocol/reference/periphery/lens/Quoter).
     /// @param _amountSeuro The amount of sEURO token to bond
     /// @param _amountOther The amount of the other token to bond
-    /// @param _otherAddress The address of the other token
     /// @param _maturityInWeeks The amount of weeks a bond is active.
     ///                          At the end of maturity, the principal + accrued interest is paid out all at once in TST.
     /// @param _rate The rate is represented as a 10,000-factor of each basis point so the most stable fee is 500 (= 0.05 pc)
@@ -240,15 +238,13 @@ contract BondingEvent is AccessControl {
         address _user,
         uint256 _amountSeuro,
         uint256 _amountOther,
-        address _otherAddress,
         uint256 _maturityInWeeks,
         uint256 _rate
     ) private onlyOperator {
         LiquidityPair memory lp = LiquidityPair(
             _user,
             _amountSeuro,
-            _amountOther,
-            _otherAddress
+            _amountOther
         );
         // information about the liquidity position after it has been successfully added
         (
@@ -274,10 +270,9 @@ contract BondingEvent is AccessControl {
         address _user,
         uint256 _amountSeuro,
         uint256 _amountOther,
-        address _otherAddress,
         uint256 _weeks,
         uint256 _rate
     ) external {
-        _bond(_user, _amountSeuro, _amountOther, _otherAddress, _weeks, _rate);
+        _bond(_user, _amountSeuro, _amountOther, _weeks, _rate);
     }
 }

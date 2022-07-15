@@ -68,7 +68,7 @@ describe('Stage 2', async () => {
 
 		async function testingSuite(seuroAmount, otherAmount, rate) {
 		  OP2.connect(owner).newBond(
-			  CUSTOMER_ADDR, seuroAmount, otherAmount, USDT_ADDRESS, durations["ONE_WEEK"], rate
+			  CUSTOMER_ADDR, seuroAmount, otherAmount, durations["ONE_WEEK"], rate
 		  );
 
 		  BStorage.connect(customer).refreshBondStatus(CUSTOMER_ADDR);
