@@ -18,6 +18,9 @@ var etherBalances = {
 };
 const MOST_STABLE_FEE = 500;
 const STABLE_TICK_SPACING = 10;
+const MIN_TICK = -887270;
+const MAX_TICK = 887270;
+const DEFAULT_SQRT_PRICE = BigNumber.from(2).pow(96);
 const ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
 const STANDARD_TOKENS_PER_EUR = 20; // 1 TST = 0.05 EUR
 const DECIMALS = BigNumber.from(10).pow(18);
@@ -52,7 +55,7 @@ const encodePriceSqrt = (reserve1, reserve0) => {
   )
 }
 
-async function helperFastForwardTime(seconds) {
+const helperFastForwardTime = async (seconds) => {
   ethers.provider.send('evm_increaseTime', [ seconds ]);
   ethers.provider.send('evm_mine');
 }
@@ -63,6 +66,9 @@ module.exports = {
   etherBalances,
   MOST_STABLE_FEE,
   STABLE_TICK_SPACING,
+  MIN_TICK,
+  MAX_TICK,
+  DEFAULT_SQRT_PRICE,
   ONE_WEEK_IN_SECONDS,
   STANDARD_TOKENS_PER_EUR,
   DECIMALS,

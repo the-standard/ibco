@@ -5,8 +5,6 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "contracts/uniswap/INonfungiblePositionManager.sol";
 
-import "hardhat/console.sol";
-
 interface IRatioCalculator {
 	function getRatioForSEuro(uint256 _amountSEuro, uint160 _price, int24 _lower, int24 _upper, bool _seuroIsToken0) external pure returns (uint256);
 }
@@ -123,9 +121,6 @@ contract LiqTest {
             uint256 amount1
         ) = manager.mint(params);
         lastTokenId = tokenId;
-        console.log(_liquidity);
-        console.log(amount0);
-        console.log(amount1);
     }
 
     function tickInfo(int24 _tick)

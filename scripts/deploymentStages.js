@@ -11,7 +11,7 @@ const OPERATOR_ADDRESS = ethers.constants.AddressZero; // update this when we ha
 const completed = async (contract, name) => {
     console.log(`${name} deploying ...`)
     await contract.deployed();
-    console.log(`${name} deployed !`)
+    console.log(`${name} deployed at ${contract.address}`)
 }
 
 const deployContracts = async () => {

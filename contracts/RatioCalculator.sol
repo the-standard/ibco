@@ -4,8 +4,6 @@ pragma solidity ^0.7.0;
 import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 
-import "hardhat/console.sol";
-
 contract RatioCalculator {
 
     function getRatioForSEuro(uint256 _amountSEuro, uint160 _price, int24 _lowerTick, int24 _upperTick, bool _seuroIsToken0) external view returns (uint256) {

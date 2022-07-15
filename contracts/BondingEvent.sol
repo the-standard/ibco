@@ -157,9 +157,6 @@ contract BondingEvent is AccessControl {
     {
         (address token0, address token1) = getAscendingPair();
 
-        // Add 1% slippage tolerance by setting minimum of either pair as within this range
-        uint256 ninetyNinePercent = uint256(99 * 10**12) /
-            uint256(100 * 10**12);
         (
             uint256 amount0Desired,
             uint256 amount1Desired,
@@ -170,12 +167,12 @@ contract BondingEvent is AccessControl {
                     lp.amountSeuro,
                     lp.amountOther,
                     lp.amountSeuro,
-                    lp.amountOther * ninetyNinePercent
+                    uint256(0)
                 )
                 : (
                     lp.amountOther,
                     lp.amountSeuro,
-                    lp.amountOther * ninetyNinePercent,
+                    uint256(0),
                     lp.amountSeuro
                 );
 
