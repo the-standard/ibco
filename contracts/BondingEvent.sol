@@ -15,12 +15,12 @@ contract BondingEvent is AccessControl {
     address public immutable SEURO_ADDRESS;
     // other: the other ERC-20 token
     address public immutable OTHER_ADDRESS;
-	uint24 public immutable FEE;
+    uint24 public immutable FEE;
     // bond storage contract
     address public bondStorageAddress;
     // controls the bonding event and manages the rates and maturities
     address public operatorAddress;
-	IUniswapV3Pool public pool;
+    IUniswapV3Pool public pool;
 
     INonfungiblePositionManager private immutable manager;
     IRatioCalculator private immutable ratioCalculator;
@@ -48,11 +48,11 @@ contract BondingEvent is AccessControl {
         address _manager,
         address _bondStorageAddress,
         address _operatorAddress,
-		address _ratioCalculatorAddress,
+        address _ratioCalculatorAddress,
         uint160 _initialPrice,
         int24 _lowerTickDefault,
         int24 _upperTickDefault,
-		uint24 _fee
+        uint24 _fee
     ) {
         _setupRole(WHITELIST_BONDING_EVENT, msg.sender);
         SEURO_ADDRESS = _seuroAddress;
@@ -61,10 +61,10 @@ contract BondingEvent is AccessControl {
         operatorAddress = _operatorAddress;
         lowerTickDefault = _lowerTickDefault;
         upperTickDefault = _upperTickDefault;
-		FEE = _fee;
+        FEE = _fee;
         manager = INonfungiblePositionManager(_manager);
-		ratioCalculator = IRatioCalculator(_ratioCalculatorAddress);
-		initialisePool(_initialPrice, _fee);
+        ratioCalculator = IRatioCalculator(_ratioCalculatorAddress);
+        initialisePool(_initialPrice, _fee);
     }
 
     modifier onlyPoolOwner() {
@@ -121,10 +121,7 @@ contract BondingEvent is AccessControl {
 
     // Initialises a pool with another token (address) and stores it in the array of pools.
     // Note that the price is in sqrtPriceX96 format.
-    function initialisePool(
-        uint160 _price,
-        uint24 _fee
-    ) private {
+    function initialisePool(uint160 _price, uint24 _fee) private {
         (address token0, address token1) = getAscendingPair();
         address poolAddress = manager.createAndInitializePoolIfNecessary(
             token0,
@@ -132,7 +129,7 @@ contract BondingEvent is AccessControl {
             _fee,
             _price
         );
-		pool = IUniswapV3Pool(poolAddress);
+        pool = IUniswapV3Pool(poolAddress);
         tickSpacing = pool.tickSpacing();
     }
 
@@ -160,18 +157,8 @@ contract BondingEvent is AccessControl {
             uint256 amount0Min,
             uint256 amount1Min
         ) = token0 == SEURO_ADDRESS
-                ? (
-                    lp.amountSeuro,
-                    lp.amountOther,
-                    lp.amountSeuro,
-                    uint256(0)
-                )
-                : (
-                    lp.amountOther,
-                    lp.amountSeuro,
-                    uint256(0),
-                    lp.amountSeuro
-                );
+                ? (lp.amountSeuro, lp.amountOther, lp.amountSeuro, uint256(0))
+                : (lp.amountOther, lp.amountSeuro, uint256(0), lp.amountSeuro);
 
         // approve the position manager
         TransferHelper.safeApprove(token0, address(manager), amount0Desired);
@@ -219,9 +206,10 @@ contract BondingEvent is AccessControl {
 
         emit MintPosition(msg.sender, tokenId, liquidity, amount0, amount1);
 
-		return token0 == SEURO_ADDRESS ?
-			(tokenId, liquidity, amount0, amount1) : 
-			(tokenId, liquidity, amount1, amount0);
+        return
+            token0 == SEURO_ADDRESS
+                ? (tokenId, liquidity, amount0, amount1)
+                : (tokenId, liquidity, amount1, amount0);
     }
 
     // We assume that there is a higher layer solution which helps to fetch the latest price as a quote.
@@ -275,10 +263,21 @@ contract BondingEvent is AccessControl {
         _bond(_user, _amountSeuro, _amountOther, _weeks, _rate);
     }
 
-	function getOtherAmount(uint256 _amountSEuro) external view returns (uint256) {
-        (uint160 price,,,,,,) = pool.slot0();
-        (address token0,) = getAscendingPair();
+    function getOtherAmount(uint256 _amountSEuro)
+        external
+        view
+        returns (uint256)
+    {
+        (uint160 price, , , , , , ) = pool.slot0();
+        (address token0, ) = getAscendingPair();
         bool seuroIsToken0 = token0 == SEURO_ADDRESS;
-        return ratioCalculator.getRatioForSEuro(_amountSEuro, price, lowerTickDefault, upperTickDefault, seuroIsToken0);
-	}
+        return
+            ratioCalculator.getRatioForSEuro(
+                _amountSEuro,
+                price,
+                lowerTickDefault,
+                upperTickDefault,
+                seuroIsToken0
+            );
+    }
 }
