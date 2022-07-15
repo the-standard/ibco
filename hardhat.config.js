@@ -8,7 +8,6 @@ const { INFURA_API_KEY, TEST_ACCOUNT_PRIVATE_KEY } = process.env;
 let testAccounts = TEST_ACCOUNT_PRIVATE_KEY ? [TEST_ACCOUNT_PRIVATE_KEY] : [];
 
 module.exports = {
-  // solidity: "0.8.14",
   solidity: {
     compilers: [
       {
