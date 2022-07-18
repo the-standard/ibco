@@ -3,15 +3,7 @@ const { expect } = require('chai');
 const bn = require('bignumber.js');
 
 let owner, user, SEuro, TST;
-
-let durations = {
-  "ONE_YR_WEEKS": 52,
-  "HALF_YR_WEEKS": 26,
-  "ONE_WEEK": 1,
-  "TWO_WEEKS": 2,
-  "FOUR_WEEKS": 4,
-  "EIGHT_WEEKS": 8
-};
+const { etherBalances } = require('./common.js');
 
 beforeEach(async () => {
   [owner, user] = await ethers.getSigners();
@@ -48,7 +40,7 @@ describe('Staking', async () => {
     activate = Staking.activate(2000,1000, TST_ADDRESS)
     await expect(activate).to.be.revertedWith('err-start-end');
 
-    // should not work - end time 
+    // should not work - end time
     activate = Staking.activate(1000,2000, TST_ADDRESS);
     await expect(activate).to.be.revertedWith('err-invalid-end');
 
@@ -83,7 +75,7 @@ describe('Staking', async () => {
     // pool isn't active
     activate = Staking.disable();
     await expect(activate).to.be.revertedWith('err-not-active')
-    
+
     // activate the pool
     await Staking.activate(1000,200000000000000, TST_ADDRESS);
 
@@ -93,10 +85,13 @@ describe('Staking', async () => {
     await Staking.disable();
     pa = await Staking.active();
     await expect(pa).to.eq(false);
-    
+
     activate = Staking.activate(5000,200000000000, TST_ADDRESS);
     await expect(activate).to.be.revertedWith('err-already-initialised');
   });
+
+  it('un-disables the pool', async () => {
+  })
 
   // it('destroys the pool and all the tokens!!!', async () => {
   // });
@@ -111,19 +106,19 @@ describe('Staking', async () => {
     StakingContract = await ethers.getContractFactory('Staking');
     const Staking = await StakingContract.deploy("Staking", "STS");
 
-    const weiValue = 100000;
+    const weiValue = etherBalances["8K"];
     await expect(Staking.mint(weiValue)).to.be.revertedWith('err-not-active');
 
     let blockNum = await ethers.provider.getBlock();
     const then = blockNum.timestamp + 600;
-    
+
     // activate the pool
-    await Staking.activate(1000,200000000000000, TST_ADDRESS);
+    await Staking.activate(1000, 200000000000000, TST_ADDRESS);
 
     // try without TST
     let mint = Staking.connect(user).mint(weiValue);
     await expect(mint).to.be.revertedWith('ERC20: insufficient allowance');
-    
+
     await TST.connect(owner).mint(user.address, weiValue);
     await TST.connect(user).approve(Staking.address, weiValue);
     let balance = await TST.balanceOf(user.address);
@@ -146,6 +141,44 @@ describe('Staking', async () => {
 
     expect(await Staking.balanceOf(user.address)).to.eq(2);
     expect(await Staking.ownerOf(1)).to.eq(user.address);
+
+    // with not enough TST
+    mint = Staking.connect(user).mint(10);
+    await expect(mint).to.be.revertedWith('err-not-min');
+  });
+
+  it('tests the start, end, supply MINT validations', async () => {
+    StakingContract = await ethers.getContractFactory('Staking');
+    const Staking = await StakingContract.deploy("Staking", "STS");
+
+    const weiValue = etherBalances["8K"];
+
+    let blockNum = await ethers.provider.getBlock();
+    const then = blockNum.timestamp + 600;
+
+    // activate the pool
+    await Staking.activate(then, then + 600, TST_ADDRESS);
+
+    await TST.connect(owner).mint(user.address, weiValue);
+    await TST.connect(user).approve(Staking.address, weiValue);
+    let balance = await TST.balanceOf(user.address);
+    expect(balance).to.eq(weiValue);
+
+    // actually mint
+    let mint = Staking.connect(user).mint(weiValue);
+    await expect(mint).to.be.revertedWith('err-not-started');
+
+    // move the time ahead
+    await ethers.provider.send("evm_increaseTime", [3600])
+    await ethers.provider.send("evm_mine") 
+    
+    mint = Staking.connect(user).mint(weiValue);
+    await expect(mint).to.be.revertedWith('err-finished');
+
+    // check the disabled
+    await Staking.disable()
+    mint = Staking.connect(user).mint(weiValue);
+    await expect(mint).to.be.revertedWith('err-not-active');
   });
 
   // it('will not close and settle because the pool aint finished', async () => {
@@ -153,7 +186,7 @@ describe('Staking', async () => {
 
   // it('closes and settles the pool', async () => {
   // });
-  
+
   // it('adds seuro to the pool', async () => {
   // });
 

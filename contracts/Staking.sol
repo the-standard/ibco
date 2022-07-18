@@ -16,16 +16,17 @@ contract Staking is ERC721URIStorage, Ownable {
     uint256 public endTime;
     uint256 public duration;
     uint256 public initialised;
+    uint256 private minTST;
 
     address TST_ADDRESS;
 
     constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {}
 
     function activate(uint256 _start, uint256 _end, address _TST_ADDRESS) external onlyOwner {
+        // CHORE needs refactor
         require(active == false, 'err-already-active');
         require(initialised == 0, 'err-already-initialised');
         require(_end > _start, 'err-start-end');
-        // require(_start >= block.timestamp, 'err-invalid-start');
         require(_end >= block.timestamp, 'err-invalid-end');
        
         TST_ADDRESS = _TST_ADDRESS;
@@ -33,6 +34,10 @@ contract Staking is ERC721URIStorage, Ownable {
         endTime = _end;
         duration = _end - _start;
         initialised = block.timestamp;
+        
+        // TODO variable
+        minTST = 1 ether;
+        
         active = true;
     }
 
@@ -42,17 +47,23 @@ contract Staking is ERC721URIStorage, Ownable {
     }
 
     function mint(uint256 _amount) external returns(uint256) {
+
+        // CHORE needs refactor
+        require(active == true, 'err-not-active');
+        require(_amount >= minTST, 'err-not-min');
+        require(block.timestamp >= startTime, 'err-not-started');
+        require(block.timestamp < endTime, 'err-finished');
         require(active == true, 'err-not-active');
 
         IERC20 TOKEN = IERC20(TST_ADDRESS);
-
-        // transfer from user to this contract;
 
         TOKEN.transferFrom(msg.sender, address(this), _amount);
         // todo put the window in here
 
         uint256 newItemId = _tokenIds.current();
         _mint(msg.sender, newItemId);
+
+        // TODO add to position
 
         _tokenIds.increment();
         return newItemId;
