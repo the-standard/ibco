@@ -1,12 +1,13 @@
 const fs = require('fs');
 const { ethers, network } = require('hardhat');
-const { deployContracts } = require('./deploymentStages');
+const { deployContracts, mintUser } = require('./deploymentStages');
 
 const CHAINS = {rinkeby: 4}
 
 async function main() {
   const contractAddresses = await deployContracts();
   const [contractOwner] = (await ethers.getSigners()).map(account => account.address);
+  await mintUser(contractOwner);
   const chainId = CHAINS[network.name];
   const serverURL = network.config.url;
 

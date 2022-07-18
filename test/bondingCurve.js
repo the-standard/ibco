@@ -1,13 +1,12 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { BigNumber } = require('ethers');
+const { DECIMALS } = require('./common');
 
 describe('BondingCurve', async () => {
   let BondingCurve, SEuro, TestBondingCurve;
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
-  const DECIMALS = BigNumber.from(10).pow(18);
 
   beforeEach(async () => {
     [owner] = await ethers.getSigners();

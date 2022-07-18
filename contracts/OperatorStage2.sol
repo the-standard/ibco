@@ -52,11 +52,10 @@ contract OperatorStage2 is AccessControl {
 		address _user,
 		uint256 _amountSeuro,
 		uint256 _amountOther,
-		address _otherAddress,
 		uint256 _weeks,
 		uint256 _rate
 	) public onlyOperatorStage2 {
-		bondingEvent.bond(_user, _amountSeuro, _amountOther, _otherAddress, _weeks, _rate);
+		bondingEvent.bond(_user, _amountSeuro, _amountOther, _weeks, _rate);
 	}
 
 	function refreshBond(address _user) public {

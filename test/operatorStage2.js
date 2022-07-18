@@ -1,10 +1,10 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, encodePriceSqrt, helperFastForwardTime } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK } = require('./common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
-let owner, customer, SEuro, TST, USDT, BStorage;
+let owner, customer, SEuro, TST, USDT;
 let USDT_ADDRESS, CUSTOMER_ADDR;
 
 beforeEach(async () => {
@@ -22,94 +22,86 @@ beforeEach(async () => {
 });
 
 describe('Stage 2', async () => {
-  let BondingEventContract, BondingEvent, StorageContract, BStorage, TokenGatewayContract, TGateway, OperatorStage2, OP2;
+  let BondingEventContract, BondingEvent, StorageContract, BStorage, TokenGatewayContract, TGateway, OperatorStage2, OP2, RatioCalculator;
 
   beforeEach(async () => {
-	BondingEventContract = await ethers.getContractFactory('BondingEvent');
-	StorageContract = await ethers.getContractFactory('BondStorage');
-	TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
-	OperatorStage2 = await ethers.getContractFactory('OperatorStage2');
+    RatioCalculatorContract = await ethers.getContractFactory('RatioCalculator');
+    BondingEventContract = await ethers.getContractFactory('BondingEvent');
+    StorageContract = await ethers.getContractFactory('BondStorage');
+    TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
+    OperatorStage2 = await ethers.getContractFactory('OperatorStage2');
   });
 
-  context('operator contract deployed and connected', async() => {
-	beforeEach(async () => {
-	  TGateway = await TokenGatewayContract.deploy(TST_ADDRESS, SEUR_ADDRESS);
-	  BStorage = await StorageContract.deploy(TGateway.address);
-	  BondingEvent = await BondingEventContract.deploy(
-		SEUR_ADDRESS, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address, OWNER_ADDR
-	  );
-	  OP2 = await OperatorStage2.deploy();
-	});
+  context('operator contract deployed and connected', async () => {
+    beforeEach(async () => {
+      RatioCalculator = await RatioCalculatorContract.deploy();
+      TGateway = await TokenGatewayContract.deploy(TST_ADDRESS, SEUR_ADDRESS);
+      BStorage = await StorageContract.deploy(TGateway.address);
+      BondingEvent = await BondingEventContract.deploy(
+        SEUR_ADDRESS, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address, OWNER_ADDR,
+        RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
+      );
+      OP2 = await OperatorStage2.deploy();
+    });
 
-	describe('bonding and rewards happy case, various pool prices', async() => {
-	  context('all stage 2 contracts deployed with an existing balance', async () => {
-		beforeEach(async () => {
-		  const EVENT_ADDRESS = BondingEvent.address;
+    describe('bonding and rewards happy case, various pool prices', async () => {
+      context('all stage 2 contracts deployed with an existing balance', async () => {
+        beforeEach(async () => {
+          const EVENT_ADDRESS = BondingEvent.address;
 
-		  await SEuro.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
-		  await USDT.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
-		  await SEuro.connect(owner).mint(CUSTOMER_ADDR, etherBalances["TWO_MILLION"]);
-		  await USDT.connect(owner).mint(CUSTOMER_ADDR, etherBalances["TWO_MILLION"]);
-		  await TST.connect(owner).mint(TGateway.address, etherBalances["FIVE_HUNDRED_MILLION"]);
-		  await TGateway.connect(owner).updateRewardSupply();
-		  await SEuro.connect(customer).approve(EVENT_ADDRESS, etherBalances["TWO_MILLION"]);
-		  await USDT.connect(customer).approve(EVENT_ADDRESS, etherBalances["TWO_MILLION"]);
+          await SEuro.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
+          await USDT.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
+          await SEuro.connect(owner).mint(CUSTOMER_ADDR, etherBalances["TWO_MILLION"]);
+          await USDT.connect(owner).mint(CUSTOMER_ADDR, etherBalances["TWO_MILLION"]);
+          await TST.connect(owner).mint(TGateway.address, etherBalances["FIVE_HUNDRED_MILLION"]);
+          await TGateway.connect(owner).updateRewardSupply();
+          await SEuro.connect(customer).approve(EVENT_ADDRESS, etherBalances["TWO_MILLION"]);
+          await USDT.connect(customer).approve(EVENT_ADDRESS, etherBalances["TWO_MILLION"]);
 
-		  await TGateway.connect(owner).setStorageAddress(BStorage.address);
-		  await BondingEvent.connect(owner).setOperator(OP2.address);
-		  await OP2.connect(owner).setStorage(BStorage.address);
-		  await OP2.connect(owner).setBonding(BondingEvent.address);
-		  await OP2.connect(owner).setGateway(TGateway.address);
-		});
+          await TGateway.connect(owner).setStorageAddress(BStorage.address);
+          await BondingEvent.connect(owner).setOperator(OP2.address);
+          await OP2.connect(owner).setStorage(BStorage.address);
+          await OP2.connect(owner).setBonding(BondingEvent.address);
+          await OP2.connect(owner).setGateway(TGateway.address);
+        });
 
-		async function formatCustomerBalance() {
-		  return ((await TST.balanceOf(CUSTOMER_ADDR)) / DECIMALS).toString();
-		}
+        async function formatCustomerBalance() {
+          return (await TST.balanceOf(CUSTOMER_ADDR)).div(DECIMALS).toString();
+        }
 
-		async function testingSuite(seuroAmount, otherAmount, rate) {
-		  OP2.connect(owner).newBond(
-			  CUSTOMER_ADDR, seuroAmount, otherAmount, USDT_ADDRESS, durations["ONE_WEEK"], rate
-		  );
+        async function testingSuite(seuroAmount, otherAmount, rate) {
+          OP2.connect(owner).newBond(
+            CUSTOMER_ADDR, seuroAmount, otherAmount, durations["ONE_WEEK"], rate
+          );
 
-		  BStorage.connect(customer).refreshBondStatus(CUSTOMER_ADDR);
+          BStorage.connect(customer).refreshBondStatus(CUSTOMER_ADDR);
 
-		  let actualBalance = await formatCustomerBalance();
-		  expect(actualBalance).to.equal('0');
+          let actualBalance = await formatCustomerBalance();
+          expect(actualBalance).to.equal('0');
 
-		  let firstBond = await BStorage.getBondAt(CUSTOMER_ADDR, 0);
-		  let actualPrincipal = firstBond.principal;
-		  let actualRate = firstBond.rate;
-		  expect(actualPrincipal).to.equal(etherBalances["125K"]);
-		  expect(actualRate).to.equal(rates["TWENTY_PC"]);
+          let firstBond = await BStorage.getBondAt(CUSTOMER_ADDR, 0);
+          let actualPrincipal = firstBond.principal;
+          let actualRate = firstBond.rate;
+          expect(actualPrincipal).to.equal(etherBalances["125K"]);
+          expect(actualRate).to.equal(rates["TWENTY_PC"]);
 
-		  await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-		  await OP2.connect(customer).refreshBond(CUSTOMER_ADDR);
-		  await OP2.connect(customer).claim();
-		}
+          await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
+          await OP2.connect(customer).refreshBond(CUSTOMER_ADDR);
+          await OP2.connect(customer).claim();
+        }
 
-		async function expectedTokBalance(principal, rateMultiplier) {
-		  let profitSeuro = principal * rateMultiplier;
-		  let expectedStandardBal = (profitSeuro * STANDARD_TOKENS_PER_EUR).toString();
-		  let actualStandardBal = await formatCustomerBalance();
-		  expect(actualStandardBal).to.equal(expectedStandardBal);
-		}
+        async function expectedTokBalance(principal, rateMultiplier) {
+          let profitSeuro = principal * rateMultiplier;
+          let expectedStandardBal = (profitSeuro * STANDARD_TOKENS_PER_EUR).toString();
+          let actualStandardBal = await formatCustomerBalance();
+          expect(actualStandardBal).to.equal(expectedStandardBal);
+        }
 
-		it('[final price (1.0)] rewards with TST successfully', async () => {
-		  let price = ethers.BigNumber.from(2).pow(96); // assumed sEUR/EUR = 1.0 and USD/EUR = 1.0;
-		  await BondingEvent.initialisePool(USDT_ADDRESS, price, MOST_STABLE_FEE);
-
-		  await testingSuite(etherBalances["125K"], etherBalances["125K"], rates["TWENTY_PC"]);
-		  await expectedTokBalance(125000, 1.2);
-		});
-
-		it('[initial price (0.8)] rewards with TST successfully', async () => {
-		  let seuroPerUsd = 1.25; // assumes sEUR/EUR = 0.8 and USD/EUR = 1.0
-		  let usdPrice = 1;
-		  let price = SEUR_ADDRESS < USDT_ADDRESS ?
-			encodePriceSqrt(usdPrice, seuroPerUsd) :
-			encodePriceSqrt(seuroPerUsd, usdPrice);
-		});
-	  });
-	});
+        it('[final price (1.0)] rewards with TST successfully', async () => {
+          await testingSuite(etherBalances["125K"], etherBalances["125K"], rates["TWENTY_PC"]);
+          await expectedTokBalance(125000, 1.2);
+        });
+      });
+    });
   });
 });
