@@ -41,29 +41,35 @@ describe('Staking', async () => {
     StakingContract = await ethers.getContractFactory('Staking');
     const Staking = await StakingContract.deploy("Staking", "STS");
 
-    let activate = Staking.connect(user).activate(1000,2000);
+    let activate = Staking.connect(user).activate(1000,2000, TST_ADDRESS);
     await expect(activate).to.be.revertedWith('Ownable: caller is not the owner')
 
     // should have start < end
-    activate = Staking.activate(2000,1000)
+    activate = Staking.activate(2000,1000, TST_ADDRESS)
     await expect(activate).to.be.revertedWith('err-start-end');
 
-    // should work
-    await Staking.activate(1000,2000);
-    const blockNum = await ethers.provider.getBlock();
+    // should not work - end time 
+    activate = Staking.activate(1000,2000, TST_ADDRESS);
+    await expect(activate).to.be.revertedWith('err-invalid-end');
+
+    let blockNum = await ethers.provider.getBlock();
+    const then = blockNum.timestamp + 600;
+
+    activate = await Staking.activate(1000, then, TST_ADDRESS);
 
     expect(await Staking.active()).to.eq(true);
     expect(await Staking.startTime()).to.eq(1000);
-    expect(await Staking.endTime()).to.eq(2000);
-    expect(await Staking.duration()).to.eq(1000);
+    expect(await Staking.endTime()).to.eq(then);
+    // expect(await Staking.duration()).to.eq(then - 1000);
 
+    blockNum = await ethers.provider.getBlock();
     let bi = await Staking.initialised();
     const bt = ethers.BigNumber.from(bi);
 
     expect(bt).to.eq(blockNum.timestamp);
 
     // should revert since we're already active
-    activate = Staking.activate(5000,100000);
+    activate = Staking.activate(5000,100000, TST_ADDRESS);
     await expect(activate).to.be.revertedWith('err-already-active');
   });
 
@@ -79,7 +85,7 @@ describe('Staking', async () => {
     await expect(activate).to.be.revertedWith('err-not-active')
     
     // activate the pool
-    await Staking.activate(1000,2000);
+    await Staking.activate(1000,200000000000000, TST_ADDRESS);
 
     let pa = await Staking.active();
     await expect(pa).to.eq(true);
@@ -88,7 +94,7 @@ describe('Staking', async () => {
     pa = await Staking.active();
     await expect(pa).to.eq(false);
     
-    activate = Staking.activate(5000,100000);
+    activate = Staking.activate(5000,200000000000, TST_ADDRESS);
     await expect(activate).to.be.revertedWith('err-already-initialised');
   });
 
@@ -101,8 +107,46 @@ describe('Staking', async () => {
   // it('cannot mint a token because the pool doesnt have enough liquidity', async () => {
   // });
 
-  // it('mints a token and creates a position', async () => {
-  // });
+  it('mints a token and creates a position', async () => {
+    StakingContract = await ethers.getContractFactory('Staking');
+    const Staking = await StakingContract.deploy("Staking", "STS");
+
+    const weiValue = 100000;
+    await expect(Staking.mint(weiValue)).to.be.revertedWith('err-not-active');
+
+    let blockNum = await ethers.provider.getBlock();
+    const then = blockNum.timestamp + 600;
+    
+    // activate the pool
+    await Staking.activate(1000,200000000000000, TST_ADDRESS);
+
+    // try without TST
+    let mint = Staking.connect(user).mint(weiValue);
+    await expect(mint).to.be.revertedWith('ERC20: insufficient allowance');
+    
+    await TST.connect(owner).mint(user.address, weiValue);
+    await TST.connect(user).approve(Staking.address, weiValue);
+    let balance = await TST.balanceOf(user.address);
+    expect(balance).to.eq(weiValue);
+
+    await Staking.connect(user).mint(weiValue);
+    balance = await TST.balanceOf(user.address);
+    expect(balance).to.eq(0);
+
+    // check the 721 mint stuff
+    expect(await Staking.balanceOf(user.address)).to.eq(1);
+    expect(await Staking.ownerOf(0)).to.eq(user.address);
+
+    // do again to check increment etc
+    await TST.connect(owner).mint(user.address, weiValue);
+    await TST.connect(user).approve(Staking.address, weiValue);
+
+    // mint ->
+    await Staking.connect(user).mint(weiValue);
+
+    expect(await Staking.balanceOf(user.address)).to.eq(2);
+    expect(await Staking.ownerOf(1)).to.eq(user.address);
+  });
 
   // it('will not close and settle because the pool aint finished', async () => {
   // });
