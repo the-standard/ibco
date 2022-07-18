@@ -56,9 +56,9 @@ describe('Staking', async () => {
     expect(await Staking.endTime()).to.eq(2000);
     expect(await Staking.duration()).to.eq(1000);
 
-
     // should work
-    expect(await Staking.activate(5000,100000)).to.be.revertedWith('cccc');
+    let sa = Staking.activate(5000,100000);
+    expect(sa).to.be.revertedWith('cccc');
   });
 
   // it('cannot reactivate an activel', async () => {
