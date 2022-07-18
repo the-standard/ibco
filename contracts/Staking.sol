@@ -64,6 +64,8 @@ contract Staking is ERC721URIStorage, Ownable {
         require(block.timestamp < endTime, 'err-finished');
         require(active == true, 'err-not-active');
 
+        // TODO checks the total TST supply
+
         // Transfer funds from sender to this contract
         // TODO send to some other guy
 
