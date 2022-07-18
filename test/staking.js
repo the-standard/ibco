@@ -96,9 +96,6 @@ describe('Staking', async () => {
   // it('destroys the pool and all the tokens!!!', async () => {
   // });
 
-  // it('cannot mint a token because the pool aint started', async () => {
-  // });
-
   // it('cannot mint a token because the pool doesnt have enough liquidity', async () => {
   // });
 
@@ -207,15 +204,6 @@ describe('Staking', async () => {
 
   // it('removes tst from the pool', async () => {
   //   // checks ownership too
-  // });
-
-  // it('creates the position', async () => {
-  // });
-
-  // it('fetches the position for an address', async () => {
-  // });
-
-  // it('adds tst to an existing position', async () => {
   // });
 
 });
