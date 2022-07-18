@@ -1,5 +1,6 @@
 const { ethers, network } = require('hardhat');
 const fs = require('fs');
+const { encodePriceSqrt, MOST_STABLE_FEE } = require('../test/common');
 let addresses;
 let DummyTST, DummyUSDT, SEuro;
 
@@ -14,7 +15,21 @@ const completed = async (contract, name) => {
   console.log(`${name} deployed at ${contract.address}`)
 }
 
-const deployContracts = async () => {
+const getPricing = () => {
+  return SEuro.address < DummyUSDT.address ?
+    {
+      initial: encodePriceSqrt(114, 100),
+      lowerTick: -400,
+      upperTick: 3000
+    } :
+    {
+      initial: encodePriceSqrt(100, 114),
+      lowerTick: -3000,
+      upperTick: 400,
+    }
+}
+
+const deployContracts = async () => {  
   const { externalContracts } = JSON.parse(fs.readFileSync('scripts/deploymentConfig.json'))[network.name];
 
   DummyTST = await (await ethers.getContractFactory('DUMMY')).deploy('Standard Token', 'TST', 0);
@@ -37,8 +52,12 @@ const deployContracts = async () => {
   await completed(StandardTokenGateway, 'StandardTokenGateway')
   const BondStorage = await (await ethers.getContractFactory('BondStorage')).deploy(StandardTokenGateway.address);
   await completed(BondStorage, 'BondStorage')
+  const RatioCalculator = await (await ethers.getContractFactory('RatioCalculator')).deploy();
+  await completed(RatioCalculator, 'RatioCalculator')
+  const pricing = getPricing();
   const BondingEvent = await (await ethers.getContractFactory('BondingEvent')).deploy(
-    SEuro.address, DummyUSDT.address, externalContracts.uniswapLiquidityManager, BondStorage.address, OPERATOR_ADDRESS
+    SEuro.address, DummyUSDT.address, externalContracts.uniswapLiquidityManager, BondStorage.address, OPERATOR_ADDRESS,
+    RatioCalculator.address, pricing.initial, pricing.lowerTick, pricing.upperTick, MOST_STABLE_FEE
   );
   await completed(BondingEvent, 'BondingEvent')
 
@@ -79,7 +98,7 @@ const contractsFrontendReady = async (accounts) => {
 }
 
 const mintUser = async (address) => {
-  const million = ethers.utils.parseEther('1000000');
+  const million = ethers.utils.parseEther('100000000');
   await SEuro.mint(address, million);
   await DummyUSDT.mint(address, million);
   await SEuro.mint(address, million);
