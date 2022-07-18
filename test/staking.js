@@ -132,15 +132,26 @@ describe('Staking', async () => {
     expect(await Staking.balanceOf(user.address)).to.eq(1);
     expect(await Staking.ownerOf(0)).to.eq(user.address);
 
+    // test positions
+    let p = await Staking.position(user.address)
+    expect(p[0]).to.eq(1);        // nonce
+    expect(p[1]).to.eq(0);        // tokenId
+    expect(p[2]).to.eq(true);     // open for business
+    expect(p[3]).to.eq(weiValue); // weiValue
+
     // do again to check increment etc
     await TST.connect(owner).mint(user.address, weiValue);
     await TST.connect(user).approve(Staking.address, weiValue);
 
-    // mint ->
+    // mint - it should not mint...->
     await Staking.connect(user).mint(weiValue);
+    expect(await Staking.balanceOf(user.address)).to.eq(1);
 
-    expect(await Staking.balanceOf(user.address)).to.eq(2);
-    expect(await Staking.ownerOf(1)).to.eq(user.address);
+    p = await Staking.position(user.address)
+    expect(p[0]).to.eq(2);              // nonce
+    expect(p[1]).to.eq(0);              // tokenId
+    expect(p[2]).to.eq(true);           // open for business
+    expect(p[3]).to.eq(weiValue.mul(2)); // weiValue
 
     // with not enough TST
     mint = Staking.connect(user).mint(10);
@@ -170,8 +181,8 @@ describe('Staking', async () => {
 
     // move the time ahead
     await ethers.provider.send("evm_increaseTime", [3600])
-    await ethers.provider.send("evm_mine") 
-    
+    await ethers.provider.send("evm_mine")
+
     mint = Staking.connect(user).mint(weiValue);
     await expect(mint).to.be.revertedWith('err-finished');
 

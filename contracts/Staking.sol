@@ -20,6 +20,15 @@ contract Staking is ERC721URIStorage, Ownable {
 
     address TST_ADDRESS;
 
+    mapping(address => Position) private _positions;
+
+    struct Position {
+        uint96 nonce;
+        uint256 tokenId;
+        bool open;
+        uint256 totalValue;
+    }
+
     constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {}
 
     function activate(uint256 _start, uint256 _end, address _TST_ADDRESS) external onlyOwner {
@@ -28,16 +37,16 @@ contract Staking is ERC721URIStorage, Ownable {
         require(initialised == 0, 'err-already-initialised');
         require(_end > _start, 'err-start-end');
         require(_end >= block.timestamp, 'err-invalid-end');
-       
+
         TST_ADDRESS = _TST_ADDRESS;
         startTime = _start;
         endTime = _end;
         duration = _end - _start;
         initialised = block.timestamp;
-        
+
         // TODO variable
         minTST = 1 ether;
-        
+
         active = true;
     }
 
@@ -55,23 +64,54 @@ contract Staking is ERC721URIStorage, Ownable {
         require(block.timestamp < endTime, 'err-finished');
         require(active == true, 'err-not-active');
 
+        // Transfer funds from sender to this contract
+        // TODO send to some other guy
+
         IERC20 TOKEN = IERC20(TST_ADDRESS);
-
         TOKEN.transferFrom(msg.sender, address(this), _amount);
-        // todo put the window in here
 
+        // fetch current tokenID
         uint256 newItemId = _tokenIds.current();
-        _mint(msg.sender, newItemId);
 
-        // TODO add to position
+        Position memory position = _positions[msg.sender];
 
-        _tokenIds.increment();
+        if (position.nonce > 0) {
+            position.totalValue += _amount;
+            position.nonce += 1;
+        }
+
+        if (position.nonce == 0) {
+            _mint(msg.sender, newItemId);
+
+            position.nonce = 1;
+            position.open = true;
+            position.totalValue = _amount;
+            position.tokenId = newItemId;
+        
+
+            // increment tokenIds for next steaker.
+            _tokenIds.increment();
+        }
+
+        _positions[msg.sender] = position;
+
+        // makes no sence to return this.
         return newItemId;
     }
 
     // function burn(uint256 tokenId) public {
     //     _burn(tokenId);
     // }
+
+    function position(address owner) external view returns (uint96, uint256, bool, uint256) {
+        Position memory position = _positions[owner];
+        return (
+            position.nonce, 
+            position.tokenId, 
+            position.open, 
+            position.totalValue
+        );
+    }
 
     modifier isAuthorizedForToken(uint256 tokenId) {
         require(_isApprovedOrOwner(msg.sender, tokenId), 'Not approved');
