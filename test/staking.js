@@ -50,36 +50,22 @@ describe('Staking', async () => {
 
     // should work
     await Staking.activate(1000,2000);
-    
+    const blockNum = await ethers.provider.getBlock();
+
     expect(await Staking.active()).to.eq(true);
     expect(await Staking.startTime()).to.eq(1000);
     expect(await Staking.endTime()).to.eq(2000);
     expect(await Staking.duration()).to.eq(1000);
 
-    // should work
-    let sa = Staking.activate(5000,100000);
-    await expect(sa).to.be.revertedWith('cccc');
+    let bi = await Staking.initialised();
+    const bt = ethers.BigNumber.from(bi);
+
+    expect(bt).to.eq(blockNum.timestamp);
+
+    // should revert since we're already active
+    activate = Staking.activate(5000,100000);
+    await expect(activate).to.be.revertedWith('err-already-active');
   });
-
-  // it('cannot reactivate an activel', async () => {
-  //   StakingContract = await ethers.getContractFactory('Staking');
-  //   const Staking = await StakingContract.deploy("Staking", "STS");
-
-  //   let activate = Staking.connect(user).activate(1000,2000);
-  //   await expect(activate).to.be.revertedWith('Ownable: caller is not the owner')
-
-  //   // should have start < end
-  //   activate = Staking.activate(2000,1000)
-  //   await expect(activate).to.be.revertedWith('err-start-end');
-
-  //   // should work
-  //   await Staking.activate(1000,2000);
-    
-  //   expect(await Staking.active()).to.eq(true);
-  //   expect(await Staking.startTime()).to.eq(1000);
-  //   expect(await Staking.endTime()).to.eq(2000);
-  //   expect(await Staking.duration()).to.eq(1000);
-  // });
 
   it('disables the pool', async () => {
     StakingContract = await ethers.getContractFactory('Staking');
@@ -101,6 +87,9 @@ describe('Staking', async () => {
     await Staking.disable();
     pa = await Staking.active();
     await expect(pa).to.eq(false);
+    
+    activate = Staking.activate(5000,100000);
+    await expect(activate).to.be.revertedWith('err-already-initialised');
   });
 
   // it('destroys the pool and all the tokens!!!', async () => {

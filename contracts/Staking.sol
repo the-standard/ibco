@@ -10,17 +10,21 @@ contract Staking is ERC721URIStorage, Ownable {
     Counters.Counter private _tokenIds;
 
     bool public active;
-    uint128 public startTime;
-    uint128 public endTime;
-    uint128 public duration;
+    uint256 public startTime;
+    uint256 public endTime;
+    uint256 public duration;
+    uint256 public initialised;
 
     constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {}
 
-    function activate(uint128 _start, uint128 _end) external onlyOwner {
+    function activate(uint256 _start, uint256 _end) external onlyOwner {
+        require(active == false, 'err-already-active');
+        require(initialised == 0, 'err-already-initialised');
         require(_end > _start, 'err-start-end');
         startTime = _start;
         endTime = _end;
         duration = endTime - startTime;
+        initialised = block.timestamp;
         active = true;
     }
    
