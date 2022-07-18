@@ -10,6 +10,8 @@ import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
+import "hardhat/console.sol";
+
 contract BondingEvent is AccessControl {
     // sEUR: the main leg of the currency pair
     address public immutable SEURO_ADDRESS;
@@ -24,6 +26,8 @@ contract BondingEvent is AccessControl {
 
     INonfungiblePositionManager private immutable manager;
     IRatioCalculator private immutable ratioCalculator;
+    uint256[] private positions;
+    mapping(uint256 => Position) private positionData;
 
     // https://docs.uniswap.org/protocol/reference/core/libraries/Tick
     int24 public lowerTickDefault;
@@ -39,8 +43,15 @@ contract BondingEvent is AccessControl {
         uint256 amount1
     );
 
+    struct Position {
+        int24 lowerTick;
+        int24 upperTick;
+        uint128 liquidity;
+    }
+
     // only contract owner can add the other currency leg
-    bytes32 public constant WHITELIST_BONDING_EVENT = keccak256("WHITELIST_BONDING_EVENT");
+    bytes32 public constant WHITELIST_BONDING_EVENT =
+        keccak256("WHITELIST_BONDING_EVENT");
 
     constructor(
         address _seuroAddress,
@@ -133,10 +144,105 @@ contract BondingEvent is AccessControl {
         tickSpacing = pool.tickSpacing();
     }
 
+    function getPositions() external view returns (uint256[] memory) {
+        return positions;
+    }
+
+    function getPosition(uint256 tokenId)
+        external
+        view
+        returns (Position memory)
+    {
+        return positionData[tokenId];
+    }
+
     struct LiquidityPair {
         address user;
         uint256 amountSeuro;
         uint256 amountOther;
+    }
+
+    struct AddLiquidityParams {
+        address token0;
+        address token1;
+        uint256 amount0Desired;
+        uint256 amount1Desired;
+        uint256 amount0Min;
+        uint256 amount1Min;
+    }
+
+    function mintLiquidityPosition(AddLiquidityParams memory params) private returns (
+            uint256,
+            uint128,
+            uint256,
+            uint256
+        ) {
+        INonfungiblePositionManager.MintParams
+            memory mintParams = INonfungiblePositionManager.MintParams({
+                token0: params.token0,
+                token1: params.token1,
+                fee: FEE,
+                tickLower: lowerTickDefault,
+                tickUpper: upperTickDefault,
+                amount0Desired: params.amount0Desired,
+                amount1Desired: params.amount1Desired,
+                amount0Min: params.amount0Min,
+                amount1Min: params.amount1Min,
+                recipient: address(this),
+                deadline: block.timestamp
+            });
+
+        // provide liquidity to the pool
+        (
+            uint256 tokenId,
+            uint128 liquidity,
+            uint256 amount0,
+            uint256 amount1
+        ) = manager.mint(mintParams);
+
+        positions.push(tokenId);
+        positionData[tokenId] = Position(
+            lowerTickDefault,
+            upperTickDefault,
+            liquidity
+        );
+
+        emit MintPosition(msg.sender, tokenId, liquidity, amount0, amount1);
+
+        return
+            params.token0 == SEURO_ADDRESS
+                ? (tokenId, liquidity, amount0, amount1)
+                : (tokenId, liquidity, amount1, amount0);
+    }
+    
+    function increaseExistingLiquidity(AddLiquidityParams memory params, uint256 tokenId) private returns (
+            uint256,
+            uint128,
+            uint256,
+            uint256
+        ) {
+        INonfungiblePositionManager.IncreaseLiquidityParams memory
+            increaseParams = INonfungiblePositionManager.IncreaseLiquidityParams({
+            tokenId: tokenId,
+            amount0Desired: params.amount0Desired,
+            amount1Desired: params.amount1Desired,
+            amount0Min: params.amount0Min,
+            amount1Min: params.amount1Min,
+            deadline: block.timestamp
+        });
+
+        (
+            uint128 liquidity,
+            uint256 amount0,
+            uint256 amount1
+        ) = manager.increaseLiquidity(increaseParams);
+        
+        positionData[tokenId].liquidity += liquidity;
+
+        return
+            params.token0 == SEURO_ADDRESS
+                ? (tokenId, liquidity, amount0, amount1)
+                : (tokenId, liquidity, amount1, amount0);
     }
 
     function addLiquidity(LiquidityPair memory lp)
@@ -177,39 +283,21 @@ contract BondingEvent is AccessControl {
             address(this),
             amount1Desired
         );
+        
+        AddLiquidityParams memory params = AddLiquidityParams(
+            token0,
+            token1,
+            amount0Desired,
+            amount1Desired,
+            amount0Min,
+            amount1Min
+        );
 
-        // We are potentially keeping some tokens for now, not returning them if the market moved.
-        // Maybe a TODO? Or cost of doing business :)
-
-        INonfungiblePositionManager.MintParams
-            memory params = INonfungiblePositionManager.MintParams({
-                token0: token0,
-                token1: token1,
-                fee: FEE,
-                tickLower: lowerTickDefault,
-                tickUpper: upperTickDefault,
-                amount0Desired: amount0Desired,
-                amount1Desired: amount1Desired,
-                amount0Min: amount0Min,
-                amount1Min: amount1Min,
-                recipient: address(this),
-                deadline: block.timestamp
-            });
-
-        // provide liquidity to the pool
-        (
-            uint256 tokenId,
-            uint128 liquidity,
-            uint256 amount0,
-            uint256 amount1
-        ) = manager.mint(params);
-
-        emit MintPosition(msg.sender, tokenId, liquidity, amount0, amount1);
-
-        return
-            token0 == SEURO_ADDRESS
-                ? (tokenId, liquidity, amount0, amount1)
-                : (tokenId, liquidity, amount1, amount0);
+        if (positions.length > 0) {
+            return increaseExistingLiquidity(params, positions[0]);
+        } else {
+            return mintLiquidityPosition(params);
+        }
     }
 
     // We assume that there is a higher layer solution which helps to fetch the latest price as a quote.
