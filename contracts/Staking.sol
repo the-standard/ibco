@@ -23,7 +23,12 @@ contract Staking is ERC721URIStorage, Ownable {
         duration = endTime - startTime;
         active = true;
     }
-    
+   
+    function disable() external onlyOwner {
+        require(active, 'err-not-active');
+        active = false;
+    }
+
     // function mint(address owner) public returns (uint256)
     // {
     //     uint256 newItemId = _tokenIds.current();

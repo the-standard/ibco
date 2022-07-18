@@ -57,8 +57,27 @@ describe('Staking', async () => {
     expect(await Staking.duration()).to.eq(1000);
   });
 
-  // it('disables the pool', async () => {
-  // });
+  it('disables the pool', async () => {
+    StakingContract = await ethers.getContractFactory('Staking');
+    const Staking = await StakingContract.deploy("Staking", "STS");
+
+    let activate = Staking.connect(user).disable();
+    await expect(activate).to.be.revertedWith('Ownable: caller is not the owner')
+
+    // pool isn't active
+    activate = Staking.disable();
+    await expect(activate).to.be.revertedWith('err-not-active')
+    
+    // activate the pool
+    await Staking.activate(1000,2000);
+
+    let pa = await Staking.active();
+    await expect(pa).to.eq(true);
+
+    await Staking.disable();
+    pa = await Staking.active();
+    await expect(pa).to.eq(false);
+  });
 
   // it('destroys the pool and all the tokens!!!', async () => {
   // });
