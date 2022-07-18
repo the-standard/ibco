@@ -55,7 +55,31 @@ describe('Staking', async () => {
     expect(await Staking.startTime()).to.eq(1000);
     expect(await Staking.endTime()).to.eq(2000);
     expect(await Staking.duration()).to.eq(1000);
+
+
+    // should work
+    expect(await Staking.activate(5000,100000)).to.be.revertedWith('cccc');
   });
+
+  // it('cannot reactivate an activel', async () => {
+  //   StakingContract = await ethers.getContractFactory('Staking');
+  //   const Staking = await StakingContract.deploy("Staking", "STS");
+
+  //   let activate = Staking.connect(user).activate(1000,2000);
+  //   await expect(activate).to.be.revertedWith('Ownable: caller is not the owner')
+
+  //   // should have start < end
+  //   activate = Staking.activate(2000,1000)
+  //   await expect(activate).to.be.revertedWith('err-start-end');
+
+  //   // should work
+  //   await Staking.activate(1000,2000);
+    
+  //   expect(await Staking.active()).to.eq(true);
+  //   expect(await Staking.startTime()).to.eq(1000);
+  //   expect(await Staking.endTime()).to.eq(2000);
+  //   expect(await Staking.duration()).to.eq(1000);
+  // });
 
   it('disables the pool', async () => {
     StakingContract = await ethers.getContractFactory('Staking');
