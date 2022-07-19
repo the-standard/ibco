@@ -37,7 +37,6 @@ describe('BondingReward', async () => {
     await TGateway.connect(owner).updateRewardSupply();
 
     // approve the bonding contract to move customer sEUR and USDT funds
-    console.log(SEuro.address, USDT.address)
     await SEuro.connect(customer).approve(BondingEvent.address, etherBalances["HUNDRED_MILLION"]);
     await USDT.connect(customer).approve(BondingEvent.address, etherBalances["HUNDRED_MILLION"]);
   });

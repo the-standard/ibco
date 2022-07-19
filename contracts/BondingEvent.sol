@@ -352,11 +352,11 @@ contract BondingEvent is AccessControl {
         _bond(_user, _amountSeuro, _weeks, _rate);
     }
 
-    function priceWithinTickRange(int24 _currentPriceTick, int24 _lowerTick, int24 _upperTick) private view returns (bool) {
+    function priceWithinTickRange(int24 _currentPriceTick, int24 _lowerTick, int24 _upperTick) private pure returns (bool) {
         return _lowerTick < _currentPriceTick && _currentPriceTick < _upperTick;
     }
 
-    function priceHasBufferWithinTicks(int24 _currentPriceTick, int24 _lowerTick, int24 _upperTick) private view returns (bool) {
+    function priceHasBufferWithinTicks(int24 _currentPriceTick, int24 _lowerTick, int24 _upperTick) private pure returns (bool) {
         // ensures that the current price sits in middle 20% of difference between the two range ticks, which keeps the ratio required pretty respectable
         int24 lowerToPriceDiff = _currentPriceTick - _lowerTick;
         int24 priceToUpperDiff = _upperTick - _currentPriceTick;

@@ -5,13 +5,13 @@ const { POSITION_MANAGER_ADDRESS, DECIMALS, etherBalances, rates, durations, ONE
 
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
-let owner, customer, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, BondingEventContract, RatioCalculator, pricing;
+let owner, customer, wallet, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, BondingEventContract, RatioCalculator, pricing;
 
 describe('BondingEvent', async () => {
 
 
   beforeEach(async () => {
-    [owner, customer] = await ethers.getSigners();
+    [owner, customer, wallet] = await ethers.getSigners();
     BondingEventContract = await ethers.getContractFactory('BondingEvent');
     const SEuroContract = await ethers.getContractFactory('SEuro');
     const ERC20Contract = await ethers.getContractFactory('DUMMY');
@@ -101,9 +101,10 @@ describe('BondingEvent', async () => {
     describe('calculating ratio', async () => {
       it('calculates the required amount of USDT for given sEURO', async () => {
         const amountSEuro = etherBalances['10K'];
-        const { amountOther } = (await BondingEvent.getOtherAmount(amountSEuro)).div(DECIMALS);
-        // comes from uniswap ui, adding the 0.1% extra from "getOtherAmount" in BondingEvent
-        const expectedUSDT = 11545;
+        let { amountOther } = (await BondingEvent.getOtherAmount(amountSEuro));
+        amountOther = amountOther.div(DECIMALS);
+        // comes from uniswap ui, adding the 0.01% extra from "getOtherAmount" in BondingEvent
+        const expectedUSDT = 11534;
         expect(amountOther).to.equal(expectedUSDT);
       });
     });
@@ -262,9 +263,15 @@ describe('BondingEvent', async () => {
         expect(actualActiveBonds).to.equal(expectedActiveBonds);
       });
     });
+
+    describe('transferring excess usdt to designated wallet', async () => {
+      it('will transfer the excess usdt if there is a designated wallet', async () => {
+        
+      });
+    });
   });
 
-  describe.only('liquidity positions', async () => {
+  describe('liquidity positions', async () => {
     context('initialised default prices', async () => {
       beforeEach(async () => {
         await deployBondingEventWithDefaultPrices();
@@ -341,7 +348,7 @@ describe('BondingEvent', async () => {
     });
 
     it('creates a different position if price is near the edge of default ticks', async () => {
-      // initialise bonding event with price outside of default liquidity range
+      // initialise bonding event with price outside near edge of liquidity range
       // redeploy tokens so we can re-initialise pool
       // new price tick will be at -305 (or inverted)
       await deployBondingEvent(100, 97);
@@ -366,13 +373,11 @@ describe('BondingEvent', async () => {
     });
   });
 
-
   //
   //
   //
   // --------------------------------------
   // TODO:
-  // - test different liquidity positions created
   // - make sure the principals / profits on bonds are correct, and based on both amounts sent in
   // - fee collection?
   // - restrict position data to owner?
