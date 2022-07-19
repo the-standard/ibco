@@ -51,7 +51,7 @@ describe('BondingReward', async () => {
 
       await TGateway.connect(owner).setStorageAddress(BStorage.address);
       await BondingEvent.connect(owner).bond(
-        customer.address, etherBalances["TWO_MILLION"], durations["ONE_WEEK"], rates["TEN_PC"]
+        customer.address, etherBalances.TWO_MILLION, durations.ONE_WEEK, rates.TEN_PC
       );
       bond = await BStorage.getBondAt(customer.address, 0);
       let principal = 2000000;

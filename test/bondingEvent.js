@@ -137,7 +137,7 @@ describe('BondingEvent', async () => {
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDT.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
+          customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
         );
 
         await helperUpdateBondStatus();
@@ -147,8 +147,8 @@ describe('BondingEvent', async () => {
         const firstBond = await helperGetBondAt(0);
         let actualPrincipal = firstBond.principal;
         let actualRate = firstBond.rate;
-        expect(actualPrincipal).to.equal(etherBalances["TWO_MILLION"]);
-        expect(actualRate).to.equal(rates["TEN_PC"]);
+        expect(actualPrincipal).to.equal(etherBalances.TWO_MILLION);
+        expect(actualRate).to.equal(rates.TEN_PC);
 
         await helperFastForwardTime(52 * ONE_WEEK_IN_SECONDS);
         await helperUpdateBondStatus();
@@ -165,7 +165,7 @@ describe('BondingEvent', async () => {
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDT.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, durations["ONE_WEEK"], rates["TEN_PC"]
+          customer.address, amountSEuro, durations.ONE_WEEK, rates.TEN_PC
         );
 
         await helperUpdateBondStatus();
@@ -176,8 +176,8 @@ describe('BondingEvent', async () => {
         let actualPrincipal = firstBond.principal;
         let actualRate = firstBond.rate;
         // TODO how should principal be calculated?
-        expect(actualPrincipal).to.equal(etherBalances["100K"]);
-        expect(actualRate).to.equal(rates["TEN_PC"]);
+        expect(actualPrincipal).to.equal(etherBalances['100K']);
+        expect(actualRate).to.equal(rates.TEN_PC);
 
         await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
         await helperUpdateBondStatus();
@@ -194,7 +194,7 @@ describe('BondingEvent', async () => {
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDT.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, durations["ONE_WEEK"], rates["SIX_PC"]
+          customer.address, amountSEuro, durations.ONE_WEEK, rates.SIX_PC
         );
 
         await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
@@ -212,13 +212,13 @@ describe('BondingEvent', async () => {
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro.mul(3));
         await USDT.connect(customer).approve(BondingEvent.address, amountOther.mul(3));
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, durations["ONE_WEEK"], rates["FIVE_PC"]
+          customer.address, amountSEuro, durations.ONE_WEEK, rates.FIVE_PC
         );
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, durations["TWO_WEEKS"], rates["SIX_PC"]
+          customer.address, amountSEuro, durations.TWO_WEEKS, rates.SIX_PC
         );
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, durations["FOUR_WEEKS"], rates["TEN_PC"]
+          customer.address, amountSEuro, durations.FOUR_WEEKS, rates.TEN_PC
         );
 
         let expectedActiveBonds = 3;
