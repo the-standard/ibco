@@ -69,12 +69,12 @@ describe('Stage 2', async () => {
           return (await TST.balanceOf(CUSTOMER_ADDR)).div(DECIMALS).toString();
         }
 
-        async function testingSuite(seuroAmount, otherAmount, rate) {
-          OP2.connect(owner).newBond(
-            CUSTOMER_ADDR, seuroAmount, otherAmount, durations["ONE_WEEK"], rate
+        async function testingSuite(seuroAmount, rate) {
+          await OP2.connect(owner).newBond(
+            CUSTOMER_ADDR, seuroAmount, durations["ONE_WEEK"], rate
           );
 
-          BStorage.connect(customer).refreshBondStatus(CUSTOMER_ADDR);
+          await BStorage.connect(customer).refreshBondStatus(CUSTOMER_ADDR);
 
           let actualBalance = await formatCustomerBalance();
           expect(actualBalance).to.equal('0');
@@ -98,7 +98,7 @@ describe('Stage 2', async () => {
         }
 
         it('[final price (1.0)] rewards with TST successfully', async () => {
-          await testingSuite(etherBalances["125K"], etherBalances["125K"], rates["TWENTY_PC"]);
+          await testingSuite(etherBalances["125K"], rates["TWENTY_PC"]);
           await expectedTokBalance(125000, 1.2);
         });
       });

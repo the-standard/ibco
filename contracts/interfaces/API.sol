@@ -21,8 +21,6 @@ interface IBondingEvent {
     function bond(
         address _user,
         uint256 _amountSeuro,
-        uint256 _amountOther,
-        address _otherAddress,
         uint256 _weeks,
         uint256 _rate
     ) external;

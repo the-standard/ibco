@@ -26,18 +26,18 @@ describe('BondingEvent', async () => {
     RatioCalculator = await RatioCalculatorContract.deploy();
   });
 
-  const deployBondingEvent = async () => {
+  const deployBondingEvent = async (reserveSEuro, reserveOther) => {
     // tick -400 approx. 0.96 USDT per SEUR
     // tick 3000 approx. 1.35 USDT per SEUR
     // 400 and -3000 are the inverse of these prices
     pricing = SEuro.address < USDT.address ?
       {
-        initial: encodePriceSqrt(114, 100),
+        initial: encodePriceSqrt(reserveOther, reserveSEuro),
         lowerTick: -400,
         upperTick: 3000
       } :
       {
-        initial: encodePriceSqrt(100, 114),
+        initial: encodePriceSqrt(reserveSEuro, reserveOther),
         lowerTick: -3000,
         upperTick: 400,
       }
@@ -47,8 +47,12 @@ describe('BondingEvent', async () => {
       owner.address, RatioCalculator.address, pricing.initial, pricing.lowerTick,
       pricing.upperTick, MOST_STABLE_FEE
     );
+  }
+
+  const deployBondingEventWithDefaultPrices = async () => {
+    await deployBondingEvent(100, 114);
   };
-  
+
   const mintUsers = async () => {
     await SEuro.connect(owner).mint(owner.address, etherBalances["ONE_BILLION"]);
     await SEuro.connect(owner).mint(customer.address, etherBalances["HUNDRED_MILLION"]);
@@ -64,7 +68,7 @@ describe('BondingEvent', async () => {
 
   describe('initialisation', async () => {
     it('initialises the pool with the given price', async () => {
-      await deployBondingEvent();
+      await deployBondingEventWithDefaultPrices();
 
       expect(await BondingEvent.pool()).not.to.equal(ethers.constants.AddressZero);
       expect(await BondingEvent.tickSpacing()).to.equal(STABLE_TICK_SPACING);
@@ -73,7 +77,7 @@ describe('BondingEvent', async () => {
 
   context('initialised', async () => {
     beforeEach(async () => {
-      await deployBondingEvent();
+      await deployBondingEventWithDefaultPrices();
       await mintUsers();
       await readyTokenGateway();
     });
@@ -98,8 +102,8 @@ describe('BondingEvent', async () => {
       it('calculates the required amount of USDT for given sEURO', async () => {
         const amountSEuro = etherBalances['10K'];
         const requiredUSDT = (await BondingEvent.getOtherAmount(amountSEuro)).div(DECIMALS);
-        // comes from uniswap ui
-        const expectedUSDT = 11533;
+        // comes from uniswap ui, adding the 0.1% extra from "getOtherAmount" in BondingEvent
+        const expectedUSDT = 11545;
         expect(requiredUSDT).to.equal(expectedUSDT);
       });
     });
@@ -134,7 +138,7 @@ describe('BondingEvent', async () => {
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDT.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, amountOther, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
+          customer.address, amountSEuro, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
         );
 
         await helperUpdateBondStatus();
@@ -162,7 +166,7 @@ describe('BondingEvent', async () => {
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDT.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, amountOther, durations["ONE_WEEK"], rates["TEN_PC"]
+          customer.address, amountSEuro, durations["ONE_WEEK"], rates["TEN_PC"]
         );
 
         await helperUpdateBondStatus();
@@ -191,7 +195,7 @@ describe('BondingEvent', async () => {
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDT.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, amountOther, durations["ONE_WEEK"], rates["SIX_PC"]
+          customer.address, amountSEuro, durations["ONE_WEEK"], rates["SIX_PC"]
         );
 
         await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
@@ -209,13 +213,13 @@ describe('BondingEvent', async () => {
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro.mul(3));
         await USDT.connect(customer).approve(BondingEvent.address, amountOther.mul(3));
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, amountOther, durations["ONE_WEEK"], rates["FIVE_PC"]
+          customer.address, amountSEuro, durations["ONE_WEEK"], rates["FIVE_PC"]
         );
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, amountOther, durations["TWO_WEEKS"], rates["SIX_PC"]
+          customer.address, amountSEuro, durations["TWO_WEEKS"], rates["SIX_PC"]
         );
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, amountOther, durations["FOUR_WEEKS"], rates["TEN_PC"]
+          customer.address, amountSEuro, durations["FOUR_WEEKS"], rates["TEN_PC"]
         );
 
         let expectedActiveBonds = 3;
@@ -261,14 +265,14 @@ describe('BondingEvent', async () => {
       });
     });
 
-    describe.only('liquidity positions', async () => {
+    describe('liquidity positions', async () => {
       it('creates a new one if there is not one for the position range', async () => {
         const amountSEuro = etherBalances["TWO_MILLION"];
         const amountOther = await BondingEvent.getOtherAmount(amountSEuro);
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDT.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, amountOther, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
+          customer.address, amountSEuro, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
         );
 
         const positions = await BondingEvent.getPositions();
@@ -287,12 +291,12 @@ describe('BondingEvent', async () => {
         await USDT.connect(customer).approve(BondingEvent.address, amountOther.mul(2));
 
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, amountOther, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
+          customer.address, amountSEuro, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
         );
         let initialPositions = await BondingEvent.getPositions();
         const initialLiquidityTotal = (await BondingEvent.getPosition(initialPositions[0])).liquidity;
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, amountOther, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
+          customer.address, amountSEuro, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
         );
 
         positions = await BondingEvent.getPositions();
@@ -303,6 +307,20 @@ describe('BondingEvent', async () => {
         const expectedLiquidity = initialLiquidityTotal.mul(2);
         expect(position.liquidity).to.equal(expectedLiquidity);
       });
+
+      it('creates a second position if first one is not viable for bonding', async () => {
+        // initialise bonding event with price outside of default liquidity range
+        // await deployBondingEvent(100, 150);
+
+        // const amountSEuro = etherBalances["TWO_MILLION"];
+        // const amountOther = await BondingEvent.getOtherAmount(amountSEuro);
+        // await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
+        // await USDT.connect(customer).approve(BondingEvent.address, amountOther);
+
+        // await BondingEvent.connect(owner).bond(
+        //   customer.address, amountSEuro, amountOther, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
+        // );
+      });
     });
   });
 
@@ -312,10 +330,10 @@ describe('BondingEvent', async () => {
   //
   // --------------------------------------
   // TODO:
-  // - test liquidity position created
   // - test different liquidity positions created
   // - make sure the principals / profits on bonds are correct, and based on both amounts sent in
   // - fee collection?
+  // - restrict position data to owner?
   // - transfer nfts?
   // --------------------------------------
   //

@@ -156,12 +156,6 @@ contract BondingEvent is AccessControl {
         return positionData[tokenId];
     }
 
-    struct LiquidityPair {
-        address user;
-        uint256 amountSeuro;
-        uint256 amountOther;
-    }
-
     struct AddLiquidityParams {
         address token0;
         address token1;
@@ -171,12 +165,15 @@ contract BondingEvent is AccessControl {
         uint256 amount1Min;
     }
 
-    function mintLiquidityPosition(AddLiquidityParams memory params) private returns (
+    function mintLiquidityPosition(AddLiquidityParams memory params)
+        private
+        returns (
             uint256,
             uint128,
             uint256,
             uint256
-        ) {
+        )
+    {
         INonfungiblePositionManager.MintParams
             memory mintParams = INonfungiblePositionManager.MintParams({
                 token0: params.token0,
@@ -214,29 +211,33 @@ contract BondingEvent is AccessControl {
                 ? (tokenId, liquidity, amount0, amount1)
                 : (tokenId, liquidity, amount1, amount0);
     }
-    
-    function increaseExistingLiquidity(AddLiquidityParams memory params, uint256 tokenId) private returns (
+
+    function increaseExistingLiquidity(
+        AddLiquidityParams memory params,
+        uint256 tokenId
+    )
+        private
+        returns (
             uint256,
             uint128,
             uint256,
             uint256
-        ) {
-        INonfungiblePositionManager.IncreaseLiquidityParams memory
-            increaseParams = INonfungiblePositionManager.IncreaseLiquidityParams({
-            tokenId: tokenId,
-            amount0Desired: params.amount0Desired,
-            amount1Desired: params.amount1Desired,
-            amount0Min: params.amount0Min,
-            amount1Min: params.amount1Min,
-            deadline: block.timestamp
-        });
+        )
+    {
+        INonfungiblePositionManager.IncreaseLiquidityParams
+            memory increaseParams = INonfungiblePositionManager
+                .IncreaseLiquidityParams({
+                    tokenId: tokenId,
+                    amount0Desired: params.amount0Desired,
+                    amount1Desired: params.amount1Desired,
+                    amount0Min: params.amount0Min,
+                    amount1Min: params.amount1Min,
+                    deadline: block.timestamp
+                });
 
-        (
-            uint128 liquidity,
-            uint256 amount0,
-            uint256 amount1
-        ) = manager.increaseLiquidity(increaseParams);
-        
+        (uint128 liquidity, uint256 amount0, uint256 amount1) = manager
+            .increaseLiquidity(increaseParams);
+
         positionData[tokenId].liquidity += liquidity;
 
         return
@@ -245,7 +246,7 @@ contract BondingEvent is AccessControl {
                 : (tokenId, liquidity, amount1, amount0);
     }
 
-    function addLiquidity(LiquidityPair memory lp)
+    function addLiquidity(address _user, uint256 _amountSEuro)
         private
         onlyOperator
         returns (
@@ -257,33 +258,36 @@ contract BondingEvent is AccessControl {
     {
         (address token0, address token1) = getAscendingPair();
 
+        uint256 amountOther = getOtherAmount(_amountSEuro);
+
         (
             uint256 amount0Desired,
             uint256 amount1Desired,
             uint256 amount0Min,
             uint256 amount1Min
         ) = token0 == SEURO_ADDRESS
-                ? (lp.amountSeuro, lp.amountOther, lp.amountSeuro, uint256(0))
-                : (lp.amountOther, lp.amountSeuro, uint256(0), lp.amountSeuro);
+                ? (_amountSEuro, amountOther, _amountSEuro, uint256(0))
+                : (amountOther, _amountSEuro, uint256(0), _amountSEuro);
 
         // approve the position manager
         TransferHelper.safeApprove(token0, address(manager), amount0Desired);
         TransferHelper.safeApprove(token1, address(manager), amount1Desired);
 
+        console.log(token0);
         // send the tokens from the user to the contract
         TransferHelper.safeTransferFrom(
             token0,
-            lp.user,
+            _user,
             address(this),
             amount0Desired
         );
         TransferHelper.safeTransferFrom(
             token1,
-            lp.user,
+            _user,
             address(this),
             amount1Desired
         );
-        
+
         AddLiquidityParams memory params = AddLiquidityParams(
             token0,
             token1,
@@ -305,29 +309,22 @@ contract BondingEvent is AccessControl {
     // The reason for this is because of the explicit discouragement of doing this on-chain
     // due to the high gas costs (see https://docs.uniswap.org/protocol/reference/periphery/lens/Quoter).
     /// @param _amountSeuro The amount of sEURO token to bond
-    /// @param _amountOther The amount of the other token to bond
     /// @param _maturityInWeeks The amount of weeks a bond is active.
     ///                          At the end of maturity, the principal + accrued interest is paid out all at once in TST.
     /// @param _rate The rate is represented as a 10,000-factor of each basis point so the most stable fee is 500 (= 0.05 pc)
     function _bond(
         address _user,
         uint256 _amountSeuro,
-        uint256 _amountOther,
         uint256 _maturityInWeeks,
         uint256 _rate
     ) private onlyOperator {
-        LiquidityPair memory lp = LiquidityPair(
-            _user,
-            _amountSeuro,
-            _amountOther
-        );
         // information about the liquidity position after it has been successfully added
         (
             uint256 tokenId,
             uint128 liquidity,
             uint256 amountSeuro,
             uint256 amountOther
-        ) = addLiquidity(lp);
+        ) = addLiquidity(_user, _amountSeuro);
         // begin bonding event
         IBondStorage(bondStorageAddress).startBond(
             _user,
@@ -344,15 +341,14 @@ contract BondingEvent is AccessControl {
     function bond(
         address _user,
         uint256 _amountSeuro,
-        uint256 _amountOther,
         uint256 _weeks,
         uint256 _rate
     ) external {
-        _bond(_user, _amountSeuro, _amountOther, _weeks, _rate);
+        _bond(_user, _amountSeuro, _weeks, _rate);
     }
 
     function getOtherAmount(uint256 _amountSEuro)
-        external
+        public
         view
         returns (uint256)
     {
@@ -360,12 +356,15 @@ contract BondingEvent is AccessControl {
         (address token0, ) = getAscendingPair();
         bool seuroIsToken0 = token0 == SEURO_ADDRESS;
         return
-            ratioCalculator.getRatioForSEuro(
+            (ratioCalculator.getRatioForSEuro(
                 _amountSEuro,
                 price,
                 lowerTickDefault,
                 upperTickDefault,
                 seuroIsToken0
-            );
+            // means that we transfer to this contract 0.1% extra usdt. will prevent problems with slippage
+            // will also approve a little extra from the frontend because we should use this function for that ratio
+            // TODO means we will have a bit of extra USDT in this contract ... do we need to do anything with it straight away?
+            ) * 1001) / 1000;
     }
 }
