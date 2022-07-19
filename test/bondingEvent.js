@@ -353,8 +353,10 @@ describe('BondingEvent', async () => {
       const positions = await BondingEvent.getPositions();
       expect(positions).to.be.length(1);
       const position = await BondingEvent.getPositionData(positions[0]);
-      expect(position.lowerTick).to.be.lt(pricing.lowerTick);
-      expect(position.upperTick).to.be.gt(pricing.upperTick);
+      // moves tickets to -13400 and 17000 (or inverted), sufficient buffer around the current price tick (4054)
+      const expectedMagnitude = 13000;
+      expect(position.lowerTick).to.eq(pricing.lowerTick - expectedMagnitude);
+      expect(position.upperTick).to.eq(pricing.upperTick + expectedMagnitude);
       expect(position.liquidity).to.be.gt(0);
     });
 
@@ -378,8 +380,10 @@ describe('BondingEvent', async () => {
       const positions = await BondingEvent.getPositions();
       expect(positions).to.be.length(1);
       const position = await BondingEvent.getPositionData(positions[0]);
-      expect(position.lowerTick).to.be.lt(pricing.lowerTick);
-      expect(position.upperTick).to.be.gt(pricing.upperTick);
+      const expectedMagnitude = 7000;
+      // moves tickets to -7400 and 10000 (or inverted), sufficient buffer around the current price tick (-305)
+      expect(position.lowerTick).to.eq(pricing.lowerTick - expectedMagnitude);
+      expect(position.upperTick).to.eq(pricing.upperTick + expectedMagnitude);
       expect(position.liquidity).to.be.gt(0);
     });
   });

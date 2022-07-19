@@ -391,8 +391,8 @@ contract BondingEvent is AccessControl {
         int24 lowerToPriceDiff = _currentPriceTick - _lowerTick;
         int24 priceToUpperDiff = _upperTick - _currentPriceTick;
         return
-            ((lowerToPriceDiff * 3) / 2 > priceToUpperDiff) &&
-            ((priceToUpperDiff * 3) / 2 > lowerToPriceDiff);
+            (lowerToPriceDiff * 3 / 2 > priceToUpperDiff) &&
+            (priceToUpperDiff * 3 / 2 > lowerToPriceDiff);
     }
 
     function viableTickPriceRatio(
