@@ -434,8 +434,7 @@ contract BondingEvent is AccessControl {
                 lowerTick,
                 upperTick,
                 seuroIsToken0
-            ) * 10001) /
+            ) * 10001) / 10000;
             // may need to add a very small amount to usdt due to an accuracy error (0.01%). it also protects against some slippage. being sent to a wallet anyway
-            10000;
     }
 }
