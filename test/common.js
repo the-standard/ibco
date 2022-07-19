@@ -5,11 +5,11 @@ const { BigNumber } = ethers;
 const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 
 let etherBalances = {
-  8K: ethers.utils.parseEther('8000'),
-  10K: ethers.utils.parseEther('10000'),
-  80K: ethers.utils.parseEther('80000'),
-  100K: ethers.utils.parseEther('100000'),
-  125K: ethers.utils.parseEther('125000'),
+  '8K': ethers.utils.parseEther('8000'),
+  '10K': ethers.utils.parseEther('10000'),
+  '80K': ethers.utils.parseEther('80000'),
+  '100K': ethers.utils.parseEther('100000'),
+  '125K': ethers.utils.parseEther('125000'),
   TWO_MILLION: ethers.utils.parseEther('2000000'),
   FOUR_MILLION: ethers.utils.parseEther('4000000'),
   FIFTY_MILLION: ethers.utils.parseEther('50000000'),

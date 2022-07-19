@@ -82,7 +82,7 @@ describe('Stage 2', async () => {
           let firstBond = await BStorage.getBondAt(CUSTOMER_ADDR, 0);
           let actualPrincipal = firstBond.principal;
           let actualRate = firstBond.rate;
-          expect(actualPrincipal).to.equal(etherBalances.125K);
+          expect(actualPrincipal).to.equal(etherBalances['125K']);
           expect(actualRate).to.equal(rates.TWENTY_PC);
 
           await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
@@ -98,7 +98,7 @@ describe('Stage 2', async () => {
         }
 
         it('[final price (1.0)] rewards with TST successfully', async () => {
-          await testingSuite(etherBalances.125K, etherBalances.125K, rates.TWENTY_PC);
+          await testingSuite(etherBalances['125K'], etherBalances['125K'], rates.TWENTY_PC);
           await expectedTokBalance(125000, 1.2);
         });
       });

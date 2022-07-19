@@ -169,7 +169,7 @@ describe('BondingEvent', async () => {
         let actualPrincipal = firstBond.principal;
         let actualRate = firstBond.rate;
         // TODO how should principal be calculated?
-        expect(actualPrincipal).to.equal(etherBalances.100K);
+        expect(actualPrincipal).to.equal(etherBalances['100K']);
         expect(actualRate).to.equal(rates.TEN_PC);
 
         await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
