@@ -47,16 +47,16 @@ describe('BondingReward', async () => {
         beforeEach(async () => {
 
           // mint some sEUROs, USDTs, and TSTs
-          await SEuro.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
-          await USDT.connect(owner).mint(CUSTOMER_ADDR, etherBalances["HUNDRED_MILLION"]);
-          await SEuro.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
-          await USDT.connect(owner).mint(OWNER_ADDR, etherBalances["ONE_BILLION"]);
-          await TST.connect(owner).mint(TGateway.address, etherBalances["FIVE_HUNDRED_MILLION"]);
+          await SEuro.connect(owner).mint(CUSTOMER_ADDR, etherBalances.HUNDRED_MILLION);
+          await USDT.connect(owner).mint(CUSTOMER_ADDR, etherBalances.HUNDRED_MILLION);
+          await SEuro.connect(owner).mint(OWNER_ADDR, etherBalances.ONE_BILLION);
+          await USDT.connect(owner).mint(OWNER_ADDR, etherBalances.ONE_BILLION);
+          await TST.connect(owner).mint(TGateway.address, etherBalances.FIVE_HUNDRED_MILLION);
           await TGateway.connect(owner).updateRewardSupply();
 
           // approve the bonding contract to move customer sEUR and USDT funds
-          await SEuro.connect(customer).approve(BondingEvent.address, etherBalances["HUNDRED_MILLION"]);
-          await USDT.connect(customer).approve(BondingEvent.address, etherBalances["HUNDRED_MILLION"]);
+          await SEuro.connect(customer).approve(BondingEvent.address, etherBalances.HUNDRED_MILLION);
+          await USDT.connect(customer).approve(BondingEvent.address, etherBalances.HUNDRED_MILLION);
         });
 
         async function balanceTST() {
