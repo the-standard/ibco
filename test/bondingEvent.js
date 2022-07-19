@@ -301,7 +301,7 @@ describe('BondingEvent', async () => {
   
         const positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(1);
-        const position = await BondingEvent.getPosition(positions[0]);
+        const position = await BondingEvent.getPositionData(positions[0]);
         expect(position.lowerTick).to.equal(pricing.lowerTick);
         expect(position.upperTick).to.equal(pricing.upperTick);
         expect(position.liquidity).to.be.gt(0);
@@ -318,14 +318,14 @@ describe('BondingEvent', async () => {
           customer.address, amountSEuro, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
         );
         let initialPositions = await BondingEvent.getPositions();
-        const initialLiquidityTotal = (await BondingEvent.getPosition(initialPositions[0])).liquidity;
+        const initialLiquidityTotal = (await BondingEvent.getPositionData(initialPositions[0])).liquidity;
         await BondingEvent.connect(owner).bond(
           customer.address, amountSEuro, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
         );
   
         positions = await BondingEvent.getPositions();
         expect(positions).to.eql(initialPositions);
-        const position = await BondingEvent.getPosition(positions[0]);
+        const position = await BondingEvent.getPositionData(positions[0]);
         expect(position.lowerTick).to.equal(pricing.lowerTick);
         expect(position.upperTick).to.equal(pricing.upperTick);
         const expectedLiquidity = initialLiquidityTotal.mul(2);
@@ -352,7 +352,7 @@ describe('BondingEvent', async () => {
 
       const positions = await BondingEvent.getPositions();
       expect(positions).to.be.length(1);
-      const position = await BondingEvent.getPosition(positions[0]);
+      const position = await BondingEvent.getPositionData(positions[0]);
       expect(position.lowerTick).to.be.lt(pricing.lowerTick);
       expect(position.upperTick).to.be.gt(pricing.upperTick);
       expect(position.liquidity).to.be.gt(0);
@@ -377,7 +377,7 @@ describe('BondingEvent', async () => {
 
       const positions = await BondingEvent.getPositions();
       expect(positions).to.be.length(1);
-      const position = await BondingEvent.getPosition(positions[0]);
+      const position = await BondingEvent.getPositionData(positions[0]);
       expect(position.lowerTick).to.be.lt(pricing.lowerTick);
       expect(position.upperTick).to.be.gt(pricing.upperTick);
       expect(position.liquidity).to.be.gt(0);

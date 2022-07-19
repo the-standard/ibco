@@ -158,7 +158,7 @@ contract BondingEvent is AccessControl {
         return positions;
     }
 
-    function getPosition(uint256 tokenId)
+    function getPositionData(uint256 tokenId)
         external
         view
         returns (Position memory)
