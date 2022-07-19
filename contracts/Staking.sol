@@ -23,6 +23,7 @@ contract Staking is ERC721URIStorage, Ownable {
     uint256 private minTST;
 
     address TST_ADDRESS;
+    address SEURO_ADDRESS;
 
     mapping(address => Position) private _positions;
 
@@ -37,9 +38,10 @@ contract Staking is ERC721URIStorage, Ownable {
     constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {}
 
     function activate(
-        uint256 _start, 
-        uint256 _end, 
+        uint256 _start,
+        uint256 _end,
         address _TST_ADDRESS,
+        address _SEURO_ADDRESS,
         uint256 _TOTAL_SEURO,
         uint _SEUROTST,
         uint _INTEREST
@@ -56,6 +58,7 @@ contract Staking is ERC721URIStorage, Ownable {
         SEUROTST = _SEUROTST;
         INTEREST = _INTEREST;
         TST_ADDRESS = _TST_ADDRESS;
+        SEURO_ADDRESS = _SEURO_ADDRESS;
         startTime = _start;
         endTime = _end;
         initialised = block.timestamp;
@@ -71,8 +74,8 @@ contract Staking is ERC721URIStorage, Ownable {
         active = false;
     }
 
-    // reward works out the amount of seuro given to the user based on the 
-    // amount of TST they first put in. 
+    // reward works out the amount of seuro given to the user based on the
+    // amount of TST they first put in.
     function reward(uint256 _amount) public view returns (uint256) {
         uint256 SEURO = _amount * SEUROTST / 10_000;
         uint256 REWARD = SEURO * INTEREST / 10_000;
@@ -86,7 +89,7 @@ contract Staking is ERC721URIStorage, Ownable {
         require(_amount >= minTST, 'err-not-min');
         require(block.timestamp >= startTime, 'err-not-started');
         require(block.timestamp < endTime, 'err-finished');
-        
+
         // calculate the reward so we can also update the remaining SEURO
         uint256 total = reward(_amount);
         require(SEURO_REMAINING >= total, 'err-overlimit');
@@ -116,7 +119,7 @@ contract Staking is ERC721URIStorage, Ownable {
             position.totalValue = _amount;
             position.tokenId = newItemId;
             position.reward = total;
-        
+
             _tokenIds.increment();
         }
 
@@ -130,16 +133,41 @@ contract Staking is ERC721URIStorage, Ownable {
         return newItemId;
     }
 
-    // function burn(uint256 tokenId) public {
-    //     _burn(tokenId);
-    // }
+    function burn() public {
+        require(block.timestamp >= endTime, 'err-pool-open');
+
+        Position memory position = _positions[msg.sender];
+        require(position.nonce > 0, 'err-not-valid');
+        require(position.open == true, 'err-closed');
+
+        // update position
+        position.open = false;
+
+        // burn the token
+        _burn(position.tokenId);
+
+        // withdraw funds
+        IERC20 TOKEN = IERC20(SEURO_ADDRESS);
+        TOKEN.transfer(msg.sender, position.reward);
+        
+        _positions[msg.sender] = position;
+    }
+
+    // withdraw to the owners address
+    function withdraw(address _address) external onlyOwner {
+        IERC20 TOKEN = IERC20(_address);
+        uint256 balance = TOKEN.balanceOf(address(this));
+
+        require(balance > 0, 'err-no-funds');
+        TOKEN.transfer(owner(), balance);
+    }
 
     function position(address owner) external view returns (uint96, uint256, bool, uint256, uint256) {
         Position memory position = _positions[owner];
         return (
-            position.nonce, 
-            position.tokenId, 
-            position.open, 
+            position.nonce,
+            position.tokenId,
+            position.open,
             position.totalValue,
             position.reward
         );
