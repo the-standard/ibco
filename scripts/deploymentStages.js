@@ -1,6 +1,6 @@
 const { ethers, network } = require('hardhat');
 const fs = require('fs');
-const { encodePriceSqrt, MOST_STABLE_FEE } = require('../test/common');
+const { encodePriceSqrt, MOST_STABLE_FEE, etherBalances } = require('../test/common');
 let addresses;
 let DummyTST, DummyUSDT, SEuro;
 
@@ -83,11 +83,15 @@ const activateSEuroOffering = async () => {
   await SEuroOffering.connect(owner).activate();
 }
 
+const mintUser = async (address) => {
+  await SEuro.mint(address, etherBalances.HUNDRED_MILLION);
+  await DummyUSDT.mint(address, etherBalances.HUNDRED_MILLION);
+  await DummyTST.mint(address, etherBalances.HUNDRED_MILLION);
+}
+
 const mintTokensForAccount = async (accounts) => {
-  const million = ethers.utils.parseEther('1000000');
   const mints = accounts.map(async account => {
-    await DummyTST.mint(account, million);
-    await DummyUSDT.mint(account, million);
+    await mintUser(account);
   })
   await Promise.all(mints);
 }
@@ -95,14 +99,6 @@ const mintTokensForAccount = async (accounts) => {
 const contractsFrontendReady = async (accounts) => {
   await activateSEuroOffering();
   await mintTokensForAccount(accounts);
-}
-
-const mintUser = async (address) => {
-  const million = ethers.utils.parseEther('100000000');
-  await SEuro.mint(address, million);
-  await DummyUSDT.mint(address, million);
-  await SEuro.mint(address, million);
-  await DummyUSDT.mint(address, million);
 }
 
 module.exports = {
