@@ -9,6 +9,7 @@ var etherBalances = {
   "80K": ethers.utils.parseEther('80000'),
   "100K": ethers.utils.parseEther('100000'),
   "125K": ethers.utils.parseEther('125000'),
+  "ONE_MILLION": ethers.utils.parseEther('1000000'),
   "TWO_MILLION": ethers.utils.parseEther('2000000'),
   "FOUR_MILLION": ethers.utils.parseEther('4000000'),
   "FIFTY_MILLION": ethers.utils.parseEther('50000000'),

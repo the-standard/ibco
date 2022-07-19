@@ -14,8 +14,9 @@ contract Staking is ERC721URIStorage, Ownable {
     bool public active;
     uint256 public startTime;
     uint256 public endTime;
-    uint256 public duration;
     uint256 public initialised;
+    uint256 public TOTAL_SEURO;
+    uint public SEUROTST;
     uint256 private minTST;
 
     address TST_ADDRESS;
@@ -31,17 +32,25 @@ contract Staking is ERC721URIStorage, Ownable {
 
     constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {}
 
-    function activate(uint256 _start, uint256 _end, address _TST_ADDRESS) external onlyOwner {
+    function activate(
+        uint256 _start, 
+        uint256 _end, 
+        address _TST_ADDRESS,
+        uint256 _TOTAL_SEURO,
+        uint _SEUROTST
+    ) external onlyOwner {
+
         // CHORE needs refactor
         require(active == false, 'err-already-active');
         require(initialised == 0, 'err-already-initialised');
         require(_end > _start, 'err-start-end');
         require(_end >= block.timestamp, 'err-invalid-end');
 
+        TOTAL_SEURO = _TOTAL_SEURO;
+        SEUROTST = _SEUROTST;
         TST_ADDRESS = _TST_ADDRESS;
         startTime = _start;
         endTime = _end;
-        duration = _end - _start;
         initialised = block.timestamp;
 
         // TODO variable
@@ -57,14 +66,14 @@ contract Staking is ERC721URIStorage, Ownable {
 
     function mint(uint256 _amount) external returns(uint256) {
 
-        // CHORE needs refactor
+        // TODO CHORE needs refactor
         require(active == true, 'err-not-active');
         require(_amount >= minTST, 'err-not-min');
         require(block.timestamp >= startTime, 'err-not-started');
         require(block.timestamp < endTime, 'err-finished');
         require(active == true, 'err-not-active');
 
-        // TODO checks the total TST supply
+        // TODO checks the total SEURO supply
 
         // Transfer funds from sender to this contract
         // TODO send to some other guy
