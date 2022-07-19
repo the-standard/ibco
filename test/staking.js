@@ -97,12 +97,6 @@ describe('Staking', async () => {
   it('un-disables the pool', async () => {
   })
 
-  // it('destroys the pool and all the tokens!!!', async () => {
-  // });
-
-  // it('cannot mint a token because the pool doesnt have enough liquidity', async () => {
-  // });
-
   it('mints a token and creates a position', async () => {
     StakingContract = await ethers.getContractFactory('Staking');
     const Staking = await StakingContract.deploy("Staking", "STS");
@@ -315,9 +309,6 @@ describe('Staking', async () => {
     await expect(burn).to.be.revertedWith('err-not-valid');
   });
 
-  // it('will list all positions', async () => {
-  // });
-  //
 
   it('adds and removes seuro to the pool', async () => {
     StakingContract = await ethers.getContractFactory('Staking');
@@ -347,4 +338,14 @@ describe('Staking', async () => {
     withdraw = Staking.withdraw(TST.address);
     await expect(withdraw).to.be.revertedWith('err-no-funds');
   });
+
+  // it('closes pool and allows people to withdraw!!!', async () => {
+  // });
+
+  // it('destroys the pool and all the tokens!!!', async () => {
+  // });
+
+  // it('will list all positions', async () => {
+  // });
+  //
 });
