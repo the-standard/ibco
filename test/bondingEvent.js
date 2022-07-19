@@ -75,7 +75,7 @@ describe('BondingEvent', async () => {
     });
   });
 
-  context('initialised', async () => {
+  context('initialised with default prices', async () => {
     beforeEach(async () => {
       await deployBondingEventWithDefaultPrices();
       await mintUsers();
@@ -101,10 +101,10 @@ describe('BondingEvent', async () => {
     describe('calculating ratio', async () => {
       it('calculates the required amount of USDT for given sEURO', async () => {
         const amountSEuro = etherBalances['10K'];
-        const requiredUSDT = (await BondingEvent.getOtherAmount(amountSEuro)).div(DECIMALS);
+        const { amountOther } = (await BondingEvent.getOtherAmount(amountSEuro)).div(DECIMALS);
         // comes from uniswap ui, adding the 0.1% extra from "getOtherAmount" in BondingEvent
         const expectedUSDT = 11545;
-        expect(requiredUSDT).to.equal(expectedUSDT);
+        expect(amountOther).to.equal(expectedUSDT);
       });
     });
 
@@ -129,12 +129,10 @@ describe('BondingEvent', async () => {
     });
 
     describe('bond', async () => {
-      beforeEach(async () => {
-      });
 
       it('bonds sEURO and USDT for 52 weeks and receives correct seuro profit', async () => {
         const amountSEuro = etherBalances["TWO_MILLION"];
-        const amountOther = await BondingEvent.getOtherAmount(amountSEuro);
+        const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDT.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
@@ -162,7 +160,7 @@ describe('BondingEvent', async () => {
 
       it('bonds with an amount less than one million and receives correct seuro profit', async () => {
         const amountSEuro = etherBalances['100K'];
-        const amountOther = await BondingEvent.getOtherAmount(amountSEuro);
+        const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDT.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
@@ -191,7 +189,7 @@ describe('BondingEvent', async () => {
 
       it('bonds with an amount less than one hundred thousand and receives correct seuro profit', async () => {
         const amountSEuro = etherBalances['10K'];
-        const amountOther = await BondingEvent.getOtherAmount(amountSEuro);
+        const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDT.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
@@ -209,7 +207,7 @@ describe('BondingEvent', async () => {
 
       it('bonds multiple times with various maturities and updates active and inactive bonds correctly', async () => {
         const amountSEuro = etherBalances['TWO_MILLION'];
-        const amountOther = await BondingEvent.getOtherAmount(amountSEuro);
+        const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro.mul(3));
         await USDT.connect(customer).approve(BondingEvent.address, amountOther.mul(3));
         await BondingEvent.connect(owner).bond(
@@ -264,17 +262,25 @@ describe('BondingEvent', async () => {
         expect(actualActiveBonds).to.equal(expectedActiveBonds);
       });
     });
+  });
 
-    describe('liquidity positions', async () => {
+  describe.only('liquidity positions', async () => {
+    context('initialised default prices', async () => {
+      beforeEach(async () => {
+        await deployBondingEventWithDefaultPrices();
+        await mintUsers();
+        await readyTokenGateway();
+      });
+
       it('creates a new one if there is not one for the position range', async () => {
         const amountSEuro = etherBalances["TWO_MILLION"];
-        const amountOther = await BondingEvent.getOtherAmount(amountSEuro);
+        const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDT.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
           customer.address, amountSEuro, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
         );
-
+  
         const positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(1);
         const position = await BondingEvent.getPosition(positions[0]);
@@ -282,14 +288,14 @@ describe('BondingEvent', async () => {
         expect(position.upperTick).to.equal(pricing.upperTick);
         expect(position.liquidity).to.be.gt(0);
       });
-
+  
       it('adds liquidity to existing position if one exists', async () => {
         const amountSEuro = etherBalances["TWO_MILLION"];
-        const amountOther = await BondingEvent.getOtherAmount(amountSEuro);
+        const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
         // approve twice as much as the bonding amount
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro.mul(2));
         await USDT.connect(customer).approve(BondingEvent.address, amountOther.mul(2));
-
+  
         await BondingEvent.connect(owner).bond(
           customer.address, amountSEuro, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
         );
@@ -298,7 +304,7 @@ describe('BondingEvent', async () => {
         await BondingEvent.connect(owner).bond(
           customer.address, amountSEuro, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
         );
-
+  
         positions = await BondingEvent.getPositions();
         expect(positions).to.eql(initialPositions);
         const position = await BondingEvent.getPosition(positions[0]);
@@ -307,20 +313,56 @@ describe('BondingEvent', async () => {
         const expectedLiquidity = initialLiquidityTotal.mul(2);
         expect(position.liquidity).to.equal(expectedLiquidity);
       });
+    });
 
-      it('creates a second position if first one is not viable for bonding', async () => {
-        // initialise bonding event with price outside of default liquidity range
-        // await deployBondingEvent(100, 150);
+    it('creates a different position if price is completely outside of default ticks', async () => {
+      // initialise bonding event with price outside of default liquidity range
+      // redeploy tokens so we can re-initialise pool
+      // new tick will be at 4054 (or inverted)
+      await deployBondingEvent(100, 150);
+      await mintUsers();
+      await readyTokenGateway();
 
-        // const amountSEuro = etherBalances["TWO_MILLION"];
-        // const amountOther = await BondingEvent.getOtherAmount(amountSEuro);
-        // await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
-        // await USDT.connect(customer).approve(BondingEvent.address, amountOther);
+      const amountSEuro = etherBalances["TWO_MILLION"];
+      const { amountOther, expectedLower, expectedUpper } = await BondingEvent.getOtherAmount(amountSEuro);
+      await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
+      await USDT.connect(customer).approve(BondingEvent.address, amountOther);
 
-        // await BondingEvent.connect(owner).bond(
-        //   customer.address, amountSEuro, amountOther, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
-        // );
-      });
+      await BondingEvent.connect(owner).bond(
+        customer.address, amountSEuro, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
+      );
+
+      const positions = await BondingEvent.getPositions();
+      expect(positions).to.be.length(1);
+      const position = await BondingEvent.getPosition(positions[0]);
+      expect(position.lowerTick).to.be.lt(pricing.lowerTick);
+      expect(position.upperTick).to.be.gt(pricing.upperTick);
+      expect(position.liquidity).to.be.gt(0);
+    });
+
+    it('creates a different position if price is near the edge of default ticks', async () => {
+      // initialise bonding event with price outside of default liquidity range
+      // redeploy tokens so we can re-initialise pool
+      // new price tick will be at -305 (or inverted)
+      await deployBondingEvent(100, 97);
+      await mintUsers();
+      await readyTokenGateway();
+
+      const amountSEuro = etherBalances["TWO_MILLION"];
+      const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
+      await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
+      await USDT.connect(customer).approve(BondingEvent.address, amountOther);
+
+      await BondingEvent.connect(owner).bond(
+        customer.address, amountSEuro, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
+      );
+
+      const positions = await BondingEvent.getPositions();
+      expect(positions).to.be.length(1);
+      const position = await BondingEvent.getPosition(positions[0]);
+      expect(position.lowerTick).to.be.lt(pricing.lowerTick);
+      expect(position.upperTick).to.be.gt(pricing.upperTick);
+      expect(position.liquidity).to.be.gt(0);
     });
   });
 

@@ -10,8 +10,6 @@ import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import "hardhat/console.sol";
-
 contract BondingEvent is AccessControl {
     // sEUR: the main leg of the currency pair
     address public immutable SEURO_ADDRESS;
@@ -119,24 +117,28 @@ contract BondingEvent is AccessControl {
         require(newLower >= -887270, "tick-min-exceeded");
     }
 
+    struct Pair{
+        address token0;
+        address token1;
+    }
     // Compares the Standard Euro token to another token and returns them in ascending order
     function getAscendingPair()
         public
         view
-        returns (address token0, address token1)
+        returns (Pair memory pair)
     {
-        (token0, token1) = SEURO_ADDRESS < OTHER_ADDRESS
-            ? (SEURO_ADDRESS, OTHER_ADDRESS)
-            : (OTHER_ADDRESS, SEURO_ADDRESS);
+        return SEURO_ADDRESS < OTHER_ADDRESS
+            ? Pair(SEURO_ADDRESS, OTHER_ADDRESS)
+            : Pair(OTHER_ADDRESS, SEURO_ADDRESS);
     }
 
     // Initialises a pool with another token (address) and stores it in the array of pools.
     // Note that the price is in sqrtPriceX96 format.
     function initialisePool(uint160 _price, uint24 _fee) private {
-        (address token0, address token1) = getAscendingPair();
+        Pair memory pair = getAscendingPair();
         address poolAddress = manager.createAndInitializePoolIfNecessary(
-            token0,
-            token1,
+            pair.token0,
+            pair.token1,
             _fee,
             _price
         );
@@ -159,6 +161,8 @@ contract BondingEvent is AccessControl {
     struct AddLiquidityParams {
         address token0;
         address token1;
+        int24 lowerTick;
+        int24 upperTick;
         uint256 amount0Desired;
         uint256 amount1Desired;
         uint256 amount0Min;
@@ -179,8 +183,8 @@ contract BondingEvent is AccessControl {
                 token0: params.token0,
                 token1: params.token1,
                 fee: FEE,
-                tickLower: lowerTickDefault,
-                tickUpper: upperTickDefault,
+                tickLower: params.lowerTick,
+                tickUpper: params.upperTick,
                 amount0Desired: params.amount0Desired,
                 amount1Desired: params.amount1Desired,
                 amount0Min: params.amount0Min,
@@ -199,8 +203,8 @@ contract BondingEvent is AccessControl {
 
         positions.push(tokenId);
         positionData[tokenId] = Position(
-            lowerTickDefault,
-            upperTickDefault,
+            params.lowerTick,
+            params.upperTick,
             liquidity
         );
 
@@ -256,41 +260,42 @@ contract BondingEvent is AccessControl {
             uint256
         )
     {
-        (address token0, address token1) = getAscendingPair();
+        Pair memory pair = getAscendingPair();
 
-        uint256 amountOther = getOtherAmount(_amountSEuro);
+        (uint256 amountOther, int24 lowerTick, int24 upperTick) = getOtherAmount(_amountSEuro);
 
         (
             uint256 amount0Desired,
             uint256 amount1Desired,
             uint256 amount0Min,
             uint256 amount1Min
-        ) = token0 == SEURO_ADDRESS
+        ) = pair.token0 == SEURO_ADDRESS
                 ? (_amountSEuro, amountOther, _amountSEuro, uint256(0))
                 : (amountOther, _amountSEuro, uint256(0), _amountSEuro);
 
         // approve the position manager
-        TransferHelper.safeApprove(token0, address(manager), amount0Desired);
-        TransferHelper.safeApprove(token1, address(manager), amount1Desired);
+        TransferHelper.safeApprove(pair.token0, address(manager), amount0Desired);
+        TransferHelper.safeApprove(pair.token1, address(manager), amount1Desired);
 
-        console.log(token0);
         // send the tokens from the user to the contract
         TransferHelper.safeTransferFrom(
-            token0,
+            pair.token0,
             _user,
             address(this),
             amount0Desired
         );
         TransferHelper.safeTransferFrom(
-            token1,
+            pair.token1,
             _user,
             address(this),
             amount1Desired
         );
 
         AddLiquidityParams memory params = AddLiquidityParams(
-            token0,
-            token1,
+            pair.token0,
+            pair.token1,
+            lowerTick,
+            upperTick,
             amount0Desired,
             amount1Desired,
             amount0Min,
@@ -347,24 +352,51 @@ contract BondingEvent is AccessControl {
         _bond(_user, _amountSeuro, _weeks, _rate);
     }
 
+    function priceWithinTickRange(int24 _currentPriceTick, int24 _lowerTick, int24 _upperTick) private view returns (bool) {
+        return _lowerTick < _currentPriceTick && _currentPriceTick < _upperTick;
+    }
+
+    function priceHasBufferWithinTicks(int24 _currentPriceTick, int24 _lowerTick, int24 _upperTick) private view returns (bool) {
+        // ensures that the current price sits in middle 20% of difference between the two range ticks, which keeps the ratio required pretty respectable
+        int24 lowerToPriceDiff = _currentPriceTick - _lowerTick;
+        int24 priceToUpperDiff = _upperTick - _currentPriceTick;
+        return (lowerToPriceDiff * 3 / 2 > priceToUpperDiff) && (priceToUpperDiff * 3 / 2 > lowerToPriceDiff);
+    }
+
+    function viableTickPriceRatio(uint160 _price, int24 _lowerTick, int24 _upperTick) private view returns (bool) {
+        int24 currentPriceTick = ratioCalculator.getTickAt(_price);
+        return priceWithinTickRange(currentPriceTick, _lowerTick, _upperTick) &&
+            priceHasBufferWithinTicks(currentPriceTick, _lowerTick, _upperTick);
+    }
+
     function getOtherAmount(uint256 _amountSEuro)
         public
         view
-        returns (uint256)
+        returns (
+            uint256 amountOther,
+            int24 lowerTick,
+            int24 upperTick
+        )
     {
         (uint160 price, , , , , , ) = pool.slot0();
-        (address token0, ) = getAscendingPair();
-        bool seuroIsToken0 = token0 == SEURO_ADDRESS;
-        return
-            (ratioCalculator.getRatioForSEuro(
-                _amountSEuro,
-                price,
-                lowerTickDefault,
-                upperTickDefault,
-                seuroIsToken0
-            // means that we transfer to this contract 0.1% extra usdt. will prevent problems with slippage
-            // will also approve a little extra from the frontend because we should use this function for that ratio
-            // TODO means we will have a bit of extra USDT in this contract ... do we need to do anything with it straight away?
-            ) * 1001) / 1000;
+        Pair memory pair = getAscendingPair();
+        bool seuroIsToken0 = pair.token0 == SEURO_ADDRESS;
+        lowerTick = lowerTickDefault;
+        upperTick = upperTickDefault;
+        int24 magnitude = 1000;
+        // expand tick range by 1000 ticks until a viable ratio is found
+        while(!viableTickPriceRatio(price, lowerTick, upperTick)) {
+            lowerTick -= magnitude;
+            upperTick += magnitude;
+        }
+
+        amountOther = ratioCalculator.getRatioForSEuro(
+            _amountSEuro,
+            price,
+            lowerTick,
+            upperTick,
+            seuroIsToken0
+        // may need to add a very small amount to usdt due to an accuracy error (0.01%). it also protects against some slippage. being sent to a wallet anyway
+        ) * 10001 / 10000;
     }
 }

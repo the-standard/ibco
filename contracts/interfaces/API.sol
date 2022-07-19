@@ -34,4 +34,6 @@ interface IRatioCalculator {
         int24 _upper,
         bool _seuroIsToken0
     ) external pure returns (uint256);
+
+    function getTickAt(uint160 _price) external pure returns (int24);
 }
