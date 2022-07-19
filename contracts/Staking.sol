@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 
 contract Staking is ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
@@ -17,6 +17,8 @@ contract Staking is ERC721URIStorage, Ownable {
     uint256 public initialised;
     uint256 public TOTAL_SEURO;
     uint public SEUROTST;
+    uint public INTEREST;
+
     uint256 private minTST;
 
     address TST_ADDRESS;
@@ -37,7 +39,8 @@ contract Staking is ERC721URIStorage, Ownable {
         uint256 _end, 
         address _TST_ADDRESS,
         uint256 _TOTAL_SEURO,
-        uint _SEUROTST
+        uint _SEUROTST,
+        uint _INTEREST
     ) external onlyOwner {
 
         // CHORE needs refactor
@@ -48,6 +51,7 @@ contract Staking is ERC721URIStorage, Ownable {
 
         TOTAL_SEURO = _TOTAL_SEURO;
         SEUROTST = _SEUROTST;
+        INTEREST = _INTEREST;
         TST_ADDRESS = _TST_ADDRESS;
         startTime = _start;
         endTime = _end;
@@ -62,6 +66,14 @@ contract Staking is ERC721URIStorage, Ownable {
     function disable() external onlyOwner {
         require(active, 'err-not-active');
         active = false;
+    }
+
+    // reward works out the amount of seuro given to the user based on the 
+    // amount of TST they first put in. 
+    function reward(uint256 _amount) external view returns (uint256) {
+        uint256 SEURO = _amount * SEUROTST / 10_000;
+        uint256 REWARD = SEURO * INTEREST / 10_000;
+        return REWARD + SEURO;
     }
 
     function mint(uint256 _amount) external returns(uint256) {
