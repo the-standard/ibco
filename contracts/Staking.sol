@@ -16,6 +16,7 @@ contract Staking is ERC721URIStorage, Ownable {
     uint256 public endTime;
     uint256 public initialised;
     uint256 public TOTAL_SEURO;
+    uint256 public SEURO_REMAINING;
     uint public SEUROTST;
     uint public INTEREST;
 
@@ -30,6 +31,7 @@ contract Staking is ERC721URIStorage, Ownable {
         uint256 tokenId;
         bool open;
         uint256 totalValue;
+        uint256 reward;
     }
 
     constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {}
@@ -50,6 +52,7 @@ contract Staking is ERC721URIStorage, Ownable {
         require(_end >= block.timestamp, 'err-invalid-end');
 
         TOTAL_SEURO = _TOTAL_SEURO;
+        SEURO_REMAINING = _TOTAL_SEURO;
         SEUROTST = _SEUROTST;
         INTEREST = _INTEREST;
         TST_ADDRESS = _TST_ADDRESS;
@@ -70,7 +73,7 @@ contract Staking is ERC721URIStorage, Ownable {
 
     // reward works out the amount of seuro given to the user based on the 
     // amount of TST they first put in. 
-    function reward(uint256 _amount) external view returns (uint256) {
+    function reward(uint256 _amount) public view returns (uint256) {
         uint256 SEURO = _amount * SEUROTST / 10_000;
         uint256 REWARD = SEURO * INTEREST / 10_000;
         return REWARD + SEURO;
@@ -83,12 +86,13 @@ contract Staking is ERC721URIStorage, Ownable {
         require(_amount >= minTST, 'err-not-min');
         require(block.timestamp >= startTime, 'err-not-started');
         require(block.timestamp < endTime, 'err-finished');
-        require(active == true, 'err-not-active');
-
-        // TODO checks the total SEURO supply
+        
+        // calculate the reward so we can also update the remaining SEURO
+        uint256 total = reward(_amount);
+        require(SEURO_REMAINING >= total, 'err-overlimit');
 
         // Transfer funds from sender to this contract
-        // TODO send to some other guy
+        // TODO send to some other guy not this contract!
 
         IERC20 TOKEN = IERC20(TST_ADDRESS);
         TOKEN.transferFrom(msg.sender, address(this), _amount);
@@ -101,6 +105,7 @@ contract Staking is ERC721URIStorage, Ownable {
         if (position.nonce > 0) {
             position.totalValue += _amount;
             position.nonce += 1;
+            position.reward += total;
         }
 
         if (position.nonce == 0) {
@@ -110,13 +115,16 @@ contract Staking is ERC721URIStorage, Ownable {
             position.open = true;
             position.totalValue = _amount;
             position.tokenId = newItemId;
+            position.reward = total;
         
-
-            // increment tokenIds for next steaker.
             _tokenIds.increment();
         }
 
+        // update the position
         _positions[msg.sender] = position;
+
+        // update the remaining SEURO
+        SEURO_REMAINING -= total;
 
         // makes no sence to return this.
         return newItemId;
@@ -126,13 +134,14 @@ contract Staking is ERC721URIStorage, Ownable {
     //     _burn(tokenId);
     // }
 
-    function position(address owner) external view returns (uint96, uint256, bool, uint256) {
+    function position(address owner) external view returns (uint96, uint256, bool, uint256, uint256) {
         Position memory position = _positions[owner];
         return (
             position.nonce, 
             position.tokenId, 
             position.open, 
-            position.totalValue
+            position.totalValue,
+            position.reward
         );
     }
 

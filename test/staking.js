@@ -133,12 +133,22 @@ describe('Staking', async () => {
     expect(await Staking.balanceOf(user.address)).to.eq(1);
     expect(await Staking.ownerOf(0)).to.eq(user.address);
 
+    // value == 1,000,000 SEURO
+    // 428 SEURO reward
+    // 1,000,000 - 428 == 999572
+    let value = ethers.utils.parseEther('999572');
+    expect(await Staking.SEURO_REMAINING()).to.eq(value);
+
     // test positions
     let p = await Staking.position(user.address)
     expect(p[0]).to.eq(1);        // nonce
     expect(p[1]).to.eq(0);        // tokenId
     expect(p[2]).to.eq(true);     // open for business
     expect(p[3]).to.eq(weiValue); // weiValue
+    
+    // check the reward is ok
+    let reward = ethers.utils.parseEther('428');
+    expect(p[4]).to.eq(reward);   // reward value 
 
     // do again to check increment etc
     await TST.connect(owner).mint(user.address, weiValue);
@@ -149,14 +159,68 @@ describe('Staking', async () => {
     expect(await Staking.balanceOf(user.address)).to.eq(1);
 
     p = await Staking.position(user.address)
-    expect(p[0]).to.eq(2);              // nonce
-    expect(p[1]).to.eq(0);              // tokenId
-    expect(p[2]).to.eq(true);           // open for business
-    expect(p[3]).to.eq(weiValue.mul(2)); // weiValue
+    expect(p[0]).to.eq(2);                // nonce
+    expect(p[1]).to.eq(0);                // tokenId
+    expect(p[2]).to.eq(true);             // open for business
+    expect(p[3]).to.eq(weiValue.mul(2));  // weiValue
+
+    // check the reward is ok
+    reward = ethers.utils.parseEther('856'); // 428 * 2
+    expect(p[4]).to.eq(reward);   // reward value 
+
+    // value == 1,000,000 SEURO
+    // 428 SEURO reward
+    // 1,000,000 - 428 - 428 == 999144
+    value = ethers.utils.parseEther('999144');
+    expect(await Staking.SEURO_REMAINING()).to.eq(value);
 
     // with not enough TST
     mint = Staking.connect(user).mint(10);
     await expect(mint).to.be.revertedWith('err-not-min');
+  });
+
+  it('tests the start, end, supply MINT validations', async () => {
+    StakingContract = await ethers.getContractFactory('Staking');
+    const Staking = await StakingContract.deploy("Staking", "STS");
+
+    const weiValue = etherBalances["8K"];
+
+    let blockNum = await ethers.provider.getBlock();
+    const then = blockNum.timestamp + 600;
+
+    // activate the pool
+    TOTAL_SEURO = etherBalances["ONE_MILLION"];
+    await Staking.activate(then, then + 600, TST_ADDRESS, TOTAL_SEURO, SEUROTST, INTEREST)
+
+    await TST.connect(owner).mint(user.address, weiValue);
+    await TST.connect(user).approve(Staking.address, weiValue);
+    let balance = await TST.balanceOf(user.address);
+    expect(balance).to.eq(weiValue);
+
+    // actually mint
+    let mint = Staking.connect(user).mint(weiValue);
+    await expect(mint).to.be.revertedWith('err-not-started');
+
+    // move the time ahead
+    await ethers.provider.send("evm_increaseTime", [601])
+    await ethers.provider.send("evm_mine")
+    
+    // over the seuro allowance of 1m
+    const tfm = ethers.utils.parseEther('25000000');
+    mint = Staking.connect(user).mint(tfm);
+    await expect(mint).to.be.revertedWith('err-overlimit');
+
+    // move the time ahead again
+    await ethers.provider.send("evm_increaseTime", [3600])
+    await ethers.provider.send("evm_mine")
+
+    mint = Staking.connect(user).mint(weiValue);
+    await expect(mint).to.be.revertedWith('err-finished');
+
+    // check the disabled
+    await Staking.disable()
+    mint = Staking.connect(user).mint(weiValue);
+    await expect(mint).to.be.revertedWith('err-not-active');
   });
 
   it('tests the seuro:tst rate', async () => {
@@ -193,40 +257,6 @@ describe('Staking', async () => {
     reward = await Staking.reward(weiValue);
     expect(reward).to.eq(fte);
     
-  });
-
-  it('tests the start, end, supply MINT validations', async () => {
-    StakingContract = await ethers.getContractFactory('Staking');
-    const Staking = await StakingContract.deploy("Staking", "STS");
-
-    const weiValue = etherBalances["8K"];
-
-    let blockNum = await ethers.provider.getBlock();
-    const then = blockNum.timestamp + 600;
-
-    // activate the pool
-    await Staking.activate(then, then + 600, TST_ADDRESS, TOTAL_SEURO, SEUROTST, INTEREST)
-
-    await TST.connect(owner).mint(user.address, weiValue);
-    await TST.connect(user).approve(Staking.address, weiValue);
-    let balance = await TST.balanceOf(user.address);
-    expect(balance).to.eq(weiValue);
-
-    // actually mint
-    let mint = Staking.connect(user).mint(weiValue);
-    await expect(mint).to.be.revertedWith('err-not-started');
-
-    // move the time ahead
-    await ethers.provider.send("evm_increaseTime", [3600])
-    await ethers.provider.send("evm_mine")
-
-    mint = Staking.connect(user).mint(weiValue);
-    await expect(mint).to.be.revertedWith('err-finished');
-
-    // check the disabled
-    await Staking.disable()
-    mint = Staking.connect(user).mint(weiValue);
-    await expect(mint).to.be.revertedWith('err-not-active');
   });
 
   // it('will list all positions', async () => {
