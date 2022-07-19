@@ -20,12 +20,15 @@ contract BondingEvent is AccessControl {
     address public bondStorageAddress;
     // controls the bonding event and manages the rates and maturities
     address public operatorAddress;
+    // receives any excess USDT from the bonding event
+    address public excessCollateralWallet;
     IUniswapV3Pool public pool;
 
     INonfungiblePositionManager private immutable manager;
     IRatioCalculator private immutable ratioCalculator;
     uint256[] private positions;
     mapping(uint256 => Position) private positionData;
+    mapping(int24 => mapping(int24 => uint256)) private positionsByTick;
 
     // https://docs.uniswap.org/protocol/reference/core/libraries/Tick
     int24 public lowerTickDefault;
@@ -98,6 +101,13 @@ contract BondingEvent is AccessControl {
         operatorAddress = _newAddress;
     }
 
+    function addExcessCollateralWallet(address _excessCollateralWallet)
+        external
+        onlyPoolOwner
+    {
+        excessCollateralWallet = _excessCollateralWallet;
+    }
+
     function adjustTickDefaults(int24 _newLower, int24 _newHigher) external {
         _validTicks(_newLower, _newHigher);
         lowerTickDefault = _newLower;
@@ -117,19 +127,17 @@ contract BondingEvent is AccessControl {
         require(newLower >= -887270, "tick-min-exceeded");
     }
 
-    struct Pair{
+    struct Pair {
         address token0;
         address token1;
     }
+
     // Compares the Standard Euro token to another token and returns them in ascending order
-    function getAscendingPair()
-        public
-        view
-        returns (Pair memory pair)
-    {
-        return SEURO_ADDRESS < OTHER_ADDRESS
-            ? Pair(SEURO_ADDRESS, OTHER_ADDRESS)
-            : Pair(OTHER_ADDRESS, SEURO_ADDRESS);
+    function getAscendingPair() public view returns (Pair memory pair) {
+        return
+            SEURO_ADDRESS < OTHER_ADDRESS
+                ? Pair(SEURO_ADDRESS, OTHER_ADDRESS)
+                : Pair(OTHER_ADDRESS, SEURO_ADDRESS);
     }
 
     // Initialises a pool with another token (address) and stores it in the array of pools.
@@ -169,13 +177,17 @@ contract BondingEvent is AccessControl {
         uint256 amount1Min;
     }
 
+    struct AddedLiquidity {
+        uint256 tokenId;
+        uint128 liquidity;
+        uint256 seuroAmount;
+        uint256 otherAmount;
+    }
+
     function mintLiquidityPosition(AddLiquidityParams memory params)
         private
         returns (
-            uint256,
-            uint128,
-            uint256,
-            uint256
+            AddedLiquidity memory
         )
     {
         INonfungiblePositionManager.MintParams
@@ -207,25 +219,19 @@ contract BondingEvent is AccessControl {
             params.upperTick,
             liquidity
         );
+        positionsByTick[params.lowerTick][params.upperTick] = tokenId;
 
         emit MintPosition(msg.sender, tokenId, liquidity, amount0, amount1);
 
         return
             params.token0 == SEURO_ADDRESS
-                ? (tokenId, liquidity, amount0, amount1)
-                : (tokenId, liquidity, amount1, amount0);
+                ? AddedLiquidity(tokenId, liquidity, amount0, amount1)
+                : AddedLiquidity(tokenId, liquidity, amount1, amount0);
     }
 
-    function increaseExistingLiquidity(
-        AddLiquidityParams memory params,
-        uint256 tokenId
-    )
-        private
+    function increaseExistingLiquidity(AddLiquidityParams memory params, uint256 tokenId) private
         returns (
-            uint256,
-            uint128,
-            uint256,
-            uint256
+            AddedLiquidity memory
         )
     {
         INonfungiblePositionManager.IncreaseLiquidityParams
@@ -246,23 +252,29 @@ contract BondingEvent is AccessControl {
 
         return
             params.token0 == SEURO_ADDRESS
-                ? (tokenId, liquidity, amount0, amount1)
-                : (tokenId, liquidity, amount1, amount0);
+                ? AddedLiquidity(tokenId, liquidity, amount0, amount1)
+                : AddedLiquidity(tokenId, liquidity, amount1, amount0);
+    }
+
+    function refundDifference(uint256 _addedAmount, uint256 _desiredAmount) private {
+        uint256 excess = _desiredAmount - _addedAmount;
+        if (excess > 0 && excessCollateralWallet != address(0)) {
+            TransferHelper.safeTransfer(OTHER_ADDRESS, excessCollateralWallet, excess);
+        } 
     }
 
     function addLiquidity(address _user, uint256 _amountSEuro)
         private
         onlyOperator
-        returns (
-            uint256,
-            uint128,
-            uint256,
-            uint256
-        )
+        returns (AddedLiquidity memory added)
     {
         Pair memory pair = getAscendingPair();
 
-        (uint256 amountOther, int24 lowerTick, int24 upperTick) = getOtherAmount(_amountSEuro);
+        (
+            uint256 otherAmount,
+            int24 lowerTick,
+            int24 upperTick
+        ) = getOtherAmount(_amountSEuro);
 
         (
             uint256 amount0Desired,
@@ -270,12 +282,20 @@ contract BondingEvent is AccessControl {
             uint256 amount0Min,
             uint256 amount1Min
         ) = pair.token0 == SEURO_ADDRESS
-                ? (_amountSEuro, amountOther, _amountSEuro, uint256(0))
-                : (amountOther, _amountSEuro, uint256(0), _amountSEuro);
+                ? (_amountSEuro, otherAmount, _amountSEuro, uint256(0))
+                : (otherAmount, _amountSEuro, uint256(0), _amountSEuro);
 
         // approve the position manager
-        TransferHelper.safeApprove(pair.token0, address(manager), amount0Desired);
-        TransferHelper.safeApprove(pair.token1, address(manager), amount1Desired);
+        TransferHelper.safeApprove(
+            pair.token0,
+            address(manager),
+            amount0Desired
+        );
+        TransferHelper.safeApprove(
+            pair.token1,
+            address(manager),
+            amount1Desired
+        );
 
         // send the tokens from the user to the contract
         TransferHelper.safeTransferFrom(
@@ -302,11 +322,12 @@ contract BondingEvent is AccessControl {
             amount1Min
         );
 
-        if (positions.length > 0) {
-            return increaseExistingLiquidity(params, positions[0]);
-        } else {
-            return mintLiquidityPosition(params);
-        }
+        uint256 position = positionsByTick[lowerTick][upperTick];
+        added = position > 0 ?
+            increaseExistingLiquidity(params, position) :
+            mintLiquidityPosition(params);
+
+        refundDifference(added.otherAmount, otherAmount);
     }
 
     // We assume that there is a higher layer solution which helps to fetch the latest price as a quote.
@@ -324,21 +345,16 @@ contract BondingEvent is AccessControl {
         uint256 _rate
     ) private onlyOperator {
         // information about the liquidity position after it has been successfully added
-        (
-            uint256 tokenId,
-            uint128 liquidity,
-            uint256 amountSeuro,
-            uint256 amountOther
-        ) = addLiquidity(_user, _amountSeuro);
+        AddedLiquidity memory added = addLiquidity(_user, _amountSeuro);
         // begin bonding event
         IBondStorage(bondStorageAddress).startBond(
             _user,
-            amountSeuro,
+            added.seuroAmount,
             _rate,
             _maturityInWeeks,
-            tokenId,
-            liquidity,
-            amountOther
+            added.tokenId,
+            added.liquidity,
+            added.otherAmount
         );
     }
 
@@ -352,20 +368,35 @@ contract BondingEvent is AccessControl {
         _bond(_user, _amountSeuro, _weeks, _rate);
     }
 
-    function priceWithinTickRange(int24 _currentPriceTick, int24 _lowerTick, int24 _upperTick) private pure returns (bool) {
+    function priceWithinTickRange(
+        int24 _currentPriceTick,
+        int24 _lowerTick,
+        int24 _upperTick
+    ) private pure returns (bool) {
         return _lowerTick < _currentPriceTick && _currentPriceTick < _upperTick;
     }
 
-    function priceHasBufferWithinTicks(int24 _currentPriceTick, int24 _lowerTick, int24 _upperTick) private pure returns (bool) {
+    function priceHasBufferWithinTicks(
+        int24 _currentPriceTick,
+        int24 _lowerTick,
+        int24 _upperTick
+    ) private pure returns (bool) {
         // ensures that the current price sits in middle 20% of difference between the two range ticks, which keeps the ratio required pretty respectable
         int24 lowerToPriceDiff = _currentPriceTick - _lowerTick;
         int24 priceToUpperDiff = _upperTick - _currentPriceTick;
-        return (lowerToPriceDiff * 3 / 2 > priceToUpperDiff) && (priceToUpperDiff * 3 / 2 > lowerToPriceDiff);
+        return
+            ((lowerToPriceDiff * 3) / 2 > priceToUpperDiff) &&
+            ((priceToUpperDiff * 3) / 2 > lowerToPriceDiff);
     }
 
-    function viableTickPriceRatio(uint160 _price, int24 _lowerTick, int24 _upperTick) private view returns (bool) {
+    function viableTickPriceRatio(
+        uint160 _price,
+        int24 _lowerTick,
+        int24 _upperTick
+    ) private view returns (bool) {
         int24 currentPriceTick = ratioCalculator.getTickAt(_price);
-        return priceWithinTickRange(currentPriceTick, _lowerTick, _upperTick) &&
+        return
+            priceWithinTickRange(currentPriceTick, _lowerTick, _upperTick) &&
             priceHasBufferWithinTicks(currentPriceTick, _lowerTick, _upperTick);
     }
 
@@ -385,18 +416,20 @@ contract BondingEvent is AccessControl {
         upperTick = upperTickDefault;
         int24 magnitude = 1000;
         // expand tick range by 1000 ticks until a viable ratio is found
-        while(!viableTickPriceRatio(price, lowerTick, upperTick)) {
+        while (!viableTickPriceRatio(price, lowerTick, upperTick)) {
             lowerTick -= magnitude;
             upperTick += magnitude;
         }
 
-        amountOther = ratioCalculator.getRatioForSEuro(
-            _amountSEuro,
-            price,
-            lowerTick,
-            upperTick,
-            seuroIsToken0
-        // may need to add a very small amount to usdt due to an accuracy error (0.01%). it also protects against some slippage. being sent to a wallet anyway
-        ) * 10001 / 10000;
+        amountOther =
+            (ratioCalculator.getRatioForSEuro(
+                _amountSEuro,
+                price,
+                lowerTick,
+                upperTick,
+                seuroIsToken0
+            ) * 10001) /
+            // may need to add a very small amount to usdt due to an accuracy error (0.01%). it also protects against some slippage. being sent to a wallet anyway
+            10000;
     }
 }

@@ -264,9 +264,20 @@ describe('BondingEvent', async () => {
       });
     });
 
-    describe('transferring excess usdt to designated wallet', async () => {
+    describe('excess usdt', async () => {
       it('will transfer the excess usdt if there is a designated wallet', async () => {
-        
+        await BondingEvent.addExcessCollateralWallet(wallet.address);
+        expect(await USDT.balanceOf(wallet.address)).to.equal(0);
+
+        const amountSEuro = etherBalances["TWO_MILLION"];
+        const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
+        await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
+        await USDT.connect(customer).approve(BondingEvent.address, amountOther);
+        await BondingEvent.connect(owner).bond(
+          customer.address, amountSEuro, durations["ONE_YR_WEEKS"], rates["TEN_PC"],
+        );
+
+        expect(await USDT.balanceOf(wallet.address)).to.be.gt(0);
       });
     });
   });
