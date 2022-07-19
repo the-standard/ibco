@@ -2,9 +2,9 @@ const bn = require('bignumber.js');
 const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 
-var POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
+const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 
-var etherBalances = {
+let etherBalances = {
   8K: ethers.utils.parseEther('8000'),
   10K: ethers.utils.parseEther('10000'),
   80K: ethers.utils.parseEther('80000'),
@@ -27,7 +27,7 @@ const ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
 const STANDARD_TOKENS_PER_EUR = 20; // 1 TST = 0.05 EUR
 const DECIMALS = BigNumber.from(10).pow(18);
 
-var rates = {
+let rates = {
   HALF_PC: 500,
   FIVE_PC: 5000,
   SIX_PC: 6000,
@@ -35,7 +35,8 @@ var rates = {
   TEN_PC: 10000,
   TWENTY_PC: 20000,
 };
-var durations = {
+
+let durations = {
   ONE_YR_WEEKS: 52,
   HALF_YR_WEEKS: 26,
   ONE_WEEK: 1,
