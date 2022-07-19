@@ -322,9 +322,9 @@ contract BondingEvent is AccessControl {
             amount1Min
         );
 
-        uint256 position = positionsByTick[lowerTick][upperTick];
-        added = position > 0 ?
-            increaseExistingLiquidity(params, position) :
+        uint256 positionId = positionsByTick[lowerTick][upperTick];
+        added = positionId > 0 ?
+            increaseExistingLiquidity(params, positionId) :
             mintLiquidityPosition(params);
 
         refundDifference(added.otherAmount, otherAmount);

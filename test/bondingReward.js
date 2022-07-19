@@ -50,7 +50,6 @@ describe('BondingReward', async () => {
       let actualClaim, expectedClaim, bond, actualStandardBal;
 
       await TGateway.connect(owner).setStorageAddress(BStorage.address);
-      console.log(SEuro.address, USDT.address)
       await BondingEvent.connect(owner).bond(
         customer.address, etherBalances["TWO_MILLION"], durations["ONE_WEEK"], rates["TEN_PC"]
       );
