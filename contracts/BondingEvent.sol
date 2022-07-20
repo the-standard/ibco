@@ -396,11 +396,10 @@ contract BondingEvent is AccessControl {
     }
 
     function viableTickPriceRatio(
-        uint160 _price,
+        int24 currentPriceTick,
         int24 _lowerTick,
         int24 _upperTick
-    ) private view returns (bool) {
-        int24 currentPriceTick = ratioCalculator.getTickAt(_price);
+    ) private pure returns (bool) {
         return
             priceWithinTickRange(currentPriceTick, _lowerTick, _upperTick) &&
             priceHasBufferWithinTicks(currentPriceTick, _lowerTick, _upperTick);
@@ -420,9 +419,10 @@ contract BondingEvent is AccessControl {
         bool seuroIsToken0 = pair.token0 == SEURO_ADDRESS;
         lowerTick = lowerTickDefault;
         upperTick = upperTickDefault;
+        int24 currentPriceTick = ratioCalculator.getTickAt(price);
         int24 magnitude = 1000;
         // expand tick range by 1000 ticks until a viable ratio is found
-        while (!viableTickPriceRatio(price, lowerTick, upperTick)) {
+        while (!viableTickPriceRatio(currentPriceTick, lowerTick, upperTick)) {
             lowerTick -= magnitude;
             upperTick += magnitude;
         }
