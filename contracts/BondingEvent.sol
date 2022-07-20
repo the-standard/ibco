@@ -381,7 +381,7 @@ contract BondingEvent is AccessControl {
     }
 
     function viableTickPriceRatio(
-        int24 currentPriceTick,
+        int24 _currentPriceTick,
         int24 _lowerTick,
         int24 _upperTick
     ) private pure returns (bool) {
