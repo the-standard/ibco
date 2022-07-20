@@ -390,7 +390,7 @@ describe('BondingEvent', async () => {
       expect(position.liquidity).to.be.gt(0);
     });
 
-    it.only('expands the position right out to min / max tick, if pool price becomes extreme', async () => {
+    it('expands the position right out to min / max tick, if pool price becomes extreme', async () => {
       // initialise bonding event with price tick very near to liquidity max tick
       // redeploy tokens so we can re-initialise pool
       // new price tick will be at 184217 (or inverted)
@@ -423,6 +423,7 @@ describe('BondingEvent', async () => {
   //
   // --------------------------------------
   // TODO:
+  // - test a second position is created if price moves after initialisation
   // - make sure the principals / profits on bonds are correct, and based on both amounts sent in
   // - fee collection?
   // - restrict position data to owner?
