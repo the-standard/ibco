@@ -380,24 +380,18 @@ contract BondingEvent is AccessControl {
         _bond(_user, _amountSeuro, _weeks, _rate);
     }
 
-    function priceHasBufferWithinTicks(
-        int24 _currentPriceTick,
-        int24 _lowerTick,
-        int24 _upperTick
-    ) private pure returns (bool) {
-        int24 lowerToPriceDiff = _currentPriceTick - _lowerTick;
-        int24 priceToUpperDiff = _upperTick - _currentPriceTick;
-        return
-            (lowerToPriceDiff * 3 / 2 > priceToUpperDiff) &&
-            (priceToUpperDiff * 3 / 2 > lowerToPriceDiff);
-    }
-
     function viableTickPriceRatio(
         int24 currentPriceTick,
         int24 _lowerTick,
         int24 _upperTick
     ) private pure returns (bool) {
-        return priceHasBufferWithinTicks(currentPriceTick, _lowerTick, _upperTick);
+        // checks that the current pool price sits between 40th + 60th percentile of given tick range
+        // this should ensure a decent enough liquidity ratio for bonding
+        int24 lowerToPriceDiff = _currentPriceTick - _lowerTick;
+        int24 priceToUpperDiff = _upperTick - _currentPriceTick;
+        return
+            (lowerToPriceDiff * 3 / 2 > priceToUpperDiff) &&
+            (priceToUpperDiff * 3 / 2 > lowerToPriceDiff);
     }
 
     function getOtherAmount(uint256 _amountSEuro)
