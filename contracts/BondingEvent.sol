@@ -10,8 +10,6 @@ import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import "hardhat/console.sol";
-
 contract BondingEvent is AccessControl {
     // sEUR: the main leg of the currency pair
     address public immutable SEURO_ADDRESS;
@@ -30,7 +28,7 @@ contract BondingEvent is AccessControl {
     IRatioCalculator private immutable ratioCalculator;
     uint256[] private positions;
     mapping(uint256 => Position) private positionData;
-    mapping(int24 => mapping(int24 => uint256)) private positionsByTick;
+    mapping(bytes32 => uint256) private positionsByTicks;
 
     // https://docs.uniswap.org/protocol/reference/core/libraries/Tick
     int24 public lowerTickDefault;
@@ -186,6 +184,10 @@ contract BondingEvent is AccessControl {
         uint256 otherAmount;
     }
 
+    function encodedTicks(int24 _lower, int24 _upper) private pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_lower, _upper));
+    }
+
     function mintLiquidityPosition(AddLiquidityParams memory params)
         private
         returns (
@@ -221,7 +223,7 @@ contract BondingEvent is AccessControl {
             params.upperTick,
             liquidity
         );
-        positionsByTick[params.lowerTick][params.upperTick] = tokenId;
+        positionsByTicks[encodedTicks(params.lowerTick, params.upperTick)] = tokenId;
 
         return
             params.token0 == SEURO_ADDRESS
@@ -329,7 +331,7 @@ contract BondingEvent is AccessControl {
             amount1Min
         );
 
-        uint256 positionId = positionsByTick[lowerTick][upperTick];
+        uint256 positionId = positionsByTicks[encodedTicks(lowerTick, upperTick)];
         added = positionId > 0 ?
             increaseExistingLiquidity(params, positionId) :
             mintLiquidityPosition(params);
