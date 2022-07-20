@@ -24,6 +24,7 @@ contract BondingCurve {
 
     Bucket public currentBucket;
     mapping(uint32 => uint256) private bucketPricesCache;
+    uint256 private ibcoTotalSupply;
 
     constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
         seuro = SEuro(_seuro);
@@ -34,7 +35,7 @@ contract BondingCurve {
 
         bucketSize = _bucketSize;
         finalBucketIndex = uint32(_maxSupply / _bucketSize);
-        updateCurrentBucket();
+        updateCurrentBucket(ibcoTotalSupply);
     }
 
     function calculatePrice(uint256 _euroAmount) external returns (uint256) {
@@ -58,8 +59,9 @@ contract BondingCurve {
         return _sEuroTotal;
     }
 
-    function updateCurrentBucket() public {
-        uint32 bucketIndex = uint32(seuro.totalSupply() / bucketSize);
+    function updateCurrentBucket(uint256 _minted) public {
+        ibcoTotalSupply += _minted;
+        uint32 bucketIndex = uint32(ibcoTotalSupply / bucketSize);
         currentBucket = Bucket(bucketIndex, getBucketPrice(bucketIndex));
         delete bucketPricesCache[bucketIndex];
     }
@@ -84,7 +86,7 @@ contract BondingCurve {
 
     function getRemainingCapacityInBucket(uint32 _bucketIndex) private view returns(uint256) {
         uint256 bucketCapacity = (_bucketIndex + 1) * bucketSize;
-        uint256 diff = bucketCapacity - seuro.totalSupply();
+        uint256 diff = bucketCapacity - ibcoTotalSupply;
         return diff > bucketSize ? bucketSize : diff;
     }
 

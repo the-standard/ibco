@@ -53,7 +53,7 @@ contract SEuroOffering is Ownable {
         token.transferFrom(msg.sender, address(this), _amount);
         uint256 euros = getEuros(_amount, chainlinkAddr, chainlinkDec);
         SEuro(seuro).mint(msg.sender, euros);
-        bondingCurve.updateCurrentBucket();
+        bondingCurve.updateCurrentBucket(euros);
         emit Swap(_token, _amount, euros);
     }
 
@@ -63,7 +63,7 @@ contract SEuroOffering is Ownable {
         weth.deposit{value: msg.value};
         uint256 euros = getEuros(msg.value, chainlinkAddr, chainlinkDec);
         SEuro(seuro).mint(msg.sender, euros);
-        bondingCurve.updateCurrentBucket();
+        bondingCurve.updateCurrentBucket(euros);
         emit Swap(bytes32("ETH"), msg.value, euros);
     }
 
