@@ -291,7 +291,7 @@ describe('BondingEvent', async () => {
         await readyTokenGateway();
       });
 
-      it('creates a new one if there is not one for the position range', async () => {
+      it('creates a new position if there is not one for the range', async () => {
         const amountSEuro = etherBalances.TWO_MILLION;
         const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
@@ -415,6 +415,24 @@ describe('BondingEvent', async () => {
       expect(position.lowerTick).to.eq(MIN_TICK);
       expect(position.upperTick).to.eq(MAX_TICK);
       expect(position.liquidity).to.be.gt(0);
+    });
+
+    it('creates a second position if the price moves after initialisation', async () => {
+      const amountSEuro = etherBalances.TWO_MILLION;
+      const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
+      await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
+      await USDT.connect(customer).approve(BondingEvent.address, amountOther);
+      
+      // will create the first position
+      await BondingEvent.connect(owner).bond(
+        customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+      );
+    });
+  });
+
+  describe('liquidity ratios', async () => {
+    it('gives the default if current price in middle 20% between ticks', async () => {
+
     });
   });
 

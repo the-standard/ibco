@@ -264,7 +264,7 @@ contract BondingEvent is AccessControl {
                 : AddedLiquidityResponse(tokenId, liquidity, amount1, amount0);
     }
 
-    function refundDifference(uint256 _addedAmount, uint256 _desiredAmount) private {
+    function transferDifferenceToWallet(uint256 _addedAmount, uint256 _desiredAmount) private {
         uint256 excess = _desiredAmount - _addedAmount;
         if (excess > 0 && excessCollateralWallet != address(0)) {
             TransferHelper.safeTransfer(OTHER_ADDRESS, excessCollateralWallet, excess);
@@ -340,7 +340,7 @@ contract BondingEvent is AccessControl {
             mintLiquidityPosition(params);
 
         emit LiquidityAdded(_user, added.tokenId, added.seuroAmount, added.otherAmount, added.liquidity);
-        refundDifference(added.otherAmount, otherAmount);
+        transferDifferenceToWallet(added.otherAmount, otherAmount);
     }
 
     // We assume that there is a higher layer solution which helps to fetch the latest price as a quote.
@@ -381,7 +381,7 @@ contract BondingEvent is AccessControl {
         _bond(_user, _amountSeuro, _weeks, _rate);
     }
 
-    function viableTickPriceRatio(
+    function priceInMiddleTwentyPC(
         int24 _currentPriceTick,
         int24 _lowerTick,
         int24 _upperTick
@@ -390,10 +390,21 @@ contract BondingEvent is AccessControl {
         // this should ensure a decent enough liquidity ratio for bonding
         int24 lowerToPriceDiff = _currentPriceTick - _lowerTick;
         int24 priceToUpperDiff = _upperTick - _currentPriceTick;
-        return
-            ((lowerToPriceDiff * 3 / 2 > priceToUpperDiff) &&
-            (priceToUpperDiff * 3 / 2 > lowerToPriceDiff)) ||
-            (_lowerTick == MIN_TICK && _upperTick == MAX_TICK);
+        return lowerToPriceDiff * 3 / 2 >= priceToUpperDiff &&
+            priceToUpperDiff * 3 / 2 >= lowerToPriceDiff;
+    }
+
+    function ticksAtLimits(int24 _lowerTick, int24 _upperTick) private pure returns (bool) {
+        return _lowerTick == MIN_TICK && _upperTick == MAX_TICK;
+    }
+
+    function viableTickPriceRatio(
+        int24 _currentPriceTick,
+        int24 _lowerTick,
+        int24 _upperTick
+    ) private pure returns (bool) {
+        return priceInMiddleTwentyPC(_currentPriceTick, _lowerTick, _upperTick) ||
+            ticksAtLimits(_lowerTick, _upperTick);
     }
 
     function increaseTicks(int24 _lower, int24 _upper, int24 magnitude) private pure returns (int24 lower, int24 upper) {
