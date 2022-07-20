@@ -10,8 +10,6 @@ import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import "hardhat/console.sol";
-
 contract BondingEvent is AccessControl {
     int24 private constant MAX_TICK = 887270;
     int24 private constant MIN_TICK = -MAX_TICK;
@@ -404,6 +402,11 @@ contract BondingEvent is AccessControl {
         if (upper > MAX_TICK) upper = MAX_TICK;
     }
 
+    function increaseMagnitude(int24 _magnitude) private pure returns (int24 magnitude, uint8 i) {
+        i = 0;
+        magnitude = _magnitude * 10;
+    }
+
     function getOtherAmount(uint256 _amountSEuro)
         public
         view
@@ -419,10 +422,13 @@ contract BondingEvent is AccessControl {
         lowerTick = lowerTickDefault;
         upperTick = upperTickDefault;
         int24 currentPriceTick = ratioCalculator.getTickAt(price);
-        int24 magnitude = 1000;
-        // expand tick range by 1000 ticks until a viable ratio is found
+        int24 magnitude = 100;
+        uint8 i;
+        // expand tick range by magnitude 100 ticks ten times, then by magnitude 1000 ticks ten times etc. until a viable ratio is found
         while (!viableTickPriceRatio(currentPriceTick, lowerTick, upperTick)) {
+            if (i == 10) (magnitude, i) = increaseMagnitude(magnitude);
             (lowerTick, upperTick) = increaseTicks(lowerTick, upperTick, magnitude);
+            i++;
         }
 
         amountOther =

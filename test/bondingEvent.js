@@ -342,7 +342,7 @@ describe('BondingEvent', async () => {
       await readyTokenGateway();
 
       const amountSEuro = etherBalances["TWO_MILLION"];
-      const { amountOther, expectedLower, expectedUpper } = await BondingEvent.getOtherAmount(amountSEuro);
+      const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
       await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
       await USDT.connect(customer).approve(BondingEvent.address, amountOther);
 
@@ -353,8 +353,10 @@ describe('BondingEvent', async () => {
       const positions = await BondingEvent.getPositions();
       expect(positions).to.be.length(1);
       const position = await BondingEvent.getPositionData(positions[0]);
-      // moves tickets to -13400 and 17000 (or inverted), sufficient buffer around the current price tick (4054)
-      const expectedMagnitude = 13000;
+      // 1000 expansion to -1400 and 4000 (or inverted), doesn't suffice
+      // 10000 expansion to -11400 and 14000 (or inverted), doesn't suffice
+      // further 10000 expansion to -21400 and 24000 (or inverted), is sufficient buffer around current price tick (4054)
+      const expectedMagnitude = 21000;
       expect(position.lowerTick).to.eq(pricing.lowerTick - expectedMagnitude);
       expect(position.upperTick).to.eq(pricing.upperTick + expectedMagnitude);
       expect(position.liquidity).to.be.gt(0);
