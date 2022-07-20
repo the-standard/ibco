@@ -10,6 +10,8 @@ import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
+import "hardhat/console.sol";
+
 contract BondingEvent is AccessControl {
     // sEUR: the main leg of the currency pair
     address public immutable SEURO_ADDRESS;
@@ -378,20 +380,11 @@ contract BondingEvent is AccessControl {
         _bond(_user, _amountSeuro, _weeks, _rate);
     }
 
-    function priceWithinTickRange(
-        int24 _currentPriceTick,
-        int24 _lowerTick,
-        int24 _upperTick
-    ) private pure returns (bool) {
-        return _lowerTick < _currentPriceTick && _currentPriceTick < _upperTick;
-    }
-
     function priceHasBufferWithinTicks(
         int24 _currentPriceTick,
         int24 _lowerTick,
         int24 _upperTick
     ) private pure returns (bool) {
-        // ensures that the current price sits in middle 20% of difference between the two range ticks, which keeps the ratio required pretty respectable
         int24 lowerToPriceDiff = _currentPriceTick - _lowerTick;
         int24 priceToUpperDiff = _upperTick - _currentPriceTick;
         return
@@ -404,9 +397,7 @@ contract BondingEvent is AccessControl {
         int24 _lowerTick,
         int24 _upperTick
     ) private pure returns (bool) {
-        return
-            priceWithinTickRange(currentPriceTick, _lowerTick, _upperTick) &&
-            priceHasBufferWithinTicks(currentPriceTick, _lowerTick, _upperTick);
+        return priceHasBufferWithinTicks(currentPriceTick, _lowerTick, _upperTick);
     }
 
     function getOtherAmount(uint256 _amountSEuro)
