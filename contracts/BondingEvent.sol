@@ -10,8 +10,6 @@ import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import "hardhat/console.sol";
-
 contract BondingEvent is AccessControl {
     int24 private constant MAX_TICK = 887270;
     int24 private constant MIN_TICK = -MAX_TICK;
@@ -436,7 +434,6 @@ contract BondingEvent is AccessControl {
         lowerTick = lowerTickDefault;
         upperTick = upperTickDefault;
         int24 currentPriceTick = ratioCalculator.getTickAt(price);
-        console.logInt(currentPriceTick);
         int24 magnitude = 100;
         uint8 i;
         // expand tick range by magnitude 100 ticks ten times, then by magnitude 1000 ticks ten times etc. until a viable ratio is found

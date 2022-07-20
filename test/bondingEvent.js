@@ -339,24 +339,52 @@ describe('BondingEvent', async () => {
         const expectedLiquidity = initialLiquidityTotal.mul(2);
         expect(position.liquidity).to.equal(expectedLiquidity);
       });
-    });
 
-    it('creates a second position if the price moves after initialisation', async () => {
-      const amountSEuro = etherBalances.TWO_MILLION;
-      const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
-      await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
-      await USDT.connect(customer).approve(BondingEvent.address, amountOther);
-      
-      // will create the first position
-      await BondingEvent.connect(owner).bond(
-        customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
-      );
+      it('creates a second position if the price moves after initialisation', async () => {
+        // will create the first position
+        let amountSEuro = etherBalances.TWO_MILLION;
+        let { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
+        await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
+        await USDT.connect(customer).approve(BondingEvent.address, amountOther);
+        await BondingEvent.connect(owner).bond(
+          customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+        );
+
+        let positions = await BondingEvent.getPositions();
+        expect(positions).to.be.length(1);
+        let position = await BondingEvent.getPositionData(positions[0]);
+        expect(position.lowerTick).to.equal(pricing.lowerTick);
+        expect(position.upperTick).to.equal(pricing.upperTick);
+        expect(position.liquidity).to.be.gt(0);
+
+        // move the price to the edge of default tick range
+        // moves current price tick to 909
+        await swapSEuro(etherBalances['100K'].mul(5));
+
+        // bonding again will create a new position, as first one is not viable since price change
+        amountSEuro = etherBalances.TWO_MILLION;
+        ({ amountOther } = await BondingEvent.getOtherAmount(amountSEuro));
+        await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
+        await USDT.connect(customer).approve(BondingEvent.address, amountOther);
+        await BondingEvent.connect(owner).bond(
+          customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+        );
+
+        positions = await BondingEvent.getPositions();
+        expect(positions).to.be.length(2);
+        let secondPosition = await BondingEvent.getPositionData(positions[1]);
+        // since swap, new tick is at 909 - shifting lower tick to -700 and upper to 3300 puts 909 at in middle 20%
+        const expectedDiff = 300;
+        expect(secondPosition.lowerTick).to.equal(pricing.lowerTick - expectedDiff);
+        expect(secondPosition.upperTick).to.equal(pricing.upperTick + expectedDiff);
+        expect(secondPosition.liquidity).to.be.gt(0);
+      });
     });
   });
 
   describe('liquidity ratios', async () => {
 
-    it.only('gives the default if current price in middle 20% between ticks', async () => {
+    it('gives the default if current price in middle 20% between ticks', async () => {
       // sets the price tick at 199
       await deployBondingEvent(9802,10000);
       await mintUsers();
