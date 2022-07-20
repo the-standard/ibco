@@ -266,7 +266,7 @@ describe('BondingEvent', async () => {
 
     describe('excess usdt', async () => {
       it('will transfer the excess usdt if there is a designated wallet', async () => {
-        await BondingEvent.addExcessCollateralWallet(wallet.address);
+        await BondingEvent.setExcessCollateralWallet(wallet.address);
         expect(await USDT.balanceOf(wallet.address)).to.equal(0);
 
         const amountSEuro = etherBalances["TWO_MILLION"];

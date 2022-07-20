@@ -10,6 +10,8 @@ import "@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
+import "hardhat/console.sol";
+
 contract BondingEvent is AccessControl {
     // sEUR: the main leg of the currency pair
     address public immutable SEURO_ADDRESS;
@@ -101,7 +103,7 @@ contract BondingEvent is AccessControl {
         operatorAddress = _newAddress;
     }
 
-    function addExcessCollateralWallet(address _excessCollateralWallet)
+    function setExcessCollateralWallet(address _excessCollateralWallet)
         external
         onlyPoolOwner
     {
