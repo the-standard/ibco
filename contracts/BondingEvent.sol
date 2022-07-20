@@ -13,6 +13,9 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "hardhat/console.sol";
 
 contract BondingEvent is AccessControl {
+    int24 private constant MAX_TICK = 887270;
+    int24 private constant MIN_TICK = -MAX_TICK;
+
     // sEUR: the main leg of the currency pair
     address public immutable SEURO_ADDRESS;
     // other: the other ERC-20 token
@@ -125,8 +128,8 @@ contract BondingEvent is AccessControl {
             newLower % tickSpacing == 0 && newHigher % tickSpacing == 0,
             "tick-mod-spacing-nonzero"
         );
-        require(newHigher <= 887270, "tick-max-exceeded");
-        require(newLower >= -887270, "tick-min-exceeded");
+        require(newHigher <= MAX_TICK, "tick-max-exceeded");
+        require(newLower >= MIN_TICK, "tick-min-exceeded");
     }
 
     struct Pair {
@@ -394,6 +397,13 @@ contract BondingEvent is AccessControl {
             (priceToUpperDiff * 3 / 2 > lowerToPriceDiff);
     }
 
+    function increaseTicks(int24 _lower, int24 _upper, int24 magnitude) private pure returns (int24 lower, int24 upper) {
+        lower = _lower - magnitude;
+        upper = _upper + magnitude;
+        if (lower < MIN_TICK) lower = MIN_TICK;
+        if (upper > MAX_TICK) upper = MAX_TICK;
+    }
+
     function getOtherAmount(uint256 _amountSEuro)
         public
         view
@@ -412,8 +422,7 @@ contract BondingEvent is AccessControl {
         int24 magnitude = 1000;
         // expand tick range by 1000 ticks until a viable ratio is found
         while (!viableTickPriceRatio(currentPriceTick, lowerTick, upperTick)) {
-            lowerTick -= magnitude;
-            upperTick += magnitude;
+            (lowerTick, upperTick) = increaseTicks(lowerTick, upperTick, magnitude);
         }
 
         amountOther =
