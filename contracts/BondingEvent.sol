@@ -391,8 +391,9 @@ contract BondingEvent is AccessControl {
         int24 lowerToPriceDiff = _currentPriceTick - _lowerTick;
         int24 priceToUpperDiff = _upperTick - _currentPriceTick;
         return
-            (lowerToPriceDiff * 3 / 2 > priceToUpperDiff) &&
-            (priceToUpperDiff * 3 / 2 > lowerToPriceDiff);
+            ((lowerToPriceDiff * 3 / 2 > priceToUpperDiff) &&
+            (priceToUpperDiff * 3 / 2 > lowerToPriceDiff)) ||
+            (_lowerTick == MIN_TICK && _upperTick == MAX_TICK);
     }
 
     function increaseTicks(int24 _lower, int24 _upper, int24 magnitude) private pure returns (int24 lower, int24 upper) {
