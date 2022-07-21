@@ -87,12 +87,12 @@ describe('BondingCurve', async () => {
     });
   });
 
-  describe.only('read-only euros to seuro', async () => {
+  describe('read-only euros to seuro', async () => {
     it('converts euro to seuro based on the initial price (read-only)', async () => {
       const { price } = await BondingCurve.currentBucket();
       const euros = etherBalances.TWO_MILLION;
       const expectedSEuro = euros.mul(DECIMALS).div(price);
-      expect(await BondingCurve.calculatePriceReadOnly(euros)).to.eq(expectedSEuro);
+      expect(await BondingCurve.readOnlycalculatePrice(euros)).to.eq(expectedSEuro);
     });
 
     it('converts euro to seuro based on later bucket price (read-only)', async () => {
@@ -100,7 +100,7 @@ describe('BondingCurve', async () => {
       const { price } = await BondingCurve.currentBucket();
       const euros = etherBalances.TWO_MILLION;
       const expectedSEuro = euros.mul(DECIMALS).div(price);
-      expect(await BondingCurve.calculatePriceReadOnly(euros)).to.eq(expectedSEuro);
+      expect(await BondingCurve.readOnlycalculatePrice(euros)).to.eq(expectedSEuro);
     });
   });
 });

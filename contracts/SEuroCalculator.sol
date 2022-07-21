@@ -29,8 +29,8 @@ contract SEuroCalculator {
         return bondingCurve.calculatePrice(euros);
     }
 
-    function calculateReadOnly(uint256 _amount, address _tokUsdCl, uint8 _tokUsdDec) external view returns (uint256) {
+    function readOnlycalculate(uint256 _amount, address _tokUsdCl, uint8 _tokUsdDec) external view returns (uint256) {
         uint256 euros = calculateBaseRate(_tokUsdCl, _tokUsdDec) * _amount / FIXED_POINT;
-        return bondingCurve.calculatePriceReadOnly(euros);
+        return bondingCurve.readOnlyCalculatePrice(euros);
     }
 }
