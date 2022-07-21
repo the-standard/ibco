@@ -2,22 +2,6 @@ const bn = require('bignumber.js');
 const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 
-<<<<<<< HEAD
-var POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
-var etherBalances = {
-  "8K": ethers.utils.parseEther('8000'),
-  "10K": ethers.utils.parseEther('10000'),
-  "80K": ethers.utils.parseEther('80000'),
-  "100K": ethers.utils.parseEther('100000'),
-  "125K": ethers.utils.parseEther('125000'),
-  "ONE_MILLION": ethers.utils.parseEther('1000000'),
-  "TWO_MILLION": ethers.utils.parseEther('2000000'),
-  "FOUR_MILLION": ethers.utils.parseEther('4000000'),
-  "FIFTY_MILLION": ethers.utils.parseEther('50000000'),
-  "HUNDRED_MILLION": ethers.utils.parseEther('100000000'),
-  "FIVE_HUNDRED_MILLION": ethers.utils.parseEther('500000000'),
-  "ONE_BILLION": ethers.utils.parseEther('1000000000'),
-=======
 const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 
 let etherBalances = {
@@ -26,13 +10,13 @@ let etherBalances = {
   '80K': ethers.utils.parseEther('80000'),
   '100K': ethers.utils.parseEther('100000'),
   '125K': ethers.utils.parseEther('125000'),
+  ONE_MILLION: ethers.utils.parseEther('1000000'),
   TWO_MILLION: ethers.utils.parseEther('2000000'),
   FOUR_MILLION: ethers.utils.parseEther('4000000'),
   FIFTY_MILLION: ethers.utils.parseEther('50000000'),
   HUNDRED_MILLION: ethers.utils.parseEther('100000000'),
   FIVE_HUNDRED_MILLION: ethers.utils.parseEther('500000000'),
   ONE_BILLION: ethers.utils.parseEther('1000000000'),
->>>>>>> master
 };
 
 const MOST_STABLE_FEE = 500;

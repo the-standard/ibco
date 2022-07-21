@@ -190,6 +190,34 @@ describe('Staking', async () => {
       // with not enough TST
       mint = Staking.connect(user).mint(10);
       await expect(mint).to.be.revertedWith('err-not-min');
+
+      // mint second user //
+      
+      await TST.connect(owner).mint(random.address, weiValue);
+      await TST.connect(random).approve(Staking.address, weiValue);
+      balance = await TST.balanceOf(random.address);
+      expect(balance).to.eq(weiValue);
+
+      await Staking.connect(random).mint(weiValue);
+      balance = await TST.balanceOf(random.address);
+      expect(balance).to.eq(0);
+
+      // check the 721 mint stuff
+      expect(await Staking.balanceOf(random.address)).to.eq(1);
+      expect(await Staking.ownerOf(1)).to.eq(random.address);
+
+      // value == 1,000,000 SEURO
+      // 428 SEURO reward
+      // 1,000,000 - 428 - 428 == 999572
+      value = ethers.utils.parseEther('998716');
+      expect(await Staking.remaining(SEuro.address)).to.eq(value);
+
+      // test positions
+      p = await Staking.position(random.address)
+      expect(p[0]).to.eq(1);        // nonce
+      expect(p[1]).to.eq(1);        // tokenId
+      expect(p[2]).to.eq(true);     // open for business
+      expect(p[3]).to.eq(weiValue); // weiValue
     });
 
     it('tests the start, end, supply MINT validations', async () => {

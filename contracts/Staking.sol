@@ -4,12 +4,9 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
-import "hardhat/console.sol";
 
 contract Staking is ERC721URIStorage, Ownable {
-    using Counters for Counters.Counter;
-    Counters.Counter private _tokenIds;
+    uint256 private _tokenId;
 
     bool public active;         // active or not, needs to be set manually
     bool public catastrophic;   // in the event of a catastrophy, let users withdraw
@@ -111,7 +108,7 @@ contract Staking is ERC721URIStorage, Ownable {
         TOKEN.transferFrom(msg.sender, address(this), _amount);
 
         // fetch current tokenID
-        uint256 newItemId = _tokenIds.current();
+        uint256 newItemId = _tokenId;
 
         Position memory position = _positions[msg.sender];
 
@@ -121,7 +118,7 @@ contract Staking is ERC721URIStorage, Ownable {
             position.open = true;
             position.tokenId = newItemId;
 
-            _tokenIds.increment();
+            _tokenId++;
         }
 
         // update the position
@@ -175,7 +172,7 @@ contract Staking is ERC721URIStorage, Ownable {
             position.reward
         );
     }
-    
+
     function catastrophy() external onlyOwner {
         require(active == true, 'err-already-active');
         require(catastrophic == false, 'err-already-catastrophic');
