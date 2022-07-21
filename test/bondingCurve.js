@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { DECIMALS } = require('./common');
+const { DECIMALS, etherBalances } = require('./common');
 
 describe('BondingCurve', async () => {
   let BondingCurve, SEuro, TestBondingCurve;
@@ -84,6 +84,23 @@ describe('BondingCurve', async () => {
       const newBucketPrice = (await BondingCurve.currentBucket()).price;
 
       expect(newBucketPrice).to.equal(await getBucketPrice(1));
+    });
+  });
+
+  describe('read-only euros to seuro', async () => {
+    it('converts euro to seuro based on the initial price (read-only)', async () => {
+      const { price } = await BondingCurve.currentBucket();
+      const euros = etherBalances.TWO_MILLION;
+      const expectedSEuro = euros.mul(DECIMALS).div(price);
+      expect(await BondingCurve.readOnlyCalculatePrice(euros)).to.eq(expectedSEuro);
+    });
+
+    it('converts euro to seuro based on later bucket price (read-only)', async () => {
+      await BondingCurve.updateCurrentBucket(etherBalances.HUNDRED_MILLION);
+      const { price } = await BondingCurve.currentBucket();
+      const euros = etherBalances.TWO_MILLION;
+      const expectedSEuro = euros.mul(DECIMALS).div(price);
+      expect(await BondingCurve.readOnlyCalculatePrice(euros)).to.eq(expectedSEuro);
     });
   });
 });

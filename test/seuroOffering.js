@@ -234,4 +234,15 @@ describe('SEuroOffering', async () => {
       expect(status._stop).to.equal(0);
     });
   });
+
+  describe('readOnlyCalculateSwap', async () => {
+    it('calculates the read-only swap amount for token', async () => {
+      const toSwap = await ethers.utils.parseEther('1');
+      const wethBytes = ethers.utils.formatBytes32String('WETH');
+      const expectedSeuros = await getEthToSEuro(toSwap);
+      const seuros = await SEuroOffering.readOnlyCalculateSwap(wethBytes, toSwap);
+
+      expect(seuros).to.equal(expectedSeuros);
+    });
+  });
 });
