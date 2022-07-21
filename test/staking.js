@@ -75,9 +75,6 @@ describe('Staking', async () => {
     await expect(pa).to.eq(false);
   });
 
-  it('un-disables the pool', async () => {
-  })
-
   it('tests for the seuro balance', async () => {
     StakingContract = await ethers.getContractFactory('Staking');
     const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
@@ -361,16 +358,20 @@ describe('Staking', async () => {
     await expect(withdraw).to.be.revertedWith('err-no-funds');
   });
 
-  // TODO
-  // it('closes pool and allows people to withdraw!!!', async () => {
-  // });
+  it('closes pool and allows people to withdraw!!!', async () => {
+    expect(1).to.eq(2);
+  });
 
-  // TODO
-  // it('destroys the pool and all the tokens!!!', async () => {
-  // });
+  it('destroys the pool and all the tokens!!!', async () => {
+    expect(1).to.eq(2);
+  });
 
-  // TODO
-  // it('will list all positions', async () => {
-  // });
-  //
+  it('will list all positions', async () => {
+    expect(1).to.eq(2);
+  });
+
+  it('un-disables the pool', async () => {
+    expect(1).to.eq(2);
+  })
+
 });

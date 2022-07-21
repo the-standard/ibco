@@ -85,7 +85,7 @@ contract Staking is ERC721URIStorage, Ownable {
         return balance(_address) - SEURO_ALLOCATED;
     }
 
-    function mint(uint256 _amount) external returns(uint256) {
+    function mint(uint256 _amount) external {
 
         // TODO CHORE needs refactor
         require(active == true, 'err-not-active');
@@ -127,9 +127,6 @@ contract Staking is ERC721URIStorage, Ownable {
 
         // update the remaining SEURO
         SEURO_ALLOCATED += total;
-
-        // makes no sense to return this.
-        return newItemId;
     }
 
     function burn() public {
