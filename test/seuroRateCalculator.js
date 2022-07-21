@@ -1,6 +1,7 @@
 const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 const { expect } = require('chai');
+const { etherBalances, DECIMALS } = require('./common')
 
 describe('SEuroCalculator', async () => {
   const CL_ETH_USD = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
@@ -44,8 +45,14 @@ describe('SEuroCalculator', async () => {
   });
 
   it('calculates the rate for other tokens', async () => {
-    const amount = ethers.utils.parseEther('1000');
+    const amount = etherBalances['10K'];
     const seuros = await SEuroCalculator.callStatic.calculate(amount, CL_DAI_USD, CL_DAI_USD_DEC);
+    expect(seuros).to.equal(await expectedSEuros(CL_DAI_USD, amount));
+  });
+
+  it('calculates using read-only bonding curve', async () => {
+    const amount = etherBalances.TWO_MILLION;
+    const seuros = await SEuroCalculator.calculateReadOnly(amount, CL_DAI_USD, CL_DAI_USD_DEC);
     expect(seuros).to.equal(await expectedSEuros(CL_DAI_USD, amount));
   });
 });
