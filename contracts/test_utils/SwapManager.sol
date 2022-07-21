@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 
 contract SwapManager {
     address private constant SWAP_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
@@ -36,5 +37,24 @@ contract SwapManager {
             );
 
         router.exactInputSingle{value: msg.value}(params);
+    }
+
+    function swap(address _tokenIn, address _tokenOut, uint256 _amountIn, uint24 _fee) external {
+        TransferHelper.safeTransferFrom(_tokenIn, msg.sender, address(this), _amountIn);
+        TransferHelper.safeApprove(_tokenIn, address(router), _amountIn);
+
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
+            .ExactInputSingleParams({
+                tokenIn: _tokenIn,
+                tokenOut: _tokenOut,
+                fee: _fee,
+                recipient: msg.sender,
+                deadline: block.timestamp,
+                amountIn: _amountIn,
+                amountOutMinimum: 1,
+                sqrtPriceLimitX96: 0
+            });
+
+        router.exactInputSingle(params);
     }
 }

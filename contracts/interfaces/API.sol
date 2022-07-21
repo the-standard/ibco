@@ -21,8 +21,6 @@ interface IBondingEvent {
     function bond(
         address _user,
         uint256 _amountSeuro,
-        uint256 _amountOther,
-        address _otherAddress,
         uint256 _weeks,
         uint256 _rate
     ) external;
@@ -36,4 +34,6 @@ interface IRatioCalculator {
         int24 _upper,
         bool _seuroIsToken0
     ) external pure returns (uint256);
+
+    function getTickAt(uint160 _price) external pure returns (int24);
 }
