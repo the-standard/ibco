@@ -60,6 +60,7 @@ contract Staking is ERC721URIStorage, Ownable {
     }
 
     function activate() external onlyOwner {
+        require(active == false, 'err-already-active');
         active = true;
     }
 
@@ -73,6 +74,26 @@ contract Staking is ERC721URIStorage, Ownable {
         require(catastrophic == false, 'err-already-catastrophic');
         catastrophic = true;
         active = false;
+    }
+
+    function closePosition() external {
+        // require(active == true, 'err-already-active');
+        require(catastrophic == true, 'err-not-allowed');
+
+        Position memory position = _positions[msg.sender];
+        require(position.nonce > 0, 'err-no-position');
+        require(position.open == true, 'err-postition-closed');
+
+        IERC20 TOKEN = IERC20(TST_ADDRESS);
+        TOKEN.transfer(msg.sender, position.totalValue);
+        
+        // closed for business
+        position.open = false;
+
+        // burn the token
+        _burn(position.tokenId);
+
+        _positions[msg.sender] = position;
     }
 
     // reward works out the amount of seuro given to the user based on the

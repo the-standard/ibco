@@ -363,7 +363,7 @@ describe('Staking', async () => {
     });
   });
 
-  describe.only('Catastrophic events!', async () => {
+  describe('Catastrophic events!', async () => {
     it('closes pool and allows people to withdraw!!!', async () => {
       let blockNum = await ethers.provider.getBlock();
       const then = blockNum.timestamp;
@@ -394,19 +394,107 @@ describe('Staking', async () => {
     });
 
     it('closes pool and allows people to withdraw!!!', async () => {
+      let blockNum = await ethers.provider.getBlock();
+      const then = blockNum.timestamp;
+
+      StakingContract = await ethers.getContractFactory('Staking');
+      const Staking = await StakingContract.deploy("Staking", "STS", 0, then + 600, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+
+      await Staking.activate();
+
+      let value = etherBalances.ONE_MILLION;
+      await SEuro.mint(Staking.address, value);
+
+      // cannot withdraw cos we're not suspended
+      let cat = Staking.connect(user).closePosition();
+      await expect(cat).to.be.revertedWith('err-not-allowed')
+
+      // mint
+      const weiValue = etherBalances["8K"];
+      await TST.connect(owner).mint(user.address, weiValue);
+      await TST.connect(user).approve(Staking.address, weiValue);
+      await Staking.connect(user).mint(weiValue);
+
+      balance = await TST.balanceOf(user.address);
+      expect(balance).to.eq(0);
+
+      // catastrophy!
+      await Staking.catastrophy();
+      let catastrophic = await Staking.catastrophic();
+      expect(catastrophic).to.eq(true);
+      
+      // close
+      cat = Staking.connect(user).closePosition();
+      await expect(cat).to.not.be.reverted;
+
+      balance = await TST.balanceOf(user.address);
+      expect(balance).to.eq(weiValue);
+
+      // test positions
+      let p = await Staking.position(user.address)
+      expect(p[2]).to.eq(false);     // closed for business
+    })
+
+    it('closes pool and checks the validations!!!', async () => {
+      let blockNum = await ethers.provider.getBlock();
+      const then = blockNum.timestamp;
+
+      StakingContract = await ethers.getContractFactory('Staking');
+      const Staking = await StakingContract.deploy("Staking", "STS", 0, then + 600, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+
+      await Staking.activate();
+
+      let value = etherBalances.ONE_MILLION;
+      await SEuro.mint(Staking.address, value);
+
+      // cannot withdraw cos we're not suspended
+      let cat = Staking.connect(user).closePosition();
+      await expect(cat).to.be.revertedWith('err-not-allowed')
+
+      balance = await TST.balanceOf(user.address);
+      expect(balance).to.eq(0);
+
+      // catastrophy!
+      await Staking.catastrophy();
+      let catastrophic = await Staking.catastrophic();
+      expect(catastrophic).to.eq(true);
+      
+      // close
+      cat = Staking.connect(user).closePosition();
+      await expect(cat).to.be.revertedWith('err-no-position')
     })
   });
 
-  it('destroys the pool and all the tokens!!!', async () => {
-    expect(1).to.eq(2);
+  // TODO fix or remove
+  describe('lists positions!', async () => {
+    it('will list all positions', async () => {
+      let blockNum = await ethers.provider.getBlock();
+      const then = blockNum.timestamp;
+
+      StakingContract = await ethers.getContractFactory('Staking');
+      const Staking = await StakingContract.deploy("Staking", "STS", 0, then + 600, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+
+      await Staking.activate();
+
+      let value = etherBalances.ONE_MILLION;
+      await SEuro.mint(Staking.address, value);
+
+      // cannot withdraw cos we're not suspended
+      let cat = Staking.connect(user).closePosition();
+      await expect(cat).to.be.revertedWith('err-not-allowed')
+
+      // mint
+      const weiValue = etherBalances["8K"];
+      await TST.connect(owner).mint(user.address, weiValue);
+      await TST.connect(user).approve(Staking.address, weiValue);
+      await Staking.connect(user).mint(weiValue);
+
+      balance = await TST.balanceOf(user.address);
+      expect(balance).to.eq(0);
+
+      // test positions
+      let p = await Staking.positions()
+      expect(p.length).to.eq(1);
+    });
   });
-
-  it('will list all positions', async () => {
-    expect(1).to.eq(2);
-  });
-
-  it('un-disables the pool', async () => {
-    expect(1).to.eq(2);
-  })
-
 });
