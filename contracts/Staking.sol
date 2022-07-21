@@ -16,7 +16,7 @@ contract Staking is ERC721URIStorage, Ownable {
     uint256 public endTime;
     uint256 public initialised;
     uint256 public TOTAL_SEURO;
-    uint256 public SEURO_REMAINING;
+    uint256 public SEURO_ALLOCATED;
     uint public SEUROTST;
     uint public INTEREST;
 
@@ -35,26 +35,16 @@ contract Staking is ERC721URIStorage, Ownable {
         uint256 reward;
     }
 
-    constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {}
-
-    function activate(
+    constructor(
+        string memory _name,
+        string memory _symbol,
         uint256 _start,
         uint256 _end,
         address _TST_ADDRESS,
         address _SEURO_ADDRESS,
-        uint256 _TOTAL_SEURO,
         uint _SEUROTST,
         uint _INTEREST
-    ) external onlyOwner {
-
-        // CHORE needs refactor
-        require(active == false, 'err-already-active');
-        require(initialised == 0, 'err-already-initialised');
-        require(_end > _start, 'err-start-end');
-        require(_end >= block.timestamp, 'err-invalid-end');
-
-        TOTAL_SEURO = _TOTAL_SEURO;
-        SEURO_REMAINING = _TOTAL_SEURO;
+    ) ERC721(_name, _symbol) {
         SEUROTST = _SEUROTST;
         INTEREST = _INTEREST;
         TST_ADDRESS = _TST_ADDRESS;
@@ -65,7 +55,9 @@ contract Staking is ERC721URIStorage, Ownable {
 
         // TODO variable
         minTST = 1 ether;
+    }
 
+    function activate() external onlyOwner {
         active = true;
     }
 
@@ -77,9 +69,20 @@ contract Staking is ERC721URIStorage, Ownable {
     // reward works out the amount of seuro given to the user based on the
     // amount of TST they first put in.
     function reward(uint256 _amount) public view returns (uint256) {
-        uint256 SEURO = _amount * SEUROTST / 10_000;
-        uint256 REWARD = SEURO * INTEREST / 10_000;
+        uint256 SEURO = _amount * SEUROTST / 100_000;
+        uint256 REWARD = SEURO * INTEREST / 100_000;
         return REWARD + SEURO;
+    }
+
+    // fetches the balance of the contract for the give erc20 token
+    function balance(address _address) public view returns(uint256) {
+        IERC20 TOKEN = IERC20(_address);
+        return TOKEN.balanceOf(address(this));
+    }
+
+    // fetches the remaining about of tokens in the contract
+    function remaining(address _address) public view returns(uint256) {
+        return balance(_address) - SEURO_ALLOCATED;
     }
 
     function mint(uint256 _amount) external returns(uint256) {
@@ -92,7 +95,7 @@ contract Staking is ERC721URIStorage, Ownable {
 
         // calculate the reward so we can also update the remaining SEURO
         uint256 total = reward(_amount);
-        require(SEURO_REMAINING >= total, 'err-overlimit');
+        require(remaining(SEURO_ADDRESS) >= total, 'err-overlimit');
 
         // Transfer funds from sender to this contract
         // TODO send to some other guy not this contract!
@@ -105,31 +108,27 @@ contract Staking is ERC721URIStorage, Ownable {
 
         Position memory position = _positions[msg.sender];
 
-        if (position.nonce > 0) {
-            position.totalValue += _amount;
-            position.nonce += 1;
-            position.reward += total;
-        }
-
         if (position.nonce == 0) {
             _mint(msg.sender, newItemId);
 
-            position.nonce = 1;
             position.open = true;
-            position.totalValue = _amount;
             position.tokenId = newItemId;
-            position.reward = total;
 
             _tokenIds.increment();
         }
 
         // update the position
+        position.totalValue += _amount;
+        position.nonce += 1;
+        position.reward += total;
+
+        // update the position
         _positions[msg.sender] = position;
 
         // update the remaining SEURO
-        SEURO_REMAINING -= total;
+        SEURO_ALLOCATED += total;
 
-        // makes no sence to return this.
+        // makes no sense to return this.
         return newItemId;
     }
 
