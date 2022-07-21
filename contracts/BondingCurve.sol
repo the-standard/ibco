@@ -38,6 +38,11 @@ contract BondingCurve {
         updateCurrentBucket(ibcoTotalSupply);
     }
 
+    function readOnlyCalculatePrice(uint256 _euroAmount) external view returns (uint256) {
+        // fetches the price of euros based on the *current* discount price, therefore not completely accurate
+        return convertEuroToSeuro(_euroAmount, currentBucket.price);
+    }
+
     function calculatePrice(uint256 _euroAmount) external returns (uint256) {
         uint256 _sEuroTotal = 0;
         uint256 remainingEuros = _euroAmount;
