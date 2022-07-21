@@ -47,7 +47,7 @@ contract SEuroOffering is Ownable {
 
     function readOnlyCalculateSwap(bytes32 _token, uint256 _amount) external view returns (uint256) {
         (, address chainlinkAddr, uint8 chainlinkDec) = tokenManager.get(_token);
-        return sEuroRateCalculator.readOnlycalculate(_amount, chainlinkAddr, chainlinkDec);
+        return sEuroRateCalculator.readOnlyCalculate(_amount, chainlinkAddr, chainlinkDec);
     }
 
     function swap(bytes32 _token, uint256 _amount) external ifActive {

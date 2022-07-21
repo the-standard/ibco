@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 const { expect } = require('chai');
-const { etherBalances, DECIMALS } = require('./common')
+const { etherBalances } = require('./common')
 
 describe('SEuroCalculator', async () => {
   const CL_ETH_USD = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
