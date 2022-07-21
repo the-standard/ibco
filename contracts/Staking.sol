@@ -11,9 +11,11 @@ contract Staking is ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
-    bool public active;
-    uint256 public startTime;
-    uint256 public endTime;
+    bool public active;         // active or not, needs to be set manually
+    bool public catastrophic;   // in the event of a catastrophy, let users withdraw
+
+    uint256 public startTime;   // the start time for the 'stake'
+    uint256 public endTime;     // the end time for the 'stake'
     uint256 public initialised;
     uint256 public TOTAL_SEURO;
     uint256 public SEURO_ALLOCATED;
@@ -66,6 +68,13 @@ contract Staking is ERC721URIStorage, Ownable {
         active = false;
     }
 
+    function catastrophy() external onlyOwner {
+        require(active == true, 'err-already-active');
+        require(catastrophic == false, 'err-already-catastrophic');
+        catastrophic = true;
+        active = false;
+    }
+
     // reward works out the amount of seuro given to the user based on the
     // amount of TST they first put in.
     function reward(uint256 _amount) public view returns (uint256) {
@@ -86,7 +95,6 @@ contract Staking is ERC721URIStorage, Ownable {
     }
 
     function mint(uint256 _amount) external {
-
         // TODO CHORE needs refactor
         require(active == true, 'err-not-active');
         require(_amount >= minTST, 'err-not-min');
@@ -145,7 +153,7 @@ contract Staking is ERC721URIStorage, Ownable {
         // withdraw funds
         IERC20 TOKEN = IERC20(SEURO_ADDRESS);
         TOKEN.transfer(msg.sender, position.reward);
-        
+
         _positions[msg.sender] = position;
     }
 
