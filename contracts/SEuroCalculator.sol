@@ -24,8 +24,13 @@ contract SEuroCalculator {
         return FIXED_POINT * uint256(tokUsd) / uint256(eurUsd) / 10 ** (_tokUsdDec - EUR_USD_CL_DEC);
     }
 
-    function calculate(uint256 _amount, address _tokUsdCl, uint8 _tokUsdDec) external returns (uint256 rate) {
+    function calculate(uint256 _amount, address _tokUsdCl, uint8 _tokUsdDec) external returns (uint256) {
         uint256 euros = calculateBaseRate(_tokUsdCl, _tokUsdDec) * _amount / FIXED_POINT;
-        rate = bondingCurve.calculatePrice(euros);
+        return bondingCurve.calculatePrice(euros);
+    }
+
+    function readOnlyCalculate(uint256 _amount, address _tokUsdCl, uint8 _tokUsdDec) external view returns (uint256) {
+        uint256 euros = calculateBaseRate(_tokUsdCl, _tokUsdDec) * _amount / FIXED_POINT;
+        return bondingCurve.readOnlyCalculatePrice(euros);
     }
 }

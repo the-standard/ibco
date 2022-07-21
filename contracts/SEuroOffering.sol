@@ -45,6 +45,11 @@ contract SEuroOffering is Ownable {
         _;
     }
 
+    function readOnlyCalculateSwap(bytes32 _token, uint256 _amount) external view returns (uint256) {
+        (, address chainlinkAddr, uint8 chainlinkDec) = tokenManager.get(_token);
+        return sEuroRateCalculator.readOnlyCalculate(_amount, chainlinkAddr, chainlinkDec);
+    }
+
     function swap(bytes32 _token, uint256 _amount) external ifActive {
         (address addr, address chainlinkAddr, uint8 chainlinkDec) = tokenManager.get(_token);
         IERC20 token = IERC20(addr);
@@ -53,7 +58,7 @@ contract SEuroOffering is Ownable {
         token.transferFrom(msg.sender, address(this), _amount);
         uint256 euros = getEuros(_amount, chainlinkAddr, chainlinkDec);
         SEuro(seuro).mint(msg.sender, euros);
-        bondingCurve.updateCurrentBucket();
+        bondingCurve.updateCurrentBucket(euros);
         emit Swap(_token, _amount, euros);
     }
 
@@ -63,7 +68,7 @@ contract SEuroOffering is Ownable {
         weth.deposit{value: msg.value};
         uint256 euros = getEuros(msg.value, chainlinkAddr, chainlinkDec);
         SEuro(seuro).mint(msg.sender, euros);
-        bondingCurve.updateCurrentBucket();
+        bondingCurve.updateCurrentBucket(euros);
         emit Swap(bytes32("ETH"), msg.value, euros);
     }
 

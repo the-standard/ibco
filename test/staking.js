@@ -464,37 +464,4 @@ describe('Staking', async () => {
       await expect(cat).to.be.revertedWith('err-no-position')
     })
   });
-
-  // TODO fix or remove
-  describe('lists positions!', async () => {
-    it('will list all positions', async () => {
-      let blockNum = await ethers.provider.getBlock();
-      const then = blockNum.timestamp;
-
-      StakingContract = await ethers.getContractFactory('Staking');
-      const Staking = await StakingContract.deploy("Staking", "STS", 0, then + 600, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
-
-      await Staking.activate();
-
-      let value = etherBalances.ONE_MILLION;
-      await SEuro.mint(Staking.address, value);
-
-      // cannot withdraw cos we're not suspended
-      let cat = Staking.connect(user).catastrophicClose();
-      await expect(cat).to.be.revertedWith('err-not-allowed')
-
-      // mint
-      const weiValue = etherBalances["8K"];
-      await TST.connect(owner).mint(user.address, weiValue);
-      await TST.connect(user).approve(Staking.address, weiValue);
-      await Staking.connect(user).mint(weiValue);
-
-      balance = await TST.balanceOf(user.address);
-      expect(balance).to.eq(0);
-
-      // test positions
-      let p = await Staking.positions()
-      expect(p.length).to.eq(1);
-    });
-  });
 });

@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { DECIMALS } = require('./common');
+const { DECIMALS, etherBalances } = require('./common');
 
 describe('BondingCurve', async () => {
   let BondingCurve, SEuro, TestBondingCurve;
@@ -67,7 +67,7 @@ describe('BondingCurve', async () => {
 
     it('will not exceed full price when max supply is met', async () => {
       await SEuro.mint(owner.address, MAX_SUPPLY);
-      await BondingCurve.updateCurrentBucket();
+      await BondingCurve.updateCurrentBucket(MAX_SUPPLY);
       const euros = ethers.utils.parseEther('1');
 
       const seuros = await BondingCurve.callStatic.calculatePrice(euros);
@@ -79,11 +79,28 @@ describe('BondingCurve', async () => {
   describe('updateCurrentBucket', async () => {
     it('saves new bucket price when supply has changed', async () => {
       await SEuro.mint(owner.address, BUCKET_SIZE);
-      await BondingCurve.updateCurrentBucket();
+      await BondingCurve.updateCurrentBucket(BUCKET_SIZE);
 
       const newBucketPrice = (await BondingCurve.currentBucket()).price;
 
       expect(newBucketPrice).to.equal(await getBucketPrice(1));
+    });
+  });
+
+  describe('read-only euros to seuro', async () => {
+    it('converts euro to seuro based on the initial price (read-only)', async () => {
+      const { price } = await BondingCurve.currentBucket();
+      const euros = etherBalances.TWO_MILLION;
+      const expectedSEuro = euros.mul(DECIMALS).div(price);
+      expect(await BondingCurve.readOnlyCalculatePrice(euros)).to.eq(expectedSEuro);
+    });
+
+    it('converts euro to seuro based on later bucket price (read-only)', async () => {
+      await BondingCurve.updateCurrentBucket(etherBalances.HUNDRED_MILLION);
+      const { price } = await BondingCurve.currentBucket();
+      const euros = etherBalances.TWO_MILLION;
+      const expectedSEuro = euros.mul(DECIMALS).div(price);
+      expect(await BondingCurve.readOnlyCalculatePrice(euros)).to.eq(expectedSEuro);
     });
   });
 });

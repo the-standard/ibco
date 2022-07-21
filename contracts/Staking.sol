@@ -184,7 +184,6 @@ contract Staking is ERC721URIStorage, Ownable {
     }
 
     function catastrophicClose() external {
-        // require(active == true, 'err-already-active');
         require(catastrophic == true, 'err-not-allowed');
 
         Position memory position = _positions[msg.sender];
