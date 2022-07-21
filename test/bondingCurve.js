@@ -92,7 +92,7 @@ describe('BondingCurve', async () => {
       const { price } = await BondingCurve.currentBucket();
       const euros = etherBalances.TWO_MILLION;
       const expectedSEuro = euros.mul(DECIMALS).div(price);
-      expect(await BondingCurve.readOnlycalculatePrice(euros)).to.eq(expectedSEuro);
+      expect(await BondingCurve.readOnlyCalculatePrice(euros)).to.eq(expectedSEuro);
     });
 
     it('converts euro to seuro based on later bucket price (read-only)', async () => {
@@ -100,7 +100,7 @@ describe('BondingCurve', async () => {
       const { price } = await BondingCurve.currentBucket();
       const euros = etherBalances.TWO_MILLION;
       const expectedSEuro = euros.mul(DECIMALS).div(price);
-      expect(await BondingCurve.readOnlycalculatePrice(euros)).to.eq(expectedSEuro);
+      expect(await BondingCurve.readOnlyCalculatePrice(euros)).to.eq(expectedSEuro);
     });
   });
 });
