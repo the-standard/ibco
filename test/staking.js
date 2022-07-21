@@ -406,7 +406,7 @@ describe('Staking', async () => {
       await SEuro.mint(Staking.address, value);
 
       // cannot withdraw cos we're not suspended
-      let cat = Staking.connect(user).closePosition();
+      let cat = Staking.connect(user).catastrophicClose();
       await expect(cat).to.be.revertedWith('err-not-allowed')
 
       // mint
@@ -424,7 +424,7 @@ describe('Staking', async () => {
       expect(catastrophic).to.eq(true);
       
       // close
-      cat = Staking.connect(user).closePosition();
+      cat = Staking.connect(user).catastrophicClose();
       await expect(cat).to.not.be.reverted;
 
       balance = await TST.balanceOf(user.address);
@@ -448,7 +448,7 @@ describe('Staking', async () => {
       await SEuro.mint(Staking.address, value);
 
       // cannot withdraw cos we're not suspended
-      let cat = Staking.connect(user).closePosition();
+      let cat = Staking.connect(user).catastrophicClose();
       await expect(cat).to.be.revertedWith('err-not-allowed')
 
       balance = await TST.balanceOf(user.address);
@@ -460,7 +460,7 @@ describe('Staking', async () => {
       expect(catastrophic).to.eq(true);
       
       // close
-      cat = Staking.connect(user).closePosition();
+      cat = Staking.connect(user).catastrophicClose();
       await expect(cat).to.be.revertedWith('err-no-position')
     })
   });
@@ -480,7 +480,7 @@ describe('Staking', async () => {
       await SEuro.mint(Staking.address, value);
 
       // cannot withdraw cos we're not suspended
-      let cat = Staking.connect(user).closePosition();
+      let cat = Staking.connect(user).catastrophicClose();
       await expect(cat).to.be.revertedWith('err-not-allowed')
 
       // mint
