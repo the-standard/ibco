@@ -59,6 +59,11 @@ contract Staking is ERC721URIStorage, Ownable {
         minTST = 1 ether;
     }
 
+    modifier isAuthorizedForToken(uint256 tokenId) {
+        require(_isApprovedOrOwner(msg.sender, tokenId), 'Not approved');
+        _;
+    }
+
     function activate() external onlyOwner {
         require(active == false, 'err-already-active');
         active = true;
@@ -86,7 +91,7 @@ contract Staking is ERC721URIStorage, Ownable {
 
         IERC20 TOKEN = IERC20(TST_ADDRESS);
         TOKEN.transfer(msg.sender, position.totalValue);
-        
+
         // closed for business
         position.open = false;
 
@@ -196,10 +201,5 @@ contract Staking is ERC721URIStorage, Ownable {
             position.totalValue,
             position.reward
         );
-    }
-
-    modifier isAuthorizedForToken(uint256 tokenId) {
-        require(_isApprovedOrOwner(msg.sender, tokenId), 'Not approved');
-        _;
     }
 }
