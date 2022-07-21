@@ -3,26 +3,24 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract Staking is ERC721URIStorage, Ownable {
+contract Staking is ERC721URIStorage {
     uint256 private _tokenId;
 
-    bool public active;         // active or not, needs to be set manually
-    bool public catastrophic;   // in the event of a catastrophy, let users withdraw
+    bool public active;             // active or not, needs to be set manually
+    bool public catastrophic;       // in the event of a catastrophy, let users withdraw
 
-    uint256 public startTime;   // the start time for the 'stake'
-    uint256 public endTime;     // the end time for the 'stake'
-    uint256 public initialised;
-    uint256 public TOTAL_SEURO;
-    uint256 public SEURO_ALLOCATED;
-    uint public SEUROTST;
-    uint public INTEREST;
-
-    uint256 private minTST;
+    uint public SEUROTST;           // SEURO:TST pair rate
+    uint public INTEREST;           // Interest for the bond
+    uint256 public startTime;       // the start time for the 'stake'
+    uint256 public endTime;         // the end time for the 'stake'
+    uint256 public initialised;     // the time we initialised the contract
+    uint256 public SEURO_ALLOCATED; // the amount of seuro allocated, inc rewards
+    uint256 private minTST;         // the min amount of tst we want to allow to bond
 
     address TST_ADDRESS;
     address SEURO_ADDRESS;
+    address public owner;
 
     mapping(address => Position) private _positions;
 
@@ -51,13 +49,14 @@ contract Staking is ERC721URIStorage, Ownable {
         startTime = _start;
         endTime = _end;
         initialised = block.timestamp;
+        owner = msg.sender;
 
         // TODO variable
         minTST = 1 ether;
     }
 
-    modifier isAuthorizedForToken(uint256 tokenId) {
-        require(_isApprovedOrOwner(msg.sender, tokenId), 'Not approved');
+    modifier onlyOwner() {
+        require(msg.sender == owner, 'err-only-owner');
         _;
     }
 
@@ -153,13 +152,13 @@ contract Staking is ERC721URIStorage, Ownable {
         _positions[msg.sender] = position;
     }
 
-    // withdraw to the owners address
+    // withdraw to the owner's address
     function withdraw(address _address) external onlyOwner {
         IERC20 TOKEN = IERC20(_address);
         uint256 balance = TOKEN.balanceOf(address(this));
 
         require(balance > 0, 'err-no-funds');
-        TOKEN.transfer(owner(), balance);
+        TOKEN.transfer(owner, balance);
     }
 
     function position(address owner) external view returns (uint96, uint256, bool, uint256, uint256) {
