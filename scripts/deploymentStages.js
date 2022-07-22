@@ -91,7 +91,8 @@ const mintUser = async (address) => {
 }
 
 const giveContractsRequiredPermissions = async () => {
-  await SEuro.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), SEuroOffering.address);
+  await SEuro.grantRole(await SEuro.MINTER_ROLE(), SEuroOffering.address);
+  await SEuroCalculator.grantRole(await SEuroCalculator.OFFERING(), SEuroOffering.address);
   await BondingCurve.grantRole(await BondingCurve.UPDATER(), SEuroOffering.address);
   await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), SEuroCalculator.address);
   await OperatorStage2.setStorage(BondStorage.address);

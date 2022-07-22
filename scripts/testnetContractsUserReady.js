@@ -18,7 +18,8 @@ async function main() {
   const TST = await ethers.getContractAt('DUMMY', addresses.TST);
 
   await SEuroOffering.activate();
-  await SEuro.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), SEuroOffering.address);
+  await SEuro.grantRole(await SEuro.MINTER_ROLE(), SEuroOffering.address);
+  await SEuroCalculator.grantRole(await SEuroCalculator.OFFERING(), SEuroOffering.address);
   await BondingCurve.grantRole(await BondingCurve.UPDATER(), SEuroOffering.address);
   await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), SEuroCalculator.address);
   await TokenManager.addAcceptedToken(ethers.utils.formatBytes32String("USDT"), USDT.address, '0x2bA49Aaa16E6afD2a993473cfB70Fa8559B523cF', 8);
