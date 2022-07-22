@@ -54,12 +54,13 @@ describe('SEuroCalculator', async () => {
     expect(seuros).to.equal(await expectedSEuros(CL_DAI_USD, amount));
   });
 
-  // it('does not do state-changing calculation unless called by offering contract', async () => {
-  //   const amount = etherBalances['10K'];
-  //   await expect(SEuroCalculator.calculate(amount, CL_DAI_USD, CL_DAI_USD_DEC)).to.be.revertedWith('invalid-user');
+  it('does not do state-changing calculation unless called by offering contract', async () => {
+    const amount = etherBalances['10K'];
+    await expect(SEuroCalculator.connect(offering).calculate(amount, CL_DAI_USD, CL_DAI_USD_DEC)).to.be.revertedWith('invalid-user');
 
-  //   await SEuroCalculator.setOffering()
-  // });
+    await SEuroCalculator.grantRole(await SEuroCalculator.OFFERING(), offering.address);
+    await expect(SEuroCalculator.connect(offering).calculate(amount, CL_DAI_USD, CL_DAI_USD_DEC)).not.to.be.reverted;
+  });
 
   it('calculates using read-only bonding curve', async () => {
     const amount = etherBalances.TWO_MILLION;

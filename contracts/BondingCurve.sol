@@ -5,8 +5,6 @@ import "contracts/SEuro.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-import "hardhat/console.sol";
-
 contract BondingCurve is AccessControl {
     struct Bucket {
         uint32 index;

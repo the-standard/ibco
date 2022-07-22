@@ -80,7 +80,7 @@ describe('BondingCurve', async () => {
       await expect(BondingCurve.connect(calculator).calculatePrice(euros)).to.be.revertedWith('invalid-user');
 
       await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), calculator.address);
-      await expect(BondingCurve.connect(calculator).calculatePrice(euros)).not.to.be.revertedWith('invalid-user');
+      await expect(BondingCurve.connect(calculator).calculatePrice(euros)).not.to.be.reverted;
     });
   });
 
