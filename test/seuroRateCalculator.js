@@ -3,6 +3,8 @@ const { BigNumber } = ethers;
 const { expect } = require('chai');
 const { etherBalances } = require('./common')
 
+let owner, offering;
+
 describe('SEuroCalculator', async () => {
   const CL_ETH_USD = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
   const CL_ETH_USD_DEC = 8;
@@ -14,6 +16,7 @@ describe('SEuroCalculator', async () => {
   let SEuroCalculator, BondingCurve;
 
   beforeEach(async () => {
+    [ owner, offering ] = await ethers.getSigners();
     const SEuroContract = await ethers.getContractFactory('SEuro');
     const SEuro = await SEuroContract.deploy('SEuro', 'SEUR', []);
     const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
@@ -23,7 +26,7 @@ describe('SEuroCalculator', async () => {
     BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
     const SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');
     SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, EUR_USD_CL, EUR_USD_CL_DEC);
-    await BondingCurve.setCalculator(SEuroCalculator.address);
+    await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), SEuroCalculator.address);
   });
 
   async function getBaseEurRate(clTokUsd) {
@@ -50,6 +53,13 @@ describe('SEuroCalculator', async () => {
     const seuros = await SEuroCalculator.callStatic.calculate(amount, CL_DAI_USD, CL_DAI_USD_DEC);
     expect(seuros).to.equal(await expectedSEuros(CL_DAI_USD, amount));
   });
+
+  // it('does not do state-changing calculation unless called by offering contract', async () => {
+  //   const amount = etherBalances['10K'];
+  //   await expect(SEuroCalculator.calculate(amount, CL_DAI_USD, CL_DAI_USD_DEC)).to.be.revertedWith('invalid-user');
+
+  //   await SEuroCalculator.setOffering()
+  // });
 
   it('calculates using read-only bonding curve', async () => {
     const amount = etherBalances.TWO_MILLION;

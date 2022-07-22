@@ -60,14 +60,6 @@ contract BondingCurve is AccessControl {
         _;
     }
 
-    function setUpdater(address _updater) external {
-        grantRole(UPDATER, _updater);
-    }
-
-    function setCalculator(address _calculator) external {
-        grantRole(CALCULATOR, _calculator);
-    }
-
     function readOnlyCalculatePrice(uint256 _euroAmount) external view returns (uint256) {
         // fetches the price of euros based on the *current* discount price, therefore not completely accurate
         return convertEuroToSeuro(_euroAmount, currentBucket.price);

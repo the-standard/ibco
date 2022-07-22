@@ -79,7 +79,7 @@ describe('BondingCurve', async () => {
       const euros = ethers.utils.parseEther('1');
       await expect(BondingCurve.connect(calculator).calculatePrice(euros)).to.be.revertedWith('invalid-user');
 
-      await BondingCurve.setCalculator(calculator.address);
+      await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), calculator.address);
       await expect(BondingCurve.connect(calculator).calculatePrice(euros)).not.to.be.revertedWith('invalid-user');
     });
   });
@@ -87,7 +87,7 @@ describe('BondingCurve', async () => {
   describe('updateCurrentBucket', async () => {
     it('saves new bucket price when supply has changed, if requested by SEuroOffering', async () => {
       // give updater access to update price bucket
-      await BondingCurve.setUpdater(updater.address);
+      await BondingCurve.grantRole(await BondingCurve.UPDATER(), updater.address);
 
       const bucket0Price = await getBucketPrice(0);
       const bucket1Price = await getBucketPrice(1);
