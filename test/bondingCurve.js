@@ -9,7 +9,7 @@ describe('BondingCurve', async () => {
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
 
   beforeEach(async () => {
-    [owner, customer, updater] = await ethers.getSigners();
+    [owner, customer, updater, calculator] = await ethers.getSigners();
 
     const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
     const SEuroContract = await ethers.getContractFactory('SEuro');
@@ -73,6 +73,14 @@ describe('BondingCurve', async () => {
       const seuros = await BondingCurve.callStatic.calculatePrice(euros);
 
       expect(seuros).to.equal(euros);
+    });
+
+    it('only allows calculator role to calculate price', async () => {
+      const euros = ethers.utils.parseEther('1');
+      await expect(BondingCurve.connect(calculator).calculatePrice(euros)).to.be.revertedWith('invalid-user');
+
+      await BondingCurve.setCalculator(calculator.address);
+      await expect(BondingCurve.connect(calculator).calculatePrice(euros)).not.to.be.revertedWith('invalid-user');
     });
   });
 

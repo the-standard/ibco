@@ -18,6 +18,7 @@ contract BondingCurve is AccessControl {
     uint8 private constant J_DENOMINATOR = 5;
 	bytes32 public constant DEFAULT_ADMIN = keccak256("DEFAULT_ADMIN");
 	bytes32 public constant UPDATER = keccak256("UPDATER");
+	bytes32 public constant CALCULATOR = keccak256("CALCULATOR");
 
     uint256 private immutable initialPrice;
     uint256 private immutable maxSupply;
@@ -34,7 +35,9 @@ contract BondingCurve is AccessControl {
     constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
 		_grantRole(DEFAULT_ADMIN, msg.sender);
         _setRoleAdmin(UPDATER, DEFAULT_ADMIN);
+        _setRoleAdmin(CALCULATOR, DEFAULT_ADMIN);
 		grantRole(UPDATER, msg.sender);
+		grantRole(CALCULATOR, msg.sender);
 
         seuro = SEuro(_seuro);
         initialPrice = _initialPrice;
@@ -52,8 +55,17 @@ contract BondingCurve is AccessControl {
         _;
     }
 
+    modifier onlyCalculator {
+		require(hasRole(CALCULATOR, msg.sender), "invalid-user");
+        _;
+    }
+
     function setUpdater(address _updater) external {
         grantRole(UPDATER, _updater);
+    }
+
+    function setCalculator(address _calculator) external {
+        grantRole(CALCULATOR, _calculator);
     }
 
     function readOnlyCalculatePrice(uint256 _euroAmount) external view returns (uint256) {
@@ -61,7 +73,7 @@ contract BondingCurve is AccessControl {
         return convertEuroToSeuro(_euroAmount, currentBucket.price);
     }
 
-    function calculatePrice(uint256 _euroAmount) external returns (uint256) {
+    function calculatePrice(uint256 _euroAmount) external onlyCalculator returns (uint256) {
         uint256 _sEuroTotal = 0;
         uint256 remainingEuros = _euroAmount;
         uint32 bucketIndex = currentBucket.index;
