@@ -23,6 +23,7 @@ describe('SEuroCalculator', async () => {
     BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
     const SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');
     SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, EUR_USD_CL, EUR_USD_CL_DEC);
+    await BondingCurve.setCalculator(SEuroCalculator.address);
   });
 
   async function getBaseEurRate(clTokUsd) {

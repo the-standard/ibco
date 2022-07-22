@@ -2,7 +2,7 @@ const { ethers, network } = require('hardhat');
 const fs = require('fs');
 const { encodePriceSqrt, MOST_STABLE_FEE, etherBalances } = require('../test/common');
 let addresses;
-let DummyTST, DummyUSDT, SEuro, SEuroOffering, OperatorStage2, BondStorage, BondingEvent, StandardTokenGateway, BondingCurve;
+let DummyTST, DummyUSDT, SEuro, SEuroOffering, OperatorStage2, BondStorage, BondingEvent, StandardTokenGateway, BondingCurve, SEuroCalculator;
 
 const INITIAL_PRICE = ethers.utils.parseEther('0.8');
 const MAX_SUPPLY = ethers.utils.parseEther('200000000');
@@ -39,7 +39,7 @@ const deployContracts = async () => {
   await completed(SEuro, 'SEuro');
   BondingCurve = await (await ethers.getContractFactory('BondingCurve')).deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   await completed(BondingCurve, 'BondingCurve')
-  const SEuroCalculator = await (await ethers.getContractFactory('SEuroCalculator')).deploy(BondingCurve.address, externalContracts.eurUsdCl.address, externalContracts.eurUsdCl.dec);
+  SEuroCalculator = await (await ethers.getContractFactory('SEuroCalculator')).deploy(BondingCurve.address, externalContracts.eurUsdCl.address, externalContracts.eurUsdCl.dec);
   await completed(SEuroCalculator, 'SEuroCalculator')
   const TokenManager = await (await ethers.getContractFactory('TokenManager')).deploy(externalContracts.weth, externalContracts.ethUsdCl.address, externalContracts.ethUsdCl.dec);
   await completed(TokenManager, 'TokenManager')
@@ -93,6 +93,7 @@ const mintUser = async (address) => {
 const giveContractsRequiredPermissions = async () => {
   await SEuro.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), SEuroOffering.address);
   await BondingCurve.setUpdater(SEuroOffering.address);
+  await BondingCurve.setCalculator(SEuroCalculator.address);
   await OperatorStage2.setStorage(BondStorage.address);
   await OperatorStage2.setBonding(BondingEvent.address);
   await OperatorStage2.setGateway(StandardTokenGateway.address);

@@ -58,6 +58,7 @@ describe('SEuroOffering', async () => {
 
     await SEuro.connect(owner).grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), SEuroOffering.address)
     await BondingCurve.setUpdater(SEuroOffering.address);
+    await BondingCurve.setCalculator(SEuroCalculator.address);
   });
 
   describe('swap', async () => {
