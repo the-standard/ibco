@@ -3,8 +3,11 @@ pragma solidity ^0.8.0;
 
 import "contracts/SEuro.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract BondingCurve {
+import "hardhat/console.sol";
+
+contract BondingCurve is AccessControl {
     struct Bucket {
         uint32 index;
         uint256 price;
@@ -13,6 +16,8 @@ contract BondingCurve {
     uint256 private constant FINAL_PRICE = 1_000_000_000_000_000_000;
     uint8 private constant J_NUMERATOR = 1;
     uint8 private constant J_DENOMINATOR = 5;
+	bytes32 public constant DEFAULT_ADMIN = keccak256("DEFAULT_ADMIN");
+	bytes32 public constant UPDATER = keccak256("UPDATER");
 
     uint256 private immutable initialPrice;
     uint256 private immutable maxSupply;
@@ -27,6 +32,10 @@ contract BondingCurve {
     uint256 private ibcoTotalSupply;
 
     constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
+		_grantRole(DEFAULT_ADMIN, msg.sender);
+        _setRoleAdmin(UPDATER, DEFAULT_ADMIN);
+		grantRole(UPDATER, msg.sender);
+
         seuro = SEuro(_seuro);
         initialPrice = _initialPrice;
         maxSupply = _maxSupply;
@@ -36,6 +45,15 @@ contract BondingCurve {
         bucketSize = _bucketSize;
         finalBucketIndex = uint32(_maxSupply / _bucketSize);
         updateCurrentBucket(ibcoTotalSupply);
+    }
+
+    modifier onlyUpdater {
+		require(hasRole(UPDATER, msg.sender), "invalid-user");
+        _;
+    }
+
+    function setUpdater(address _updater) external {
+        grantRole(UPDATER, _updater);
     }
 
     function readOnlyCalculatePrice(uint256 _euroAmount) external view returns (uint256) {
@@ -64,7 +82,7 @@ contract BondingCurve {
         return _sEuroTotal;
     }
 
-    function updateCurrentBucket(uint256 _minted) public {
+    function updateCurrentBucket(uint256 _minted) public onlyUpdater {
         ibcoTotalSupply += _minted;
         uint32 bucketIndex = uint32(ibcoTotalSupply / bucketSize);
         currentBucket = Bucket(bucketIndex, getBucketPrice(bucketIndex));
