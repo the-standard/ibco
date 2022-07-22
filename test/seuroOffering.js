@@ -57,6 +57,7 @@ describe('SEuroOffering', async () => {
     SEuroOffering = await SEuroOfferingContract.deploy(SEuro.address, SEuroCalculator.address, TokenManager.address, BondingCurve.address);
 
     await SEuro.connect(owner).grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), SEuroOffering.address)
+    await BondingCurve.setUpdater(SEuroOffering.address);
   });
 
   describe('swap', async () => {
