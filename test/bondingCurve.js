@@ -9,7 +9,7 @@ describe('BondingCurve', async () => {
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
 
   beforeEach(async () => {
-    [owner] = await ethers.getSigners();
+    [owner, customer, updater, calculator] = await ethers.getSigners();
 
     const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
     const SEuroContract = await ethers.getContractFactory('SEuro');
@@ -74,16 +74,29 @@ describe('BondingCurve', async () => {
 
       expect(seuros).to.equal(euros);
     });
+
+    it('only allows calculator role to calculate price', async () => {
+      const euros = ethers.utils.parseEther('1');
+      await expect(BondingCurve.connect(calculator).calculatePrice(euros)).to.be.revertedWith('invalid-user');
+
+      await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), calculator.address);
+      await expect(BondingCurve.connect(calculator).calculatePrice(euros)).not.to.be.reverted;
+    });
   });
 
   describe('updateCurrentBucket', async () => {
-    it('saves new bucket price when supply has changed', async () => {
-      await SEuro.mint(owner.address, BUCKET_SIZE);
-      await BondingCurve.updateCurrentBucket(BUCKET_SIZE);
+    it('saves new bucket price when supply has changed, if requested by SEuroOffering', async () => {
+      // give updater access to update price bucket
+      await BondingCurve.grantRole(await BondingCurve.UPDATER(), updater.address);
 
-      const newBucketPrice = (await BondingCurve.currentBucket()).price;
+      const bucket0Price = await getBucketPrice(0);
+      const bucket1Price = await getBucketPrice(1);
 
-      expect(newBucketPrice).to.equal(await getBucketPrice(1));
+      await expect(BondingCurve.connect(customer).updateCurrentBucket(BUCKET_SIZE)).to.be.revertedWith('invalid-user');
+      expect((await BondingCurve.currentBucket()).price).to.equal(bucket0Price);
+
+      await BondingCurve.connect(updater).updateCurrentBucket(BUCKET_SIZE);
+      expect((await BondingCurve.currentBucket()).price).to.equal(bucket1Price);
     });
   });
 
