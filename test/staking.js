@@ -59,7 +59,7 @@ describe('Staking', async () => {
     const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
     let disable = Staking.connect(user).disable();
-    await expect(disable).to.be.revertedWith('err-only-owner')
+    await expect(disable).to.be.revertedWith('Ownable: caller is not the owner')
 
     // pool isn't active
     disable = Staking.disable();
@@ -373,7 +373,7 @@ describe('Staking', async () => {
       expect(balance).to.eq(value);
 
       let withdraw = Staking.connect(user).withdraw(SEuro.address);
-      await expect(withdraw).to.be.revertedWith('err-only-owner');
+      await expect(withdraw).to.be.revertedWith('Ownable: caller is not the owner');
 
       // withdraw SEURO
       await Staking.withdraw(SEuro.address);
@@ -409,7 +409,7 @@ describe('Staking', async () => {
       expect(catastrophic).to.eq(false);
 
       let cat = Staking.connect(user).catastrophy();
-      await expect(cat).to.be.revertedWith('err-only-owner')
+      await expect(cat).to.be.revertedWith('Ownable: caller is not the owner')
 
       cat = Staking.catastrophy();
       catastrophic = await Staking.catastrophic();
