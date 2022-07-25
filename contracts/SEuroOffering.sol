@@ -10,6 +10,8 @@ import "contracts/TokenManager.sol";
 import "contracts/BondingCurve.sol";
 
 contract SEuroOffering is Ownable {
+    address public collateralWallet;
+
     bool private active;
     uint256 private start;
     uint256 private stop;
@@ -27,6 +29,12 @@ contract SEuroOffering is Ownable {
         bondingCurve = BondingCurve(_bondingCurve);
     }
 
+    modifier ifActive() {
+        bool isActive = activated() && notEnded();
+        require(isActive, "err-ibco-inactive");
+        _;
+    }
+
     function getEuros(uint256 _amount, address _chainlinkAddr, uint8 _chainlinkDec) private returns (uint256) {
         return sEuroRateCalculator.calculate(_amount, _chainlinkAddr, _chainlinkDec);
     }
@@ -39,10 +47,10 @@ contract SEuroOffering is Ownable {
         return stop == 0 || stop > block.timestamp;
     }
 
-    modifier ifActive() {
-        bool isActive = activated() && notEnded();
-        require(isActive, "err-ibco-inactive");
-        _;
+    function transferCollateral(IERC20 _token, uint256 _amount) private {
+        if (collateralWallet != address(0)) {
+            _token.transfer(collateralWallet, _amount);
+        }
     }
 
     function readOnlyCalculateSwap(bytes32 _token, uint256 _amount) external view returns (uint256) {
@@ -59,17 +67,20 @@ contract SEuroOffering is Ownable {
         uint256 euros = getEuros(_amount, chainlinkAddr, chainlinkDec);
         SEuro(seuro).mint(msg.sender, euros);
         bondingCurve.updateCurrentBucket(euros);
+        transferCollateral(token, _amount);
         emit Swap(_token, _amount, euros);
     }
 
     function swapETH() external payable ifActive {
+        uint256 amount = msg.value;
         (address addr, address chainlinkAddr, uint8 chainlinkDec) = tokenManager.get(bytes32("WETH"));
         WETH weth = WETH(addr);
-        weth.deposit{value: msg.value};
-        uint256 euros = getEuros(msg.value, chainlinkAddr, chainlinkDec);
+        weth.deposit{value: amount}();
+        uint256 euros = getEuros(amount, chainlinkAddr, chainlinkDec);
         SEuro(seuro).mint(msg.sender, euros);
         bondingCurve.updateCurrentBucket(euros);
-        emit Swap(bytes32("ETH"), msg.value, euros);
+        transferCollateral(IERC20(addr), amount);
+        emit Swap(bytes32("ETH"), amount, euros);
     }
 
     function getStatus() external view returns (bool _active, uint256 _start, uint256 _stop) {
@@ -84,5 +95,10 @@ contract SEuroOffering is Ownable {
     function complete() external onlyOwner {
         active = false;
         stop = block.timestamp;
+    }
+
+    function setCollateralWallet(address _collateralWallet) external onlyOwner {
+		require(_collateralWallet != address(0), "err-zero-address");
+        collateralWallet = _collateralWallet;
     }
 }
