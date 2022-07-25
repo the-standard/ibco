@@ -98,7 +98,6 @@ contract SEuroOffering is Ownable {
     }
 
     function setCollateralWallet(address _collateralWallet) external onlyOwner {
-		require(_collateralWallet != address(0), "err-zero-address");
         collateralWallet = _collateralWallet;
     }
 }
