@@ -13,7 +13,7 @@ describe('SEuroOffering', async () => {
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
-  let SEuroOffering, SEuro, BondingCurve, SEuroCalculator, TokenManager, WETH, owner, user;
+  let SEuroOffering, SEuro, BondingCurve, SEuroCalculator, TokenManager, WETH, owner, user, collateralWallet;
 
   async function buyWETH(signer, amount) {
     await WETH.connect(signer).deposit({ value: amount });
@@ -41,7 +41,7 @@ describe('SEuroOffering', async () => {
   }
 
   beforeEach(async () => {
-    [owner, user] = await ethers.getSigners();
+    [owner, user, collateralWallet] = await ethers.getSigners();
 
     const SEuroContract = await ethers.getContractFactory('SEuro');
     const SEuroOfferingContract = await ethers.getContractFactory('SEuroOffering');
@@ -70,7 +70,7 @@ describe('SEuroOffering', async () => {
     });
 
     it('will not swap for eth if ibco not active', async () => {
-      const toSwap = await ethers.utils.parseEther('1');
+      const toSwap = ethers.utils.parseEther('1');
 
       const swap = SEuroOffering.connect(user).swapETH({ value: toSwap });
 
@@ -80,7 +80,7 @@ describe('SEuroOffering', async () => {
     });
 
     it('will not swap for token if ibco not active', async () => {
-      const toSwap = await ethers.utils.parseEther('1');
+      const toSwap = ethers.utils.parseEther('1');
       await buyWETH(user, toSwap);
       await WETH.connect(user).approve(SEuroOffering.address, toSwap);
 
@@ -91,13 +91,13 @@ describe('SEuroOffering', async () => {
       expect(userSEuroBalance).to.eq(0);
     });
 
-    describe('activated', async () => {
+    context('activated', async () => {
       beforeEach(async () => {
         await SEuroOffering.connect(owner).activate();
       });
 
       it('swaps for given token', async () => {
-        const toSwap = await ethers.utils.parseEther('1');
+        const toSwap = ethers.utils.parseEther('1');
         await buyWETH(user, toSwap);
         await WETH.connect(user).approve(SEuroOffering.address, toSwap);
 
@@ -110,7 +110,7 @@ describe('SEuroOffering', async () => {
       });
 
       it('will not swap without preapproval', async () => {
-        const toSwap = await ethers.utils.parseEther('1');
+        const toSwap = ethers.utils.parseEther('1');
         await buyWETH(user, toSwap);
 
         const swap = SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
@@ -121,7 +121,7 @@ describe('SEuroOffering', async () => {
       });
 
       it('will not swap without balance of token', async () => {
-        const toSwap = await ethers.utils.parseEther('1');
+        const toSwap = ethers.utils.parseEther('1');
         await WETH.connect(user).withdraw(await WETH.balanceOf(user.address));
         await WETH.connect(user).approve(SEuroOffering.address, toSwap);
 
@@ -164,7 +164,7 @@ describe('SEuroOffering', async () => {
 
       describe('swapETH', async () => {
         it('swaps for eth', async () => {
-          const toSwap = await ethers.utils.parseEther('1');
+          const toSwap = ethers.utils.parseEther('1');
           const ethBytes = ethers.utils.formatBytes32String('ETH');
 
           const expectedEuros = await getEthToSEuro(toSwap);
@@ -183,6 +183,22 @@ describe('SEuroOffering', async () => {
           expect(bucket.price).to.equal(await getBucketPrice(1));
         });
       });
+    });
+  });
+
+  describe('transferring collateral', async () => {
+    it('transfers deposited collateral to designated wallet', async () => {
+      await SEuroOffering.activate();
+      await SEuroOffering.setCollateralWallet(collateralWallet.address);
+
+      const toSwap = ethers.utils.parseEther('1');
+      await buyWETH(user, toSwap);
+      await WETH.connect(user).approve(SEuroOffering.address, toSwap);
+      await SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
+      expect(await WETH.balanceOf(collateralWallet.address)).to.equal(toSwap);
+
+      await SEuroOffering.connect(user).swapETH({ value: toSwap });
+      expect(await WETH.balanceOf(collateralWallet.address)).to.equal(toSwap.mul(2));
     });
   });
 
@@ -240,7 +256,7 @@ describe('SEuroOffering', async () => {
 
   describe('readOnlyCalculateSwap', async () => {
     it('calculates the read-only swap amount for token', async () => {
-      const toSwap = await ethers.utils.parseEther('1');
+      const toSwap = ethers.utils.parseEther('1');
       const wethBytes = ethers.utils.formatBytes32String('WETH');
       const expectedSeuros = await getEthToSEuro(toSwap);
       const seuros = await SEuroOffering.readOnlyCalculateSwap(wethBytes, toSwap);
