@@ -197,11 +197,6 @@ describe('SEuroOffering', async () => {
       await SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
       expect(await WETH.balanceOf(collateralWallet.address)).to.equal(toSwap);
 
-      // const walletETHBalance = await collateralWallet.getBalance();
-      // const expectedETHBalance = walletETHBalance.add(toSwap);
-      // await SEuroOffering.connect(user).swapETH({ value: toSwap });
-      // expect(await collateralWallet.getBalance()).to.equal(expectedETHBalance);
-
       await SEuroOffering.connect(user).swapETH({ value: toSwap });
       expect(await WETH.balanceOf(collateralWallet.address)).to.equal(toSwap.mul(2));
     });
