@@ -3,8 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract Staking is ERC721URIStorage {
+contract Staking is ERC721URIStorage, Ownable {
     uint256 private _tokenId;
 
     bool public active;             // active or not, needs to be set manually
@@ -20,7 +21,6 @@ contract Staking is ERC721URIStorage {
 
     address TST_ADDRESS;
     address SEURO_ADDRESS;
-    address public owner;
 
     mapping(address => Position) private _positions;
 
@@ -49,15 +49,9 @@ contract Staking is ERC721URIStorage {
         startTime = _start;
         endTime = _end;
         initialised = block.timestamp;
-        owner = msg.sender;
 
         // TODO variable
         minTST = 1 ether;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, 'err-only-owner');
-        _;
     }
 
     function activate() external onlyOwner {
@@ -158,7 +152,7 @@ contract Staking is ERC721URIStorage {
         uint256 balance = TOKEN.balanceOf(address(this));
 
         require(balance > 0, 'err-no-funds');
-        TOKEN.transfer(owner, balance);
+        TOKEN.transfer(owner(), balance);
     }
 
     function position(address owner) external view returns (uint96, uint256, bool, uint256, uint256) {
