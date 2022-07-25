@@ -95,7 +95,8 @@ describe('BondingCurve', async () => {
       await expect(BondingCurve.connect(customer).updateCurrentBucket(BUCKET_SIZE)).to.be.revertedWith('invalid-user');
       expect((await BondingCurve.currentBucket()).price).to.equal(bucket0Price);
 
-      await BondingCurve.connect(updater).updateCurrentBucket(BUCKET_SIZE);
+      const update = BondingCurve.connect(updater).updateCurrentBucket(BUCKET_SIZE);
+      await expect(update).to.emit(BondingCurve, 'PriceUpdated').withArgs(1, bucket1Price);
       expect((await BondingCurve.currentBucket()).price).to.equal(bucket1Price);
     });
   });

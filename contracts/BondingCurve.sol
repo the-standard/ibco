@@ -30,6 +30,8 @@ contract BondingCurve is AccessControl {
     mapping(uint32 => uint256) private bucketPricesCache;
     uint256 private ibcoTotalSupply;
 
+    event PriceUpdated(uint32 index, uint256 price);
+
     constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
 		_grantRole(DEFAULT_ADMIN, msg.sender);
         _setRoleAdmin(UPDATER, DEFAULT_ADMIN);
@@ -87,8 +89,10 @@ contract BondingCurve is AccessControl {
     function updateCurrentBucket(uint256 _minted) public onlyUpdater {
         ibcoTotalSupply += _minted;
         uint32 bucketIndex = uint32(ibcoTotalSupply / bucketSize);
+        uint32 previous = currentBucket.index;
         currentBucket = Bucket(bucketIndex, getBucketPrice(bucketIndex));
         delete bucketPricesCache[bucketIndex];
+        if (previous != bucketIndex) emit PriceUpdated(currentBucket.index, currentBucket.price);
     }
 
     function getBucketPrice(uint32 _bucketIndex) internal returns (uint256 _price) {
