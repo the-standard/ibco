@@ -13,4 +13,4 @@ The contracts used in this stage are:
 ### Relationship
 The relationship between the contracts is:
 1. **SEuroOffering** gets the exchange rate contracts from **TokenManager** and uses **SEuroCalculator** to calculate the exchange rate
-2. **SEuroCalculator** calculates the base exchange rate of ETH/ERC20 > euros, then gets the amount of sEURO that can be obtained with given euros
+2. **SEuroCalculator** calculates the base exchange rate of ETH/ERC20 to euros, then gets the amount of sEURO that can be obtained with given euros

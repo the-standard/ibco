@@ -116,7 +116,7 @@ contract BondingEvent is AccessControl {
         operatorAddress = _newAddress;
     }
 
-    // Sets address of wallet, which will receive excess USDT bonding collateral
+    // Sets address of wallet, which will receive excess bonding collateral
     function setExcessCollateralWallet(address _excessCollateralWallet)
         external
         onlyPoolOwner
@@ -449,18 +449,18 @@ contract BondingEvent is AccessControl {
         }
     }
 
-    // Calculates how much USDT is required to bond with given amount of sEURO
-    // Calculates the required ratio of USDT to add to the liquidity pool
+    // Calculates how much of other token is required to bond with given amount of sEURO
+    // Calculates the required ratio of other token to add to the liquidity pool
     // Calculated given the current price, lower and upper ticks, and amount of sEURO
     // The lower and upper ticks used for the range are the default ones from the contract, if viable
     // A tick range is considered viable for the bonding if the current price is within 40th and 60th percentile of tick range
     // If these ticks would not give us a viable ratio for bonding, we expand the tick range
     // Expanded by a magnitude of 100 ticks (ten times), then 1,000 ticks (ten times), then 10,000 etc, until viable
-    // Adds 0.01% to required USDT amount, which:
+    // Adds 0.01% to required other token amount, which:
     // a) resolves a rounding discrepancy between Uniswap's LiquidityAmounts library and the NonfungiblePositionManager
     // b) helps prevent price slippage issues when adding liquidity to the pool
     /// @param _amountSEuro The amount of sEURO token to bond
-    /// @return amountOther The required amount of USDT to bond with given sEURO amount
+    /// @return amountOther The required amount of other token to bond with given sEURO amount
     /// @return lowerTick The lower tick of the viable price range
     /// @return upperTick The upper tick of the viable price range
     function getOtherAmount(uint256 _amountSEuro)
