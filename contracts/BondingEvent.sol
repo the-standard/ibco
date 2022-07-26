@@ -57,6 +57,16 @@ contract BondingEvent is AccessControl {
     bytes32 public constant WHITELIST_BONDING_EVENT =
         keccak256("WHITELIST_BONDING_EVENT");
 
+    /// @param _seuroAddress address of sEURO token
+    /// @param _otherAddress address of token to bond with sEURO
+    /// @param _manager address of Uniswap NonfungiblePositionManager contract
+    /// @param _bondStorageAddress address of Bond Storage contract
+    /// @param _operatorAddress address of operator contract
+    /// @param _ratioCalculatorAddress address of ratio calculator contract
+    /// @param _initialPrice initial price of liquidity pool for sEURO / other, as a sqrtPriceX96 (https://docs.uniswap.org/sdk/guides/fetching-prices#understanding-sqrtprice)
+    /// @param _lowerTickDefault default lower tick value for liquidity positions
+    /// @param _upperTickDefault default upper tick value for liquidity positions (https://docs.uniswap.org/protocol/concepts/V3-overview/concentrated-liquidity#ticks)
+    /// @param _fee the fee amount for the pool you are initialising (https://docs.uniswap.org/protocol/concepts/V3-overview/fees#swap-fees)
     constructor(
         address _seuroAddress,
         address _otherAddress,
@@ -96,14 +106,17 @@ contract BondingEvent is AccessControl {
         _;
     }
 
+    // Sets address of Bond Storage contract, which manages customer bonds
     function setStorageContract(address _newAddress) public onlyPoolOwner {
         bondStorageAddress = _newAddress;
     }
 
+    // Sets address of operator contract, the key dependent of this contract
     function setOperator(address _newAddress) public onlyPoolOwner {
         operatorAddress = _newAddress;
     }
 
+    // Sets address of wallet, which will receive excess bonding collateral
     function setExcessCollateralWallet(address _excessCollateralWallet)
         external
         onlyPoolOwner
@@ -111,6 +124,7 @@ contract BondingEvent is AccessControl {
         excessCollateralWallet = _excessCollateralWallet;
     }
 
+    // Sets default lower and upper tick for liquidity positions, if valid
     function adjustTickDefaults(int24 _newLower, int24 _newHigher) external {
         _validTicks(_newLower, _newHigher);
         lowerTickDefault = _newLower;
@@ -143,8 +157,6 @@ contract BondingEvent is AccessControl {
                 : Pair(OTHER_ADDRESS, SEURO_ADDRESS);
     }
 
-    // Initialises a pool with another token (address) and stores it in the array of pools.
-    // Note that the price is in sqrtPriceX96 format.
     function initialisePool(uint160 _price, uint24 _fee) private {
         Pair memory pair = getAscendingPair();
         address poolAddress = manager.createAndInitializePoolIfNecessary(
@@ -157,16 +169,19 @@ contract BondingEvent is AccessControl {
         tickSpacing = pool.tickSpacing();
     }
 
+    // Gets all the Uniswap liquidity pool token IDs that this pool manages
     function getPositions() external view returns (uint256[] memory) {
         return positions;
     }
 
-    function getPositionData(uint256 tokenId)
+    // Gets data for the given position token ID
+    /// @param _tokenId the ID of the position token
+    function getPositionData(uint256 _tokenId)
         external
         view
         returns (Position memory)
     {
-        return positionData[tokenId];
+        return positionData[_tokenId];
     }
 
     struct AddLiquidityParams {
@@ -347,6 +362,7 @@ contract BondingEvent is AccessControl {
     // This quote is being used to supply the two amounts to the function.
     // The reason for this is because of the explicit discouragement of doing this on-chain
     // due to the high gas costs (see https://docs.uniswap.org/protocol/reference/periphery/lens/Quoter).
+    /// @param _user The address of the bonding user (assuming higher layer contract which calls this function)
     /// @param _amountSeuro The amount of sEURO token to bond
     /// @param _maturityInWeeks The amount of weeks a bond is active.
     ///                          At the end of maturity, the principal + accrued interest is paid out all at once in TST.
@@ -419,6 +435,34 @@ contract BondingEvent is AccessControl {
         magnitude = _magnitude * 10;
     }
 
+    function getViableTickRange(uint160 _price) private view returns (int24 lowerTick, int24 upperTick) {
+        lowerTick = lowerTickDefault;
+        upperTick = upperTickDefault;
+        int24 currentPriceTick = ratioCalculator.getTickAt(_price);
+        int24 magnitude = 100;
+        uint8 i;
+        // expand tick range by magnitude 100 ticks ten times, then by magnitude 1000 ticks ten times etc. until a viable ratio is found
+        while (!viableTickPriceRatio(currentPriceTick, lowerTick, upperTick)) {
+            if (i == 10) (magnitude, i) = increaseMagnitude(magnitude);
+            (lowerTick, upperTick) = increaseTicks(lowerTick, upperTick, magnitude);
+            i++;
+        }
+    }
+
+    // Calculates how much of other token is required to bond with given amount of sEURO
+    // Calculates the required ratio of other token to add to the liquidity pool
+    // Calculated given the current price, lower and upper ticks, and amount of sEURO
+    // The lower and upper ticks used for the range are the default ones from the contract, if viable
+    // A tick range is considered viable for the bonding if the current price is within 40th and 60th percentile of tick range
+    // If these ticks would not give us a viable ratio for bonding, we expand the tick range
+    // Expanded by a magnitude of 100 ticks (ten times), then 1,000 ticks (ten times), then 10,000 etc, until viable
+    // Adds 0.01% to required other token amount, which:
+    // a) resolves a rounding discrepancy between Uniswap's LiquidityAmounts library and the NonfungiblePositionManager
+    // b) helps prevent price slippage issues when adding liquidity to the pool
+    /// @param _amountSEuro The amount of sEURO token to bond
+    /// @return amountOther The required amount of other token to bond with given sEURO amount
+    /// @return lowerTick The lower tick of the viable price range
+    /// @return upperTick The upper tick of the viable price range
     function getOtherAmount(uint256 _amountSEuro)
         public
         view
@@ -431,26 +475,13 @@ contract BondingEvent is AccessControl {
         (uint160 price,,,,,,) = pool.slot0();
         Pair memory pair = getAscendingPair();
         bool seuroIsToken0 = pair.token0 == SEURO_ADDRESS;
-        lowerTick = lowerTickDefault;
-        upperTick = upperTickDefault;
-        int24 currentPriceTick = ratioCalculator.getTickAt(price);
-        int24 magnitude = 100;
-        uint8 i;
-        // expand tick range by magnitude 100 ticks ten times, then by magnitude 1000 ticks ten times etc. until a viable ratio is found
-        while (!viableTickPriceRatio(currentPriceTick, lowerTick, upperTick)) {
-            if (i == 10) (magnitude, i) = increaseMagnitude(magnitude);
-            (lowerTick, upperTick) = increaseTicks(lowerTick, upperTick, magnitude);
-            i++;
-        }
-
-        amountOther =
-            (ratioCalculator.getRatioForSEuro(
+        (lowerTick, upperTick) = getViableTickRange(price);
+        amountOther = ratioCalculator.getRatioForSEuro(
                 _amountSEuro,
                 price,
                 lowerTick,
                 upperTick,
                 seuroIsToken0
-            ) * 10001) / 10000;
-            // may need to add a very small amount to usdt due to an accuracy error (0.01%). it also protects against some slippage. being sent to a wallet anyway
+            ) * 10001 / 10000;
     }
 }

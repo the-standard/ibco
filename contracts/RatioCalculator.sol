@@ -6,6 +6,13 @@ import "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 
 contract RatioCalculator {
 
+    // Gets required amount of a second asset to provide liquidity, 
+    // Calculates using given amount of sEURO, the current price, the lower and upper ticks of the position range, and whether sEURO is token0 in pool
+    /// @param _amountSEuro the amount of sEURO token to bond
+    /// @param _price the current price of the pool as a sqrtPriceX96 (https://docs.uniswap.org/sdk/guides/fetching-prices#understanding-sqrtprice)
+    /// @param _lowerTick the lower tick of the potential position range
+    /// @param _upperTick the upper tick of the potential position range
+    /// @param _seuroIsToken0 whether sEURO is token0 of the liquidity pool
     function getRatioForSEuro(uint256 _amountSEuro, uint160 _price, int24 _lowerTick, int24 _upperTick, bool _seuroIsToken0) external pure returns (uint256) {
         uint160 lower = TickMath.getSqrtRatioAtTick(_lowerTick);
         uint160 upper = TickMath.getSqrtRatioAtTick(_upperTick);

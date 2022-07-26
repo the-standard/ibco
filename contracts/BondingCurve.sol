@@ -26,12 +26,27 @@ contract BondingCurve is AccessControl {
     uint256 private immutable bucketSize;
     uint32 private immutable finalBucketIndex;
 
+    // index and price of current price bucket
     Bucket public currentBucket;
     mapping(uint32 => uint256) private bucketPricesCache;
     uint256 private ibcoTotalSupply;
 
     event PriceUpdated(uint32 index, uint256 price);
 
+    /// @param _seuro address of sEURO token
+    /// @param _initialPrice initial price of sEURO, multiplied by 10^18, e.g. 800_000_000_000_000_000 = 0.8
+    /// @param _maxSupply the amount of sEURO to be supplied by the Bonding Curve before sEURO reaches full price (€1 = 1 SEUR)
+    /// @param _bucketSize the size of each price bucket in sEURO
+    // Price buckets combine accurate pricing with lightweight calculations
+    // All sEURO within a single price bucket are equal to the price of the median token
+    // e.g. if bucket size is 100_000 SEUR, each of the first 100_000 SEUR will be priced as if the 50,001st token
+    // Pricing is calculated by the Bonding Curve formula:
+    // y = k * (x / m)^j + i;
+    // where: k = final price - initial price
+    // x = current total supply of sEURO by Bonding Curve
+    // m = max supply of Bonding Curve
+    // j = 0.2, a constant which dictates the shape of the curve
+    // i = the initial price of sEURO in Bonding Curve
     constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
 		_grantRole(DEFAULT_ADMIN, msg.sender);
         _setRoleAdmin(UPDATER, DEFAULT_ADMIN);
@@ -60,11 +75,16 @@ contract BondingCurve is AccessControl {
         _;
     }
 
+    // Read only function to estimate the amount of sEURO for given euros
+    // Based on the current price alone, so not necessarily accurate
+    /// @param _euroAmount amount of euros for which you want to estimate conversion into sEURO
     function readOnlyCalculatePrice(uint256 _euroAmount) external view returns (uint256) {
-        // fetches the price of euros based on the *current* discount price, therefore not completely accurate
         return convertEuroToSeuro(_euroAmount, currentBucket.price);
     }
 
+    // Calculates exactly how much sEURO is equivalent to given euros
+    // Caches price calculations and is therefore a state-changing function
+    /// @param _euroAmount amount of euros for which you want to calculate conversion into sEURO
     function calculatePrice(uint256 _euroAmount) external onlyCalculator returns (uint256) {
         uint256 _sEuroTotal = 0;
         uint256 remainingEuros = _euroAmount;
@@ -86,6 +106,8 @@ contract BondingCurve is AccessControl {
         return _sEuroTotal;
     }
 
+    // Updates the current price of sEURO, based on the total supply of sEURO through IBCO
+    /// @param _minted the amount of sEURO to add to the IBCO total supply
     function updateCurrentBucket(uint256 _minted) public onlyUpdater {
         ibcoTotalSupply += _minted;
         uint32 bucketIndex = uint32(ibcoTotalSupply / bucketSize);
