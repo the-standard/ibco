@@ -21,8 +21,8 @@ contract TokenManager is Ownable {
     // Gets the details for the given token, if it is accepted
     /// @param _name 32-byte array value representation of the token symbol e.g. "WETH", "USDT"
     /// @return addr the address of the token
-    /// @return chainlinkAddr the address of the token / USD chainlink data feed
-    /// @return chainlinkDec the number of decimals the chainlink data feed uses
+    /// @return chainlinkAddr the address of the token / USD Chainlink data feed
+    /// @return chainlinkDec the number of decimals the Chainlink data feed uses
     function get(bytes32 _name) external view returns(address addr, address chainlinkAddr, uint8 chainlinkDec) {
         Token memory token = tokens[_name];
         return (token.addr, token.chainlinkAddr, token.chainlinkDec);
@@ -40,8 +40,8 @@ contract TokenManager is Ownable {
     // Add a token to the accepted list of tokens
     /// @param _name 32-byte array value representation of the token symbol e.g. "WETH", "USDT"
     /// @param _addr the address of the token
-    /// @param _chainlinkAddr the address of the token / USD chainlink data feed
-    /// @param _chainlinkDec the number of decimals the chainlink data feed uses
+    /// @param _chainlinkAddr the address of the token / USD Chainlink data feed
+    /// @param _chainlinkDec the number of decimals the Chainlink data feed uses
     function addAcceptedToken(bytes32 _name, address _addr, address _chainlinkAddr, uint8 _chainlinkDec) public onlyOwner {
         tokens[_name] = Token(_addr, _chainlinkAddr, _chainlinkDec);
         tokenNames.push(_name);
