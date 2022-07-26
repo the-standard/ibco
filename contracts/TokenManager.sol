@@ -14,6 +14,9 @@ contract TokenManager is Ownable {
         uint8 chainlinkDec;
     }
 
+    /// @param _wethAddress address of WETH token
+    /// @param _ethUsdCL address of Chainlink data feed for ETH / USD
+    /// @param _ethUsdCLDec number of decimals that ETH / USD data feed uses
     constructor(address _wethAddress, address _ethUsdCL, uint8 _ethUsdCLDec) {
         addDefaultTokens(_wethAddress, _ethUsdCL, _ethUsdCLDec);
     }

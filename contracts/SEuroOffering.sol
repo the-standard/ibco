@@ -10,6 +10,7 @@ import "contracts/TokenManager.sol";
 import "contracts/BondingCurve.sol";
 
 contract SEuroOffering is Ownable {
+    // address of the wallet which will receive the collateral provided in swap and swapETH
     address public collateralWallet;
 
     bool private active;
@@ -22,6 +23,10 @@ contract SEuroOffering is Ownable {
 
     event Swap(bytes32 _token, uint256 amountIn, uint256 amountOut);
 
+    /// @param _seuro address of sEURO token
+    /// @param _sEuroRateCalculator address of SEuroRateCalculator contract
+    /// @param _tokenManager address of TokenManager contract
+    /// @param _bondingCurve address of BondingCurve contract
     constructor(address _seuro, address _sEuroRateCalculator, address _tokenManager, address _bondingCurve) {
         seuro = _seuro;
         sEuroRateCalculator = SEuroCalculator(_sEuroRateCalculator);

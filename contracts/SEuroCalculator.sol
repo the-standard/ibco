@@ -6,7 +6,9 @@ import "contracts/interfaces/Chainlink.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract SEuroCalculator is AccessControl {
+    // multiplier used to assist calculation of fractions
     uint256 public constant FIXED_POINT = 1_000_000_000_000_000_000;
+    // address of Offering contract, the key dependent of this contract
 	bytes32 public constant OFFERING = keccak256("OFFERING");
 
     address public immutable EUR_USD_CL;
@@ -15,6 +17,9 @@ contract SEuroCalculator is AccessControl {
 
     BondingCurve private bondingCurve;
 
+    /// @param _bondingCurve address of Bonding Curve contract
+    /// @param _eurUsdCl address of Chainlink data feed for EUR / USD
+    /// @param _eurUsdDec number of decimals that EUR / USD data feed uses
     constructor(address _bondingCurve, address _eurUsdCl, uint8 _eurUsdDec) {
         _grantRole(DEFAULT_ADMIN, msg.sender);
         _setRoleAdmin(OFFERING, DEFAULT_ADMIN);
