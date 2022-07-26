@@ -437,6 +437,20 @@ contract BondingEvent is AccessControl {
         magnitude = _magnitude * 10;
     }
 
+    function getViableTickRange(uint160 _price) private returns (int24 lowerTick, int24 upperTick) {
+        lowerTick = lowerTickDefault;
+        upperTick = upperTickDefault;
+        int24 currentPriceTick = ratioCalculator.getTickAt(_price);
+        int24 magnitude = 100;
+        uint8 i;
+        // expand tick range by magnitude 100 ticks ten times, then by magnitude 1000 ticks ten times etc. until a viable ratio is found
+        while (!viableTickPriceRatio(currentPriceTick, lowerTick, upperTick)) {
+            if (i == 10) (magnitude, i) = increaseMagnitude(magnitude);
+            (lowerTick, upperTick) = increaseTicks(lowerTick, upperTick, magnitude);
+            i++;
+        }
+    }
+
     // Calculates how much USDT is required to bond with given amount of sEURO
     // Calculates the required ratio of USDT to add to the liquidity pool
     // Calculated given the current price, lower and upper ticks, and amount of sEURO
@@ -463,25 +477,14 @@ contract BondingEvent is AccessControl {
         (uint160 price,,,,,,) = pool.slot0();
         Pair memory pair = getAscendingPair();
         bool seuroIsToken0 = pair.token0 == SEURO_ADDRESS;
-        lowerTick = lowerTickDefault;
-        upperTick = upperTickDefault;
-        int24 currentPriceTick = ratioCalculator.getTickAt(price);
-        int24 magnitude = 100;
-        uint8 i;
-        // expand tick range by magnitude 100 ticks ten times, then by magnitude 1000 ticks ten times etc. until a viable ratio is found
-        while (!viableTickPriceRatio(currentPriceTick, lowerTick, upperTick)) {
-            if (i == 10) (magnitude, i) = increaseMagnitude(magnitude);
-            (lowerTick, upperTick) = increaseTicks(lowerTick, upperTick, magnitude);
-            i++;
-        }
-
+        (lowerTick, upperTick) = getViableTickRange(price);
         amountOther =
-            (ratioCalculator.getRatioForSEuro(
+            ratioCalculator.getRatioForSEuro(
                 _amountSEuro,
                 price,
                 lowerTick,
                 upperTick,
                 seuroIsToken0
-            ) * 10001) / 10000;
+            ) * 10001 / 10000;
     }
 }
