@@ -25,10 +25,10 @@ contract BondingEvent is AccessControl {
     address public operatorAddress;
     // receives any excess USDT from the bonding event
     address public excessCollateralWallet;
+    IUniswapV3Pool public pool;
 
     INonfungiblePositionManager private immutable manager;
     IRatioCalculator private immutable ratioCalculator;
-    IUniswapV3Pool private pool;
     uint256[] private positions;
     mapping(uint256 => Position) private positionData;
     mapping(bytes32 => uint256) private positionsByTicks;
@@ -157,8 +157,6 @@ contract BondingEvent is AccessControl {
                 : Pair(OTHER_ADDRESS, SEURO_ADDRESS);
     }
 
-    // Initialises a pool with another token (address) and stores it in the array of pools.
-    // Note that the price is in sqrtPriceX96 format.
     function initialisePool(uint160 _price, uint24 _fee) private {
         Pair memory pair = getAscendingPair();
         address poolAddress = manager.createAndInitializePoolIfNecessary(
@@ -437,7 +435,7 @@ contract BondingEvent is AccessControl {
         magnitude = _magnitude * 10;
     }
 
-    function getViableTickRange(uint160 _price) private returns (int24 lowerTick, int24 upperTick) {
+    function getViableTickRange(uint160 _price) private view returns (int24 lowerTick, int24 upperTick) {
         lowerTick = lowerTickDefault;
         upperTick = upperTickDefault;
         int24 currentPriceTick = ratioCalculator.getTickAt(_price);
@@ -478,8 +476,7 @@ contract BondingEvent is AccessControl {
         Pair memory pair = getAscendingPair();
         bool seuroIsToken0 = pair.token0 == SEURO_ADDRESS;
         (lowerTick, upperTick) = getViableTickRange(price);
-        amountOther =
-            ratioCalculator.getRatioForSEuro(
+        amountOther = ratioCalculator.getRatioForSEuro(
                 _amountSEuro,
                 price,
                 lowerTick,
