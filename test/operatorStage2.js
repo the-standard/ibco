@@ -5,7 +5,6 @@ const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, DECIMALS, etherBalanc
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
 let owner, customer, SEuro, TST, USDT;
-let USDT_ADDRESS, CUSTOMER_ADDR;
 
 beforeEach(async () => {
   [owner, customer] = await ethers.getSigners();
@@ -14,11 +13,6 @@ beforeEach(async () => {
   SEuro = await SEuroContract.deploy('sEURO', 'sEUR', [owner.address]);
   USDT = await ERC20Contract.deploy('USDT', 'USDT', ethers.utils.parseEther('10000000'));
   TST = await ERC20Contract.deploy('TST', 'TST', ethers.utils.parseEther('10000000'));
-  USDT_ADDRESS = USDT.address;
-  TST_ADDRESS = TST.address;
-  SEUR_ADDRESS = SEuro.address;
-  CUSTOMER_ADDR = customer.address;
-  OWNER_ADDR = owner.address;
 });
 
 describe('Stage 2', async () => {
@@ -35,10 +29,10 @@ describe('Stage 2', async () => {
   context('operator contract deployed and connected', async () => {
     beforeEach(async () => {
       RatioCalculator = await RatioCalculatorContract.deploy();
-      TGateway = await TokenGatewayContract.deploy(TST_ADDRESS, SEUR_ADDRESS);
+      TGateway = await TokenGatewayContract.deploy(TST.address, SEuro.address);
       BStorage = await StorageContract.deploy(TGateway.address);
       BondingEvent = await BondingEventContract.deploy(
-        SEUR_ADDRESS, USDT_ADDRESS, POSITION_MANAGER_ADDRESS, BStorage.address, OWNER_ADDR,
+        SEuro.address, USDT.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
         RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
       );
       OP2 = await OperatorStage2.deploy();
@@ -47,16 +41,14 @@ describe('Stage 2', async () => {
     describe('bonding and rewards happy case, various pool prices', async () => {
       context('all stage 2 contracts deployed with an existing balance', async () => {
         beforeEach(async () => {
-          const EVENT_ADDRESS = BondingEvent.address;
-
-          await SEuro.connect(owner).mint(OWNER_ADDR, etherBalances.ONE_BILLION);
-          await USDT.connect(owner).mint(OWNER_ADDR, etherBalances.ONE_BILLION);
-          await SEuro.connect(owner).mint(CUSTOMER_ADDR, etherBalances.TWO_MILLION);
-          await USDT.connect(owner).mint(CUSTOMER_ADDR, etherBalances.TWO_MILLION);
+          await SEuro.connect(owner).mint(owner.address, etherBalances.ONE_BILLION);
+          await USDT.connect(owner).mint(owner.address, etherBalances.ONE_BILLION);
+          await SEuro.connect(owner).mint(customer.address, etherBalances.TWO_MILLION);
+          await USDT.connect(owner).mint(customer.address, etherBalances.TWO_MILLION);
           await TST.connect(owner).mint(TGateway.address, etherBalances.FIVE_HUNDRED_MILLION);
           await TGateway.connect(owner).updateRewardSupply();
-          await SEuro.connect(customer).approve(EVENT_ADDRESS, etherBalances.TWO_MILLION);
-          await USDT.connect(customer).approve(EVENT_ADDRESS, etherBalances.TWO_MILLION);
+          await SEuro.connect(customer).approve(BondingEvent.address, etherBalances.TWO_MILLION);
+          await USDT.connect(customer).approve(BondingEvent.address, etherBalances.TWO_MILLION);
 
           await TGateway.connect(owner).setStorageAddress(BStorage.address);
           await BondingEvent.connect(owner).setOperator(OP2.address);
@@ -66,27 +58,27 @@ describe('Stage 2', async () => {
         });
 
         async function formatCustomerBalance() {
-          return (await TST.balanceOf(CUSTOMER_ADDR)).div(DECIMALS).toString();
+          return (await TST.balanceOf(customer.address)).div(DECIMALS).toString();
         }
 
         async function testingSuite(seuroAmount, rate) {
           await OP2.connect(owner).newBond(
-            CUSTOMER_ADDR, seuroAmount, durations.ONE_WEEK, rate
+            customer.address, seuroAmount, durations.ONE_WEEK, rate
           );
 
-          await BStorage.connect(customer).refreshBondStatus(CUSTOMER_ADDR);
+          await BStorage.connect(customer).refreshBondStatus(customer.address);
 
           let actualBalance = await formatCustomerBalance();
           expect(actualBalance).to.equal('0');
 
-          let firstBond = await BStorage.getBondAt(CUSTOMER_ADDR, 0);
+          let firstBond = await BStorage.getBondAt(customer.address, 0);
           let actualPrincipal = firstBond.principal;
           let actualRate = firstBond.rate;
           expect(actualPrincipal).to.equal(etherBalances['125K']);
           expect(actualRate).to.equal(rates.TWENTY_PC);
 
           await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-          await OP2.connect(customer).refreshBond(CUSTOMER_ADDR);
+          await OP2.connect(customer).refreshBond(customer.address);
           await OP2.connect(customer).claim();
         }
 

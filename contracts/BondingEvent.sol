@@ -13,6 +13,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 contract BondingEvent is AccessControl {
     int24 private constant MAX_TICK = 887270;
     int24 private constant MIN_TICK = -MAX_TICK;
+    uint128 private constant MAX_UINT_128 = 2 ** 128 - 1;
 
     // sEUR: the main leg of the currency pair
     address public immutable SEURO_ADDRESS;
@@ -45,6 +46,16 @@ contract BondingEvent is AccessControl {
         uint256 seuroAmount,
         uint256 otherAmount,
         uint128 liquidity
+    );
+
+    event LiquidityCollected(
+        uint256 tokenId,
+        uint256 retractedAmount0,
+        uint256 retractedAmount1,
+        uint256 feesCollected0,
+        uint256 feesCollected1,
+        uint256 collectedTotal0,
+        uint256 collectedTotal1
     );
 
     struct Position {
@@ -483,5 +494,59 @@ contract BondingEvent is AccessControl {
                 upperTick,
                 seuroIsToken0
             ) * 10001 / 10000;
+    }
+
+    function retractLiquidity(uint256 _tokenId, uint128 _liquidity) private returns (uint256 retractedLiquidity0, uint256 retractedLiquidity1) {
+        INonfungiblePositionManager.DecreaseLiquidityParams memory params = 
+            INonfungiblePositionManager.DecreaseLiquidityParams({
+                tokenId: _tokenId,
+                liquidity: _liquidity,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: block.timestamp
+            });
+        (retractedLiquidity0, retractedLiquidity1) = manager.decreaseLiquidity(params);
+    }
+
+    function collectAll(uint256 _tokenId) private returns (uint256 collectedFees0, uint256 collectedFees1) {
+        INonfungiblePositionManager.CollectParams memory params = 
+            INonfungiblePositionManager.CollectParams({
+                tokenId: _tokenId,
+                recipient: excessCollateralWallet,
+                amount0Max: MAX_UINT_128,
+                amount1Max: MAX_UINT_128
+            });
+        (collectedFees0, collectedFees1) = manager.collect(params);
+    }
+
+    function burnToken(uint256 _tokenId) private {
+        manager.burn(_tokenId);
+    }
+
+    function deletePositionFromArray(uint256 index) private {
+        for (uint256 i = index; i < positions.length - 1; i++) {
+            positions[i] = positions[i+1];
+        }
+        positions.pop();
+    }
+
+    function deletePosition(uint256 _tokenId, int24 _positionLowerTick, int24 _positionUpperTick) private {
+        delete positionData[_tokenId];
+        delete positionsByTicks[encodedTicks(_positionLowerTick, _positionUpperTick)];
+        for (uint256 i = 0; i < positions.length; i++) {
+            if (positions[i] == _tokenId) deletePositionFromArray(i);
+        }
+    }
+
+    function clearPositionAndBurn(uint256 _tokenId) external onlyPoolOwner {
+        require(excessCollateralWallet != address(0), "err-no-wallet-assigned");
+        (,,,,,int24 positionLowerTick, int24 positionUpperTick, uint128 liquidity,,,,) = manager.positions(_tokenId);
+        (uint256 retractedAmount0, uint256 retractedAmount1) = retractLiquidity(_tokenId, liquidity);
+        (uint256 collectedAmount0, uint256 collectedAmount1) = collectAll(_tokenId);
+        uint256 feesCollected0 = collectedAmount0 - retractedAmount0;
+        uint256 feesCollected1 = collectedAmount1 - retractedAmount1;
+        burnToken(_tokenId);
+        deletePosition(_tokenId, positionLowerTick, positionUpperTick);
+        emit LiquidityCollected(_tokenId, retractedAmount0, retractedAmount1, feesCollected0, feesCollected1, collectedAmount0, collectedAmount1);
     }
 }

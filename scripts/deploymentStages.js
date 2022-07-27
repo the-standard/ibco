@@ -15,7 +15,7 @@ const completed = async (contract, name) => {
 }
 
 const getPricing = () => {
-  return SEuro.address < DummyUSDT.address ?
+  return SEuro.address.toLowerCase() < DummyUSDT.address.toLowerCase() ?
     {
       initial: encodePriceSqrt(114, 100),
       lowerTick: -400,
