@@ -1,8 +1,10 @@
-# Stage 1
+# Stage 1 APIs
 
 The sEURO offering is the first stage in the IBCO process. Users can obtain sEURO in exchange for ETH or some accepted ERC20 tokens, at a discount which gradually reaches full price during the period of the IBCO.
 
-### sEURO Offering public APIs
+### Bonding Curve Public APIs
+
+These are the functions exposed to the user in Stage 1.
 
 **readOnlyCalculatePrice(uint256 _euroAmount)**
 *Description*: reads the cached price of sEUROs from the bonding curve
@@ -19,7 +21,7 @@ The sEURO offering is the first stage in the IBCO process. Users can obtain sEUR
 *Input*: an amount of sEUROs to add to the IBCO total supply
 
 
-# sEURO Offering Architecture
+# Stage 1 Architecture
 
 ### Contracts
 The contracts used in this stage are:
@@ -34,4 +36,4 @@ The contracts used in this stage are:
 The relationship between the contracts is:
 1. **SEuroOffering** gets the exchange rate contracts from **TokenManager** and uses **SEuroCalculator** to calculate the exchange rate
 2. **SEuroCalculator** calculates the base exchange rate of ETH/ERC20 to euros, then gets the amount of sEURO that can be obtained with given euros
-3. **BondingCurve** contains the sEURO token in **SEuro** and exposes the main APIs
+3. **BondingCurve** exposes the main APIs
