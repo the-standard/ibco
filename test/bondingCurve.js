@@ -14,8 +14,8 @@ describe('BondingCurve', async () => {
     const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
     const SEuroContract = await ethers.getContractFactory('SEuro');
     SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
-    BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
-    TestBondingCurve = await (await ethers.getContractFactory('TestBondingCurve')).deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
+    BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
+    TestBondingCurve = await (await ethers.getContractFactory('TestBondingCurve')).deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   });
 
   const getBucketPrice = async (index) => {
