@@ -32,10 +32,10 @@ module.exports = {
     }
   },
   contractSizer: {
-  alphaSort: false,
-  disambiguatePaths: false,
-  runOnCompile: false,
-  strict: true,
-  only: [],
-}
+    alphaSort: false,
+    disambiguatePaths: false,
+    runOnCompile: false,
+    strict: true,
+    only: [],
+  }
 };
