@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "contracts/SEuro.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
@@ -22,7 +21,6 @@ contract BondingCurve is AccessControl {
     uint256 private immutable maxSupply;
     uint256 private immutable k;
     int128 private immutable j;
-    SEuro private immutable seuro;
     uint256 private immutable bucketSize;
     uint32 private immutable finalBucketIndex;
 
@@ -33,7 +31,6 @@ contract BondingCurve is AccessControl {
 
     event PriceUpdated(uint32 index, uint256 price);
 
-    /// @param _seuro address of sEURO token
     /// @param _initialPrice initial price of sEURO, multiplied by 10^18, e.g. 800_000_000_000_000_000 = 0.8
     /// @param _maxSupply the amount of sEURO to be supplied by the Bonding Curve before sEURO reaches full price (€1 = 1 SEUR)
     /// @param _bucketSize the size of each price bucket in sEURO
@@ -47,14 +44,13 @@ contract BondingCurve is AccessControl {
     // m = max supply of Bonding Curve
     // j = 0.2, a constant which dictates the shape of the curve
     // i = the initial price of sEURO in Bonding Curve
-    constructor(address _seuro, uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
+    constructor(uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
 		_grantRole(DEFAULT_ADMIN, msg.sender);
         _setRoleAdmin(UPDATER, DEFAULT_ADMIN);
         _setRoleAdmin(CALCULATOR, DEFAULT_ADMIN);
 		grantRole(UPDATER, msg.sender);
 		grantRole(CALCULATOR, msg.sender);
 
-        seuro = SEuro(_seuro);
         initialPrice = _initialPrice;
         maxSupply = _maxSupply;
         k = FINAL_PRICE - initialPrice;

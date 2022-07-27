@@ -37,7 +37,7 @@ const deployContracts = async () => {
   await completed(DummyUSDT, 'USDT');
   SEuro = await (await ethers.getContractFactory('SEuro')).deploy('sEURO', 'SEUR', []);
   await completed(SEuro, 'SEuro');
-  BondingCurve = await (await ethers.getContractFactory('BondingCurve')).deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
+  BondingCurve = await (await ethers.getContractFactory('BondingCurve')).deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   await completed(BondingCurve, 'BondingCurve')
   SEuroCalculator = await (await ethers.getContractFactory('SEuroCalculator')).deploy(BondingCurve.address, externalContracts.eurUsdCl.address, externalContracts.eurUsdCl.dec);
   await completed(SEuroCalculator, 'SEuroCalculator')
