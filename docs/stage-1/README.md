@@ -1,6 +1,25 @@
-# sEURO Offering Architecture
-The sEURO Offering is the first stage in the IBCO process. Users can obtain sEURO in exchange for ETH or some accepted ERC20 tokens, at a discount which gradually reaches full price during the period of the IBCO.
+# Stage 1
 
+The sEURO offering is the first stage in the IBCO process. Users can obtain sEURO in exchange for ETH or some accepted ERC20 tokens, at a discount which gradually reaches full price during the period of the IBCO.
+
+### sEURO Offering public APIs
+
+**readOnlyCalculatePrice(uint256 _euroAmount)**
+*Description*: reads the cached price of sEUROs from the bonding curve
+*Input*: an amount of FIAT euros
+*Output*: an estimate in sEUROs given the input
+
+**calculatePrice(uint256 _euroAmount)**
+*Description*: calculates the actual (current) price of sEUROs in the bonding curve
+*Input*: an amount of FIAT euros
+*Output*: actual amount of sEUROs given the input
+
+**updateCurrentBucket(uint256 _minted)**
+*Description*: updates the current point on the bucket based on the IBCO total supply
+*Input*: an amount of sEUROs to add to the IBCO total supply
+
+
+# sEURO Offering Architecture
 
 ### Contracts
 The contracts used in this stage are:
@@ -9,8 +28,10 @@ The contracts used in this stage are:
 - [TokenManager.sol](../../contracts/TokenManager.sol): dictates which ERC20 tokens are accepted to exchange for sEURO, and stores exchange rate details
 - [SEuroCalculator.sol](../../contracts/SEuroCalculator.sol): calculates how many sEURO to exchange for the given collateral
 - [BondingCurve.sol](../../contracts/BondingCurve.sol): calculates the current price of sEURO in euros
+- [SEuro.sol](../../contracts/SEuro.sol): the ERC20-token representing the stable euro
 
 ### Relationship
 The relationship between the contracts is:
 1. **SEuroOffering** gets the exchange rate contracts from **TokenManager** and uses **SEuroCalculator** to calculate the exchange rate
 2. **SEuroCalculator** calculates the base exchange rate of ETH/ERC20 to euros, then gets the amount of sEURO that can be obtained with given euros
+3. **BondingCurve** contains the sEURO token in **SEuro** and exposes the main APIs
