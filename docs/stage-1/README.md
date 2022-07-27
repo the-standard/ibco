@@ -10,21 +10,15 @@ These are the functions exposed to the user in Stage 1.
 
 *Description*: estimates a price for given amount of given token
 
-*Input*:
-- symbol of accepted token as a 32-byte array (provided by **TokenManager**)
-- amount of provided token to estimate conversion into sEURO
+*Input*: symbol of accepted token as a 32-byte array (provided by **TokenManager**); amount of provided token to estimate conversion into sEURO
 
 *Output*: an estimate in sEURO given the input
 
 **swap(bytes32 _token, uint256 _amount)**
 
-*Description*:
-- swaps the given amount of given token for equivalent sEURO, transferred to user
-- user must approve **SEuroOffering** contract for given amount of token
+*Description*: swaps the given amount of given token for equivalent sEURO, transferred to user; user must approve **SEuroOffering** contract for given amount of token
 
-*Input*:
-- symbol of accepted token as a 32-byte array (provided by **TokenManager**)
-- amount of provided token to swap into sEURO
+*Input*: symbol of accepted token as a 32-byte array (provided by **TokenManager**); amount of provided token to swap into sEURO
 
 **swapETH()**
 
@@ -41,15 +35,11 @@ These are the functions exposed to the user in Stage 1.
 
 **get(bytes32 _name)**
 
-*Description*:
+*Description*: provides details for the accepted token; TODO: also provide the name of the token
 
-- provides details for the accepted token: 
-- TODO: also provide the name of the token
 *Input*: symbol of token as a 32-byte array (provided by **TokenManager**)
-*Output*:
-- address of the token
-- address of the Chainlink data feed for its exchange rate with USD
-- number of decimals the Chainlink data feed uses
+
+*Output*: address of the token; address of the Chainlink data feed for its exchange rate with USD; number of decimals the Chainlink data feed uses
 
 
 # Stage 1 Architecture
