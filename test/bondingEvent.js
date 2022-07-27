@@ -26,11 +26,15 @@ describe('BondingEvent', async () => {
     RatioCalculator = await RatioCalculatorContract.deploy();
   });
 
+  const isSEuroToken0 = () => {
+    return SEuro.address.toLowerCase() < USDT.address.toLowerCase();
+  }
+
   const deployBondingEvent = async (reserveSEuro, reserveOther) => {
     // tick -400 approx. 0.96 USDT per SEUR
     // tick 3000 approx. 1.35 USDT per SEUR
     // 400 and -3000 are the inverse of these prices
-    pricing = SEuro.address.toLowerCase() < USDT.address.toLowerCase() ?
+    pricing = isSEuroToken0() ?
       {
         initial: encodePriceSqrt(reserveOther, reserveSEuro),
         lowerTick: -400,
@@ -510,7 +514,7 @@ describe('BondingEvent', async () => {
       await expect(collect).to.emit(BondingEvent, 'LiquidityCollected');
       const collectedData = (await (await collect).wait()).events.filter(e => e.event == 'LiquidityCollected')[0].args;
       // should transfer to the given collateral wallet
-      const transferred = SEuro.address < USDT.address ?
+      const transferred = isSEuroToken0() ?
         {SEuro: collectedData.collectedTotal0, USDT: collectedData.collectedTotal1} :
         {SEuro: collectedData.collectedTotal1, USDT: collectedData.collectedTotal0};
       expect(await SEuro.balanceOf(wallet.address)).to.equal(transferred.SEuro);
