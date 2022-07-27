@@ -2,23 +2,44 @@
 
 The sEURO offering is the first stage in the IBCO process. Users can obtain sEURO in exchange for ETH or some accepted ERC20 tokens, at a discount which gradually reaches full price during the period of the IBCO.
 
-### Bonding Curve Public APIs
+### sEURO Offering Public APIs
 
 These are the functions exposed to the user in Stage 1.
 
-**readOnlyCalculatePrice(uint256 _euroAmount)**
-*Description*: reads the cached price of sEUROs from the bonding curve
-*Input*: an amount of FIAT euros
-*Output*: an estimate in sEUROs given the input
+**readOnlyCalculateSwap(bytes32 _token, uint256 _amount)**
+*Description*: estimates a price for given amount of given token
+*Input*:
+- symbol of accepted token as a 32-byte array (provided by **TokenManager**)
+- amount of provided token to estimate conversion into sEURO
+*Output*: an estimate in sEURO given the input
 
-**calculatePrice(uint256 _euroAmount)**
-*Description*: calculates the actual (current) price of sEUROs in the bonding curve
-*Input*: an amount of FIAT euros
-*Output*: actual amount of sEUROs given the input
+**swap(bytes32 _token, uint256 _amount)**
+*Description*:
+- swaps the given amount of given token for equivalent sEURO, transferred to user
+- user must approve **SEuroOffering** contract for given amount of token
+*Input*:
+- symbol of accepted token as a 32-byte array (provided by **TokenManager**)
+- amount of provided token to swap into sEURO
 
-**updateCurrentBucket(uint256 _minted)**
-*Description*: updates the current point on the bucket based on the IBCO total supply
-*Input*: an amount of sEUROs to add to the IBCO total supply
+**swapETH()**
+*Description*: payable function that swaps ETH value of message for equivalent sEURO
+
+### Token Manager Public APIs
+
+These are the functions exposed to the user in Stage 1.
+**getAcceptedTokens()**
+*Description*: provides list of all ERC20 tokens that are swappable for sEURO
+*Output*: list of 32-byte array representations of token symbols e.g. `0x5553445400000000000000000000000000000000000000000000000000000000` = `WETH`
+
+**get(bytes32 _name)**
+*Description*:
+- provides details for the accepted token: 
+- TODO: also provide the name of the token
+*Input*: symbol of token as a 32-byte array (provided by **TokenManager**)
+*Output*:
+- address of the token
+- address of the Chainlink data feed for its exchange rate with USD
+- number of decimals the Chainlink data feed uses
 
 
 # Stage 1 Architecture
