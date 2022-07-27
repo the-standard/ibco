@@ -23,7 +23,7 @@ describe('SEuroCalculator', async () => {
     const INITIAL_PRICE = ethers.utils.parseEther('0.8');
     const MAX_SUPPLY = ethers.utils.parseEther('200000000');
     const BUCKET_SIZE = ethers.utils.parseEther('100000');
-    BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
+    BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
     const SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');
     SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, EUR_USD_CL, EUR_USD_CL_DEC);
     await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), SEuroCalculator.address);

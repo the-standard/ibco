@@ -35,7 +35,7 @@ describe('SEuroOffering', async () => {
 
   async function getBucketPrice(index) {
     const TestBondingCurve = await (await ethers.getContractFactory('TestBondingCurve')).deploy(
-      SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE
+      INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE
     );
     return await TestBondingCurve.callStatic.getPriceOfBucket(index);
   }
@@ -51,7 +51,7 @@ describe('SEuroOffering', async () => {
 
     WETH = await ethers.getContractAt('WETH', WETH_ADDRESS);
     SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
-    BondingCurve = await BondingCurveContract.deploy(SEuro.address, INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
+    BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
     SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, EUR_USD_CL, EUR_USD_CL_DEC);
     TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CL_ETH_USD, CL_ETH_USD_DEC);
     SEuroOffering = await SEuroOfferingContract.deploy(SEuro.address, SEuroCalculator.address, TokenManager.address, BondingCurve.address);
