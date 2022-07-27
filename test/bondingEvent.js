@@ -66,20 +66,12 @@ describe('BondingEvent', async () => {
     await TokenGateway.connect(owner).setStorageAddress(BondStorage.address);
   }
 
-  const swapSEuro = async (amountIn) => {
+  const swap = async (tokenIn, tokenOut, amountIn) => {
     if (!SwapManager) {
       SwapManager = await (await ethers.getContractFactory('SwapManager')).deploy();
     }
-    await SEuro.approve(SwapManager.address, amountIn);
-    await SwapManager.swap(SEuro.address, USDT.address, amountIn, MOST_STABLE_FEE);
-  }
-
-  const swapUSDT = async (amountIn) => {
-    if (!SwapManager) {
-      SwapManager = await (await ethers.getContractFactory('SwapManager')).deploy();
-    }
-    await USDT.approve(SwapManager.address, amountIn);
-    await SwapManager.swap(USDT.address, SEuro.address, amountIn, MOST_STABLE_FEE);
+    await tokenIn.approve(SwapManager.address, amountIn);
+    await SwapManager.swap(tokenIn.address, tokenOut.address, amountIn, MOST_STABLE_FEE);
   }
 
   describe('initialisation', async () => {
@@ -367,7 +359,7 @@ describe('BondingEvent', async () => {
 
         // move the price to the edge of default tick range
         // moves current price tick to 909
-        await swapSEuro(etherBalances['100K'].mul(5));
+        await swap(SEuro, USDT, etherBalances['100K'].mul(5));
 
         // bonding again will create a new position, as first one is not viable since price change
         amountSEuro = etherBalances.TWO_MILLION;
@@ -416,7 +408,7 @@ describe('BondingEvent', async () => {
         const { lowerTick, upperTick } = await BondingEvent.getOtherAmount(amountSEuro);
         expect(lowerTick).to.equal(initialLower);
         expect(upperTick).to.equal(initialUpper);
-        await swapSEuro(etherBalances['100K']);
+        await swap(SEuro, USDT, etherBalances['100K']);
       }
     });
 
@@ -491,7 +483,7 @@ describe('BondingEvent', async () => {
       expect(await BondingEvent.getPositions()).to.be.length(1);
 
       // create some fees to collect and also moves the price so there will be more than one position
-      await swapSEuro(etherBalances['125K'].mul(5));
+      await swap(SEuro, USDT, etherBalances['125K'].mul(5));
 
       // create a second position
       amountSEuro = etherBalances.TWO_MILLION;
@@ -503,7 +495,7 @@ describe('BondingEvent', async () => {
       );
       const positions = await BondingEvent.getPositions();
       expect(positions).to.be.length(2);
-      await swapUSDT(etherBalances['125K'].mul(5));
+      await swap(USDT, SEuro, etherBalances['125K'].mul(5));
 
       await expect(BondingEvent.clearPositionAndBurn(positions[0])).to.be.revertedWith('err-no-wallet-assigned');
 
