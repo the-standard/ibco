@@ -74,6 +74,14 @@ describe('BondingEvent', async () => {
     await SwapManager.swap(SEuro.address, USDT.address, amountIn, MOST_STABLE_FEE);
   }
 
+  const swapUSDT = async (amountIn) => {
+    if (!SwapManager) {
+      SwapManager = await (await ethers.getContractFactory('SwapManager')).deploy();
+    }
+    await USDT.approve(SwapManager.address, amountIn);
+    await SwapManager.swap(USDT.address, SEuro.address, amountIn, MOST_STABLE_FEE);
+  }
+
   describe('initialisation', async () => {
     it('initialises the pool with the given price', async () => {
       await deployBondingEventWithDefaultPrices();
@@ -464,12 +472,70 @@ describe('BondingEvent', async () => {
     })
   });
 
+  describe('retracting liquidity', async () => {
+    beforeEach(async () => {
+      await deployBondingEventWithDefaultPrices();
+      await mintUsers();
+      await readyTokenGateway();
+    });
+
+    it('sends all liquidity - plus fees - to designated collateral wallet, given a token ID', async () => {
+      // create the first position
+      let amountSEuro = etherBalances.TWO_MILLION;
+      let { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
+      await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
+      await USDT.connect(customer).approve(BondingEvent.address, amountOther);
+      await BondingEvent.connect(owner).bond(
+        customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+      );
+      expect(await BondingEvent.getPositions()).to.be.length(1);
+
+      // create some fees to collect and also moves the price so there will be more than one position
+      await swapSEuro(etherBalances['125K'].mul(5));
+
+      // create a second position
+      amountSEuro = etherBalances.TWO_MILLION;
+      ({ amountOther } = await BondingEvent.getOtherAmount(amountSEuro));
+      await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
+      await USDT.connect(customer).approve(BondingEvent.address, amountOther);
+      await BondingEvent.connect(owner).bond(
+        customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+      );
+      const positions = await BondingEvent.getPositions();
+      expect(positions).to.be.length(2);
+      await swapUSDT(etherBalances['125K'].mul(5));
+
+      await expect(BondingEvent.clearPositionAndBurn(positions[0])).to.be.revertedWith('err-no-wallet-assigned');
+
+      await BondingEvent.setExcessCollateralWallet(wallet.address);
+
+      const collect = BondingEvent.clearPositionAndBurn(positions[0]);
+
+      await expect(collect).not.to.be.reverted;
+      // remove the liquidity position token
+      await expect(await BondingEvent.getPositions()).to.be.length(1);
+      // should emit the data about the collection
+      await expect(collect).to.emit(BondingEvent, 'LiquidityCollected');
+      const collectedData = (await (await collect).wait()).events.filter(e => e.event == 'LiquidityCollected')[0].args;
+      // should transfer to the given collateral wallet
+      const transferred = SEuro.address < USDT.address ?
+        {SEuro: collectedData.collectedTotal0, USDT: collectedData.collectedTotal1} :
+        {SEuro: collectedData.collectedTotal1, USDT: collectedData.collectedTotal0};
+      expect(await SEuro.balanceOf(wallet.address)).to.equal(transferred.SEuro);
+      expect(await USDT.balanceOf(wallet.address)).to.equal(transferred.USDT);
+      // fees should be generated
+      expect(collectedData.feesCollected0).to.be.gt(0);
+      expect(collectedData.feesCollected1).to.be.gt(0);
+      expect(collectedData.collectedTotal0).to.eq(collectedData.retractedAmount0.add(collectedData.feesCollected0));
+      expect(collectedData.collectedTotal1).to.eq(collectedData.retractedAmount1.add(collectedData.feesCollected1));
+    });
+  });
+ 
   //
   //
   //
   // --------------------------------------
   // TODO:
-  // - test a second position is created if price moves after initialisation
   // - make sure the principals / profits on bonds are correct, and based on both amounts sent in
   // - fee collection?
   // - restrict position data to owner?
