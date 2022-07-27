@@ -30,7 +30,7 @@ describe('BondingEvent', async () => {
     // tick -400 approx. 0.96 USDT per SEUR
     // tick 3000 approx. 1.35 USDT per SEUR
     // 400 and -3000 are the inverse of these prices
-    pricing = SEuro.address < USDT.address ?
+    pricing = SEuro.address.toLowerCase() < USDT.address.toLowerCase() ?
       {
         initial: encodePriceSqrt(reserveOther, reserveSEuro),
         lowerTick: -400,
