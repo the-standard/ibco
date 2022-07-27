@@ -36,5 +36,12 @@ module.exports = {
       url: `https://rinkeby.infura.io/v3/${INFURA_API_KEY}`,
       accounts: testAccounts
     }
+  },
+  contractSizer: {
+    alphaSort: false,
+    disambiguatePaths: false,
+    runOnCompile: false,
+    strict: true,
+    only: [],
   }
 };

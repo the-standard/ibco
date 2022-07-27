@@ -2,7 +2,7 @@ const { ethers, network } = require('hardhat');
 const fs = require('fs');
 const { encodePriceSqrt, MOST_STABLE_FEE, etherBalances } = require('../test/common');
 let addresses;
-let DummyTST, DummyUSDT, SEuro, SEuroOffering, OperatorStage2, BondStorage, BondingEvent, StandardTokenGateway, BondingCurve, SEuroCalculator;
+let DummyTST, DummyUSDT, SEuro, SEuroOffering, OperatorStage2, BondStorage, BondingEvent, StandardTokenGateway, BondingCurve, SEuroCalculator, Staking;
 
 const INITIAL_PRICE = ethers.utils.parseEther('0.8');
 const MAX_SUPPLY = ethers.utils.parseEther('200000000');
@@ -61,6 +61,15 @@ const deployContracts = async () => {
   );
   await completed(BondingEvent, 'BondingEvent')
 
+  let timeNow = Math.floor(Date.now() / 1000);
+  let oneWeek = 60 * 60 * 24 * 7;
+  let seuroPerTst = 0.8 / 0.05;
+  let fivePc = 5000;
+  Staking = await (await ethers.getContractFactory('Staking')).deploy(
+	'TST Staking', 'TST-S', timeNow, timeNow + oneWeek, DummyTST.address, SEuro.address, seuroPerTst, fivePc
+  );
+  await completed(Staking, 'Staking');
+
   addresses = {
     TST: DummyTST.address,
     USDT: DummyUSDT.address,
@@ -72,7 +81,8 @@ const deployContracts = async () => {
     BondingEvent: BondingEvent.address,
     BondStorage: BondStorage.address,
     StandardTokenGateway: StandardTokenGateway.address,
-    OperatorStage2: OperatorStage2.address
+    OperatorStage2: OperatorStage2.address,
+    Staking: Staking.address
   };
 
   return addresses
@@ -82,6 +92,12 @@ const activateSEuroOffering = async () => {
   const [owner] = await ethers.getSigners();
   const SEuroOffering = await ethers.getContractAt('SEuroOffering', addresses.SEuroOffering);
   await SEuroOffering.connect(owner).activate();
+}
+
+const activateStaking = async() => {
+  const [owner] = await ethers.getSigners();
+  const Staking = await ethers.getContractAt('Staking', addresses.Staking);
+  await Staking.connect(owner).activate();
 }
 
 const mintUser = async (address) => {
@@ -111,6 +127,7 @@ const mintTokensForAccount = async (accounts) => {
 
 const contractsFrontendReady = async (accounts) => {
   await activateSEuroOffering();
+  await activateStaking();
   await giveContractsRequiredPermissions();
   await mintTokensForAccount(accounts);
 }
