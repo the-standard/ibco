@@ -103,24 +103,24 @@ contract Staking is ERC721URIStorage, Ownable {
         // fetch current tokenID
         uint256 newItemId = _tokenId;
 
-        Position memory position = _positions[msg.sender];
+        Position memory pos = _positions[msg.sender];
 
-        if (position.nonce == 0) {
+        if (pos.nonce == 0) {
             _mint(msg.sender, newItemId);
 
-            position.open = true;
-            position.tokenId = newItemId;
+            pos.open = true;
+            pos.tokenId = newItemId;
 
             _tokenId++;
         }
 
         // update the position
-        position.totalValue += _amount;
-        position.nonce += 1;
-        position.reward += total;
+        pos.totalValue += _amount;
+        pos.nonce += 1;
+        pos.reward += total;
 
         // update the position
-        _positions[msg.sender] = position;
+        _positions[msg.sender] = pos;
 
         // update the remaining SEURO
         SEURO_ALLOCATED += total;
@@ -129,40 +129,40 @@ contract Staking is ERC721URIStorage, Ownable {
     function burn() public {
         require(block.timestamp >= endTime, 'err-pool-open');
 
-        Position memory position = _positions[msg.sender];
-        require(position.nonce > 0, 'err-not-valid');
-        require(position.open == true, 'err-closed');
+        Position memory pos = _positions[msg.sender];
+        require(pos.nonce > 0, 'err-not-valid');
+        require(pos.open == true, 'err-closed');
 
         // update position
-        position.open = false;
+        pos.open = false;
 
         // burn the token
-        _burn(position.tokenId);
+        _burn(pos.tokenId);
 
         // withdraw funds
         IERC20 TOKEN = IERC20(SEURO_ADDRESS);
-        TOKEN.transfer(msg.sender, position.reward);
+        TOKEN.transfer(msg.sender, pos.reward);
 
-        _positions[msg.sender] = position;
+        _positions[msg.sender] = pos;
     }
 
     // withdraw to the owner's address
     function withdraw(address _address) external onlyOwner {
         IERC20 TOKEN = IERC20(_address);
-        uint256 balance = TOKEN.balanceOf(address(this));
+        uint256 bal = TOKEN.balanceOf(address(this));
 
-        require(balance > 0, 'err-no-funds');
-        TOKEN.transfer(owner(), balance);
+        require(bal > 0, 'err-no-funds');
+        TOKEN.transfer(owner(), bal);
     }
 
     function position(address owner) external view returns (uint96, uint256, bool, uint256, uint256) {
-        Position memory position = _positions[owner];
+        Position memory pos = _positions[owner];
         return (
-            position.nonce,
-            position.tokenId,
-            position.open,
-            position.totalValue,
-            position.reward
+            pos.nonce,
+            pos.tokenId,
+            pos.open,
+            pos.totalValue,
+            pos.reward
         );
     }
 
@@ -176,20 +176,20 @@ contract Staking is ERC721URIStorage, Ownable {
     function catastrophicClose() external {
         require(catastrophic == true, 'err-not-allowed');
 
-        Position memory position = _positions[msg.sender];
-        require(position.nonce > 0, 'err-no-position');
-        require(position.open == true, 'err-postition-closed');
+        Position memory pos = _positions[msg.sender];
+        require(pos.nonce > 0, 'err-no-position');
+        require(pos.open == true, 'err-postition-closed');
 
         IERC20 TOKEN = IERC20(TST_ADDRESS);
-        TOKEN.transfer(msg.sender, position.totalValue);
+        TOKEN.transfer(msg.sender, pos.totalValue);
 
         // closed for business
-        position.open = false;
+        pos.open = false;
 
         // burn the token
-        _burn(position.tokenId);
+        _burn(pos.tokenId);
 
-        _positions[msg.sender] = position;
+        _positions[msg.sender] = pos;
     }
 }
 
