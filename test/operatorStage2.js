@@ -77,9 +77,9 @@ describe('Stage 2', async () => {
           expect(actualPrincipal).to.equal(etherBalances['125K']);
           expect(actualRate).to.equal(inputRate);
 
-		  if (inputDurationWeeks == 0) {
-			inputDurationWeeks = 52;
-		  }
+          if (inputDurationWeeks == 0) {
+            inputDurationWeeks = 52;
+          }
 
           await helperFastForwardTime(inputDurationWeeks * ONE_WEEK_IN_SECONDS);
           await OP2.connect(customer).refreshBond(customer.address);
@@ -94,32 +94,32 @@ describe('Stage 2', async () => {
         }
 
         it('transfers TST rewards successfully when bonding with a custom rate', async () => {
-		  await OP2.connect(owner).addRate(rates.TWENTY_PC, 1);
+          await OP2.connect(owner).addRate(rates.TWENTY_PC, 1);
           await testingSuite(etherBalances['125K'], rates.TWENTY_PC, 1);
           await expectedTokBalance(125000, 1.2);
         });
 
-		it('transfers TST rewards successfully when bonding with the default rate', async () => {
-		  let twoPercent = 2000;
-		  await testingSuite(etherBalances['125K'], twoPercent, 52);
-		  await expectedTokBalance(125000, 1.02);
-		});
+        it('transfers TST rewards successfully when bonding with the default rate', async () => {
+          let twoPercent = 2000;
+          await testingSuite(etherBalances['125K'], twoPercent, 52);
+          await expectedTokBalance(125000, 1.02);
+        });
 
-		it('reverts when trying to bond with a non-added rate', async () => {
-		  let threePercent = 3000;
-		  let arbitraryWeeks = 36;
-		  await expect(testingSuite(etherBalances['125K'], threePercent, arbitraryWeeks)).to.be.revertedWith('err-missing-rate');
-		});
+        it('reverts when trying to bond with a non-added rate', async () => {
+          let threePercent = 3000;
+          let arbitraryWeeks = 36;
+          await expect(testingSuite(etherBalances['125K'], threePercent, arbitraryWeeks)).to.be.revertedWith('err-missing-rate');
+       });
 
-		it('adds multiple new rates and grows the set of accepted rates', async() => {
-		  await OP2.connect(owner).addRate(rates.FIVE_PC, 10);
-		  await OP2.connect(owner).addRate(rates.TEN_PC, 20);
-		  await OP2.connect(owner).addRate(rates.TWENTY_PC, 40);
+       it('adds multiple new rates and grows the set of accepted rates', async() => {
+          await OP2.connect(owner).addRate(rates.FIVE_PC, 10);
+          await OP2.connect(owner).addRate(rates.TEN_PC, 20);
+          await OP2.connect(owner).addRate(rates.TWENTY_PC, 40);
 
-		  let expectedRates = 4;
-		  let actualRates = (await OP2.showRates()).length;
-		  expect(actualRates).to.equal(expectedRates);
-		});
+          let expectedRates = 4;
+          let actualRates = (await OP2.showRates()).length;
+          expect(actualRates).to.equal(expectedRates);
+       });
 
       });
     });
