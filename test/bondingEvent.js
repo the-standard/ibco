@@ -526,3 +526,4 @@ describe('BondingEvent', async () => {
       expect(collectedData.collectedTotal1).to.eq(collectedData.retractedAmount1.add(collectedData.feesCollected1));
     });
   });
+});
