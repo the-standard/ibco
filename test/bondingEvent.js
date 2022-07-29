@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 const { expect } = require('chai');
-const { POSITION_MANAGER_ADDRESS, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec } = require('./common.js');
 
 let owner, customer, wallet, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, BondingEventContract, RatioCalculator, pricing, SwapManager;
 
@@ -23,7 +23,7 @@ describe('BondingEvent', async () => {
     RatioCalculator = await RatioCalculatorContract.deploy();
   });
 
-  const scaleUpForDec = (reserve) => {
+  const scaleUpForDecDiff = (reserve) => {
     const scale = BigNumber.from(10).pow(12);
     return BigNumber.from(reserve).mul(scale);
   }
@@ -58,7 +58,7 @@ describe('BondingEvent', async () => {
   }
 
   const deployBondingEventWithDefaultPrices = async () => {
-    await deployBondingEvent(scaleUpForDec(100), 114);
+    await deployBondingEvent(scaleUpForDecDiff(100), 114);
   };
 
   const mintUsers = async () => {
@@ -118,9 +118,9 @@ describe('BondingEvent', async () => {
       it('calculates the required amount of USDT for given sEURO', async () => {
         const amountSEuro = etherBalances['10K'];
         let { amountOther } = (await BondingEvent.getOtherAmount(amountSEuro));
-        amountOther = amountOther.div(DECIMALS);
-        // comes from uniswap ui, adding the 0.01% extra from "getOtherAmount" in BondingEvent
-        const expectedUSDT = 11534;
+        amountOther = format6Dec(amountOther);
+        // comes from uniswap ui
+        const expectedUSDT = 11225;
         expect(amountOther).to.equal(expectedUSDT);
       });
     });
@@ -275,15 +275,15 @@ describe('BondingEvent', async () => {
     });
 
     describe('excess usdt', async () => {
-      it('will transfer the excess usdt if there is a designated wallet', async () => {
+      it('will transfer the excess sEURO if there is a designated wallet', async () => {
         await BondingEvent.setExcessCollateralWallet(wallet.address);
-        expect(await USDT.balanceOf(wallet.address)).to.equal(0);
+        expect(await SEuro.balanceOf(wallet.address)).to.equal(0);
 
         await testStartBond(etherBalances.TWO_MILLION, durations.ONE_YR_WEEKS,
           rates.TEN_PC, USDT
         );
 
-        expect(await USDT.balanceOf(wallet.address)).to.be.gt(0);
+        expect(await SEuro.balanceOf(wallet.address)).to.be.gt(0);
       });
     });
   });
@@ -356,7 +356,7 @@ describe('BondingEvent', async () => {
         expect(position.liquidity).to.be.gt(0);
 
         // move the price to the edge of default tick range
-        // moves current price tick to 909
+        // moves current price tick to 275014
         await swap(SEuro, USDT, etherBalances['100K'].mul(5));
 
         // bonding again will create a new position, as first one is not viable since price change
@@ -371,8 +371,8 @@ describe('BondingEvent', async () => {
         positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(2);
         let secondPosition = await BondingEvent.getPositionData(positions[1]);
-        // since swap, new tick is at 909 - shifting lower tick to -700 and upper to 3300 puts 909 at in middle 20%
-        const expectedDiff = 300;
+        // since swap, new tick is at 275420 - shifting lower tick to 272900 and upper to 277100 puts at in middle 20%
+        const expectedDiff = 400;
         expect(secondPosition.lowerTick).to.equal(pricing.lowerTick - expectedDiff);
         expect(secondPosition.upperTick).to.equal(pricing.upperTick + expectedDiff);
         expect(secondPosition.liquidity).to.be.gt(0);
@@ -382,9 +382,9 @@ describe('BondingEvent', async () => {
 
   describe('liquidity ratios', async () => {
 
-    it.only('gives the default if current price in middle 20% between ticks', async () => {
+    it('gives the default if current price in middle 20% between ticks', async () => {
       // puts price tick at 274669, between 40th + 60th percentile between 273300 and 276700 ticks
-      await deployBondingEvent(scaleUpForDec(100), 118);
+      await deployBondingEvent(scaleUpForDecDiff(100), 118);
       await mintUsers();
       await readyTokenGateway();
 
@@ -403,53 +403,41 @@ describe('BondingEvent', async () => {
         // initial current price tick is at 200, we move it towards -200 gradually (via swapping the seuro for the usdt liquidity in there)
         // we expect the lower and upper ticks to stay within +/- 1000, because +/- 200 is in the middle 20%
         const { lowerTick, upperTick } = await BondingEvent.getOtherAmount(amountSEuro);
-        expect(lowerTick).to.equal(initialLower);
-        expect(upperTick).to.equal(initialUpper);
+        expect(lowerTick).to.equal(pricing.lowerTick);
+        expect(upperTick).to.equal(pricing.upperTick);
         await swap(SEuro, USDT, etherBalances['100K']);
       }
     });
 
     it('gives a new tick range if current price outside of range of default ticks', async () => {
-      // sets current price tick to 4054
-      await deployBondingEvent(100, 150);
-      const initialLower = -1000;
-      const initialUpper = 1000;
-      await BondingEvent.adjustTickDefaults(initialLower,initialUpper);
+      // sets current price tick to 272960, outside of ticks 273300 and 276700
+      await deployBondingEvent(scaleUpForDecDiff(100), 140);
       const amountSEuro = etherBalances.TWO_MILLION;
 
       const { lowerTick, upperTick } = await BondingEvent.getOtherAmount(amountSEuro);
 
-      // 1000 expansion to -2000 and 2000 (or inverted), doesn't suffice
-      // 10000 expansion to -12000 and 12000 (or inverted), doesn't suffice
-      // further 10000 expansion to -22000 and 22000 (or inverted), puts current price tick (4054) in middle 20% of tick range
-      const expectedDiff = 21000;
-      expect(lowerTick).to.eq(initialLower - expectedDiff);
-      expect(upperTick).to.eq(initialUpper + expectedDiff);
+      // 9000 expansion to 264300 and 285700 satisfies 40th - 60th percentile buffer
+      const expectedDiff = 9000;
+      expect(lowerTick).to.eq(pricing.lowerTick - expectedDiff);
+      expect(upperTick).to.eq(pricing.upperTick + expectedDiff);
     });
 
-    it('gives a new tick range if current price outside of range of default ticks', async () => {
-      // sets current price tick to -953
-      await deployBondingEvent(110, 100);
-      const initialLower = -1000;
-      const initialUpper = 1000;
-      await BondingEvent.adjustTickDefaults(initialLower,initialUpper);
+    it('gives a new tick range if current price close to edge of tick range', async () => {
+      // sets current price tick to 276629, narrowly inside ticks 273300 and 276700
+      await deployBondingEvent(scaleUpForDecDiff(100), 97);
       const amountSEuro = etherBalances.TWO_MILLION;
 
       const { lowerTick, upperTick } = await BondingEvent.getOtherAmount(amountSEuro);
 
-      // 1000 expansion to -2000 and 2000 (or inverted), doesn't suffice
-      // further 3000 expansion to -5000 and 5000 (or inverted), puts current price tick (953) in middle 20% of tick range
-      const expectedDiff = 4000;
-      expect(lowerTick).to.eq(initialLower - expectedDiff);
-      expect(upperTick).to.eq(initialUpper + expectedDiff);
+      // 7000 expansion to 266300 and 283700 satisfies 40th - 60th percentile buffer
+      const expectedDiff = 7000;
+      expect(lowerTick).to.eq(pricing.lowerTick - expectedDiff);
+      expect(upperTick).to.eq(pricing.upperTick + expectedDiff);
     });
 
     it('gives max limit tick range if current price is very extreme', async () => {
-      // sets current price tick to 184216
-      await deployBondingEvent(1, BigNumber.from(10).pow(8));
-      const initialLower = -1000;
-      const initialUpper = 1000;
-      await BondingEvent.adjustTickDefaults(initialLower,initialUpper);
+      // sets current price tick to -276324 (inverted)
+      await deployBondingEvent(1, scaleUpForDecDiff(1));
       const amountSEuro = etherBalances.TWO_MILLION;
 
       const { lowerTick, upperTick } = await BondingEvent.getOtherAmount(amountSEuro);

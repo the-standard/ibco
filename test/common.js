@@ -39,6 +39,7 @@ const DEFAULT_SQRT_PRICE = BigNumber.from(2).pow(96);
 const ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
 const STANDARD_TOKENS_PER_EUR = 20; // 1 TST = 0.05 EUR
 const DECIMALS = BigNumber.from(10).pow(18);
+const sixDec = BigNumber.from(10).pow(6);
 
 let rates = {
   HALF_PC: 500,
@@ -79,6 +80,10 @@ const helperFastForwardTime = async (seconds) => {
   ethers.provider.send('evm_mine');
 }
 
+const format6Dec = (amount) => {
+  return BigNumber.from(amount).div(sixDec);
+}
+
 module.exports = {
   POSITION_MANAGER_ADDRESS,
   etherBalances,
@@ -93,6 +98,7 @@ module.exports = {
   rates,
   durations,
   encodePriceSqrt,
-  helperFastForwardTime
+  helperFastForwardTime,
+  format6Dec
 }
 
