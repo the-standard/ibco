@@ -4,6 +4,7 @@ const { BigNumber } = ethers;
 
 const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 
+// Only usable for tokens with 18 decimals such as TST and SEURO
 let etherBalances = {
   '8K': ethers.utils.parseEther('8000'),
   '10K': ethers.utils.parseEther('10000'),
@@ -18,6 +19,17 @@ let etherBalances = {
   FIVE_HUNDRED_MILLION: ethers.utils.parseEther('500000000'),
   ONE_BILLION: ethers.utils.parseEther('1000000000'),
 };
+
+// const parseOtherTokens = (valueStr) => {
+//  return ethers.utils.parseUnits(valueStr, 6);
+// }
+
+// Only usable for tokens with 6 decimals such as USDT and USDC
+// let otherBalances = {
+//  THOUSAND: parseOtherTokens('1000'),
+//  MILLION: parseOtherTokens('1000000'),
+//  BILLION: parseOtherTokens('1000000000'),
+//};
 
 const MOST_STABLE_FEE = 500;
 const STABLE_TICK_SPACING = 10;
@@ -46,9 +58,11 @@ let durations = {
   EIGHT_WEEKS: 8
 };
 
-bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
+bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 
-// ============== FUNCTIONS ==============
+// ============== MAIN TEST UTILS ==============
+
+
 const encodePriceSqrt = (reserve1, reserve0) => {
   return ethers.BigNumber.from(
     new bn(reserve1.toString())

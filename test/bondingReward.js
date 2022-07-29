@@ -9,7 +9,7 @@ describe('BondingReward', async () => {
 
   beforeEach(async () => {
     [owner, customer] = await ethers.getSigners();
-    const ERC20Contract = await ethers.getContractFactory('DUMMY');
+    const ERC20Contract = await ethers.getContractFactory('DummyDec18');
     const SEuroContract = await ethers.getContractFactory('SEuro');
     SEuro = await SEuroContract.deploy('sEURO', 'sEUR', [owner.address]);
     USDT = await ERC20Contract.deploy('USDT', 'USDT', ethers.utils.parseEther('10000000'));
