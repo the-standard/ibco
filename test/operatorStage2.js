@@ -111,16 +111,29 @@ describe('Stage 2', async () => {
           await expect(testingSuite(etherBalances['125K'], threePercent, arbitraryWeeks)).to.be.revertedWith('err-missing-rate');
        });
 
-       it('adds multiple new rates and grows the set of accepted rates', async() => {
-          await OP2.connect(owner).addRate(rates.FIVE_PC, 10);
-          await OP2.connect(owner).addRate(rates.TEN_PC, 20);
-          await OP2.connect(owner).addRate(rates.TWENTY_PC, 40);
+       it('adds and subtracts multiple new rates to grow and shrink the set of accepted rates', async() => {
+         let expectedRates, actualRates;
+         await OP2.connect(owner).addRate(rates.FIVE_PC, 10);
+         await OP2.connect(owner).addRate(rates.TEN_PC, 20);
+         await OP2.connect(owner).addRate(rates.TWENTY_PC, 40);
 
-          let expectedRates = 4;
-          let actualRates = (await OP2.showRates()).length;
-          expect(actualRates).to.equal(expectedRates);
+         expectedRates = 4;
+         actualRates = (await OP2.showRates()).length;
+         expect(actualRates).to.equal(expectedRates);
+
+         await OP2.removeRate(rates.TWENTY_PC);
+         await OP2.removeRate(rates.TEN_PC);
+         expectedRates = 2;
+         actualRates = (await OP2.showRates()).length;
+         expect(actualRates).to.equal(expectedRates);
        });
 
+       it('adds a rate and bonds successfully, then removes it such that following bonding fails', async() => {
+         await OP2.connect(owner).addRate(rates.FIVE_PC, 10);
+         await testingSuite(etherBalances['125K'], rates.FIVE_PC, 10);
+         await OP2.connect(owner).removeRate(rates.FIVE_PC);
+         await expect(testingSuite(etherBalances['125K'], rates.FIVE_PC, 10)).to.be.revertedWith('err-missing-rate');
+        });
       });
     });
   });
