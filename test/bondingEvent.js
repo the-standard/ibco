@@ -20,31 +20,38 @@ describe('BondingEvent', async () => {
     const RatioCalculatorContract = await ethers.getContractFactory('RatioCalculator');
     SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
     TST = await ERC20Contract.deploy('TST', 'TST', 18);
-    USDT = await ERC20Contract.deploy('USDT', 'USDT', 18);
+    USDT = await ERC20Contract.deploy('USDT', 'USDT', 6);
     TokenGateway = await TokenGatewayContract.deploy(TST.address, SEuro.address);
     BondStorage = await BondStorageContract.deploy(TokenGateway.address);
     RatioCalculator = await RatioCalculatorContract.deploy();
   });
+
+  const scaleUpForDec = (reserve) => {
+    const scale = BigNumber.from(10).pow(12);
+    return BigNumber.from(reserve).mul(scale);
+  }
 
   const isSEuroToken0 = () => {
     return SEuro.address.toLowerCase() < USDT.address.toLowerCase();
   }
 
   const deployBondingEvent = async (reserveSEuro, reserveOther) => {
-    // tick -400 approx. 0.96 USDT per SEUR
-    // tick 3000 approx. 1.35 USDT per SEUR
-    // 400 and -3000 are the inverse of these prices
+    // note: ticks represent that sEURO is 18dec and USDT is 6dec
+    // tick -276700 approx. 0.96 USDT per SEUR
+    // tick -273300 approx. 1.35 USDT per SEUR
+    // 273300 and 276700 are the inverse of these prices
     pricing = isSEuroToken0() ?
       {
         initial: encodePriceSqrt(reserveOther, reserveSEuro),
-        lowerTick: -400,
-        upperTick: 3000
+        lowerTick: -276700,
+        upperTick: -273300
       } :
       {
         initial: encodePriceSqrt(reserveSEuro, reserveOther),
-        lowerTick: -3000,
-        upperTick: 400,
+        lowerTick: 273300,
+        upperTick: 276700
       }
+      console.log(pricing)
 
     BondingEvent = await BondingEventContract.deploy(
       SEuro.address, USDT.address, POSITION_MANAGER_ADDRESS, BondStorage.address,
@@ -54,7 +61,7 @@ describe('BondingEvent', async () => {
   }
 
   const deployBondingEventWithDefaultPrices = async () => {
-    await deployBondingEvent(100, 114);
+    await deployBondingEvent(scaleUpForDec(100), 114);
   };
 
   const mintUsers = async () => {
@@ -388,18 +395,17 @@ describe('BondingEvent', async () => {
 
   describe('liquidity ratios', async () => {
 
-    it('gives the default if current price in middle 20% between ticks', async () => {
-      // sets the price tick at 199
-      await deployBondingEvent(9802,10000);
+    it.only('gives the default if current price in middle 20% between ticks', async () => {
+      // puts price tick at 274669, between 40th + 60th percentile between 273300 and 276700 ticks
+      await deployBondingEvent(scaleUpForDec(100), 118);
       await mintUsers();
       await readyTokenGateway();
-      const initialLower = -1000;
-      const initialUpper = 1000;
-      await BondingEvent.adjustTickDefaults(initialLower,initialUpper);
 
       // add some liquidity to pool, to allow some swapping;
       const amountSEuro = etherBalances.TWO_MILLION;
       const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
+      console.log(amountSEuro)
+      console.log(amountOther)
       await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
       await USDT.connect(customer).approve(BondingEvent.address, amountOther);
       await BondingEvent.connect(owner).bond(
