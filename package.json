@@ -28,6 +28,7 @@
     "bignumber.js": "^9.0.2",
     "chai": "^4.3.6",
     "dotenv": "^16.0.0",
+    "eslint": "^8.20.0",
     "ethereum-waffle": "^3.4.4",
     "ethers": "^5.6.1",
     "hardhat": "^2.10.0"
@@ -37,4 +38,3 @@
     "solidity-coverage": "^0.7.21"
   }
 }
-
