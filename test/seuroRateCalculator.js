@@ -3,8 +3,6 @@ const { BigNumber } = ethers;
 const { expect } = require('chai');
 const { etherBalances } = require('./common')
 
-let owner, offering;
-
 describe('SEuroCalculator', async () => {
   const CL_ETH_USD = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
   const CL_ETH_USD_DEC = 8;
@@ -18,7 +16,7 @@ describe('SEuroCalculator', async () => {
   beforeEach(async () => {
     [ owner, offering ] = await ethers.getSigners();
     const SEuroContract = await ethers.getContractFactory('SEuro');
-    const SEuro = await SEuroContract.deploy('SEuro', 'SEUR', []);
+    await SEuroContract.deploy('SEuro', 'SEUR', []);
     const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
     const INITIAL_PRICE = ethers.utils.parseEther('0.8');
     const MAX_SUPPLY = ethers.utils.parseEther('200000000');

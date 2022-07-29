@@ -15,3 +15,6 @@ cov:
 
 size:
 		@npx hardhat size-contracts
+
+lint:
+		@npx eslint test/

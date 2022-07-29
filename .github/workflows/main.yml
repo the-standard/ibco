@@ -22,4 +22,5 @@ jobs:
       - run: npm ci
       - run: npx hardhat test --parallel
       - run: npx hardhat size-contracts
+      - run: npx eslint test/
 
