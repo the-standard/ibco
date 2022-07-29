@@ -73,10 +73,29 @@ contract OperatorStage2 is AccessControl {
 		emit Yield(_rate, _maturityInWeeks);
 	}
 
+	function findIndexOfItem(uint256 _item) private view returns(bool, uint256) {
+		for(uint256 i=0; i < ratesAvailable.length; i++) {
+			if (ratesAvailable[i].rate == _item) {
+				return (true, i);
+			}
+		}
+		return (false, 0);
+	}
+
 	// Sets a rate to zero, not removing it but making it obsolete
-	// TODO: make this nicer and not just bond for 0% yield
 	function removeRate(uint256 _rate) public onlyOperatorStage2 {
+		// invalidate duration for this yield in lookup, rendering it
+		// impossible to bond for this rate
 		allowedYieldToWeeks[_rate] = 0;
+
+		// delete rate from available rates without caring for order
+		// so sorting may be required on the frontend
+		(bool ok, uint256 ind) = findIndexOfItem(_rate);
+		require(ok == true, 'err-rate-not-found');
+		// copy last rate to deleted item's such that there is a duplicate of it
+		ratesAvailable[ind] = ratesAvailable[ratesAvailable.length - 1];
+		ratesAvailable.pop();
+
 		emit Yield(_rate, 0);
 	}
 
