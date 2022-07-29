@@ -202,7 +202,7 @@ describe('BondingEvent', async () => {
       it('bonds with an amount less than one hundred thousand and receives correct seuro profit', async () => {
         await testStartBond(etherBalances['10K'], durations.ONE_WEEK,
           rates.SIX_PC, USDT
-      );
+        );
 
         await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
         await helperUpdateBondStatus();
