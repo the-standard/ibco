@@ -327,6 +327,10 @@ contract BondingEvent is AccessControl {
         );
     }
 
+    function ninetyNineNineNinePc(uint256 _amount) private returns (uint256) {
+        return _amount * 9999 / 10000;
+    }
+
     function addLiquidity(address _user, uint256 _amountSEuro)
         private
         onlyOperator
@@ -340,14 +344,17 @@ contract BondingEvent is AccessControl {
             int24 upperTick
         ) = getOtherAmount(_amountSEuro);
 
+
+        // Gives a 0.01 slippage tolerance to sEURO
+        // Due to the possible difference in accuracy between sEURO (18dec) and another token (possible 6dec)
         (
             uint256 amount0Desired,
             uint256 amount1Desired,
             uint256 amount0Min,
             uint256 amount1Min
         ) = pair.token0 == SEURO_ADDRESS
-                ? (_amountSEuro, otherAmount, _amountSEuro, uint256(0))
-                : (otherAmount, _amountSEuro, uint256(0), _amountSEuro);
+                ? (_amountSEuro, otherAmount, ninetyNineNineNinePc(_amountSEuro), uint256(0))
+                : (otherAmount, _amountSEuro, uint256(0), ninetyNineNineNinePc(_amountSEuro));
 
         approveAndTransfer(pair, _user, amount0Desired, amount1Desired);
 
@@ -366,6 +373,10 @@ contract BondingEvent is AccessControl {
         added = positionId > 0 ?
             increaseExistingLiquidity(params, positionId) :
             mintLiquidityPosition(params);
+            console.log(added.seuroAmount);
+            console.log(added.otherAmount);
+            console.log(_amountSEuro - added.seuroAmount);
+            console.log(otherAmount - added.otherAmount);
 
         emit LiquidityAdded(_user, added.tokenId, added.seuroAmount, added.otherAmount, added.liquidity);
         transferExcessToWallet(added.otherAmount, otherAmount);
@@ -452,7 +463,6 @@ contract BondingEvent is AccessControl {
         lowerTick = lowerTickDefault;
         upperTick = upperTickDefault;
         int24 currentPriceTick = ratioCalculator.getTickAt(_price);
-        console.logInt(currentPriceTick);
         int24 magnitude = 100;
         uint8 i;
         // expand tick range by magnitude 100 ticks ten times, then by magnitude 1000 ticks ten times etc. until a viable ratio is found
@@ -470,9 +480,6 @@ contract BondingEvent is AccessControl {
     // A tick range is considered viable for the bonding if the current price is within 40th and 60th percentile of tick range
     // If these ticks would not give us a viable ratio for bonding, we expand the tick range
     // Expanded by a magnitude of 100 ticks (ten times), then 1,000 ticks (ten times), then 10,000 etc, until viable
-    // Adds 0.01% to required other token amount, which:
-    // a) resolves a rounding discrepancy between Uniswap's LiquidityAmounts library and the NonfungiblePositionManager
-    // b) helps prevent price slippage issues when adding liquidity to the pool
     /// @param _amountSEuro The amount of sEURO token to bond
     /// @return amountOther The required amount of other token to bond with given sEURO amount
     /// @return lowerTick The lower tick of the viable price range
@@ -496,7 +503,7 @@ contract BondingEvent is AccessControl {
                 lowerTick,
                 upperTick,
                 seuroIsToken0
-            ) * 10001 / 10000;
+            );
     }
 
     function retractLiquidity(uint256 _tokenId, uint128 _liquidity) private returns (uint256 retractedLiquidity0, uint256 retractedLiquidity1) {
