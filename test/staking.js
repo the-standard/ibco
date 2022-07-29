@@ -1,8 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const bn = require('bignumber.js');
 
-let owner, user, random, SEuro, TST, SEUROTST, TOTAL_SEURO, INTEREST;
+let owner, user, random, SEuro, TST, SEUROTST, INTEREST;
 const { etherBalances } = require('./common.js');
 
 beforeEach(async () => {
@@ -16,7 +15,6 @@ beforeEach(async () => {
   TOTAL_SEURO = etherBalances["ONE_MILLION"];
   SEUROTST = 5000;
   INTEREST = 7000; // 7%
-  let StakingContract;
 });
 
 describe('Staking', async () => {
@@ -49,7 +47,7 @@ describe('Staking', async () => {
     const Staking = await StakingContract.deploy("Staking", "STS", 1000, 2000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
     expect(await Staking.active()).to.eq(false);
 
-    let activate = Staking.activate();
+    await Staking.activate();
 
     expect(await Staking.active()).to.eq(true);
   });
@@ -122,7 +120,7 @@ describe('Staking', async () => {
       await expect(Staking.mint(weiValue)).to.be.revertedWith('err-not-active');
 
       let blockNum = await ethers.provider.getBlock();
-      const then = blockNum.timestamp + 600;
+      blockNum.timestamp + 600;
 
       // activate the pool
       await Staking.activate()
