@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 const { expect } = require('chai');
-const { POSITION_MANAGER_ADDRESS, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff } = require('./common.js');
 
 let owner, customer, wallet, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, BondingEventContract, RatioCalculator, pricing, SwapManager;
 
@@ -23,11 +23,6 @@ describe('BondingEvent', async () => {
     RatioCalculator = await RatioCalculatorContract.deploy();
   });
 
-  const scaleUpForDecDiff = (reserve) => {
-    const scale = BigNumber.from(10).pow(12);
-    return BigNumber.from(reserve).mul(scale);
-  }
-
   const isSEuroToken0 = () => {
     return SEuro.address.toLowerCase() < USDT.address.toLowerCase();
   }
@@ -48,7 +43,6 @@ describe('BondingEvent', async () => {
         lowerTick: 273300,
         upperTick: 276700
       }
-      console.log(pricing)
 
     BondingEvent = await BondingEventContract.deploy(
       SEuro.address, USDT.address, POSITION_MANAGER_ADDRESS, BondStorage.address,
@@ -391,8 +385,6 @@ describe('BondingEvent', async () => {
       // add some liquidity to pool, to allow some swapping;
       const amountSEuro = etherBalances.TWO_MILLION;
       const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
-      console.log(amountSEuro)
-      console.log(amountOther)
       await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
       await USDT.connect(customer).approve(BondingEvent.address, amountOther);
       await BondingEvent.connect(owner).bond(

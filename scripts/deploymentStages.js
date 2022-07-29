@@ -1,6 +1,6 @@
 const { ethers, network } = require('hardhat');
 const fs = require('fs');
-const { encodePriceSqrt, MOST_STABLE_FEE, etherBalances } = require('../test/common');
+const { encodePriceSqrt, MOST_STABLE_FEE, etherBalances, scaleUpForDecDiff, parse6Dec } = require('../test/common');
 let addresses;
 let DummyTST, DummyUSDT, SEuro, SEuroOffering, OperatorStage2, BondStorage, BondingEvent, StandardTokenGateway, BondingCurve, SEuroCalculator, Staking;
 
@@ -15,16 +15,20 @@ const completed = async (contract, name) => {
 }
 
 const getPricing = () => {
+  // note: ticks represent that sEURO is 18dec and USDT is 6dec
+  // tick -276700 approx. 0.96 USDT per SEUR
+  // tick -273300 approx. 1.35 USDT per SEUR
+  // 273300 and 276700 are the inverse of these prices
   return SEuro.address.toLowerCase() < DummyUSDT.address.toLowerCase() ?
     {
-      initial: encodePriceSqrt(114, 100),
-      lowerTick: -400,
-      upperTick: 3000
+      initial: encodePriceSqrt(114, scaleUpForDecDiff(100)),
+      lowerTick: -276700,
+      upperTick: -273300
     } :
     {
-      initial: encodePriceSqrt(100, 114),
-      lowerTick: -3000,
-      upperTick: 400,
+      initial: encodePriceSqrt(scaleUpForDecDiff(100), 114),
+      lowerTick: 273300,
+      upperTick: 276700
     }
 }
 
@@ -33,7 +37,7 @@ const deployContracts = async () => {
 
   DummyTST = await (await ethers.getContractFactory('DUMMY')).deploy('Standard Token', 'TST', 18);
   await completed(DummyTST, 'TST');
-  DummyUSDT = await (await ethers.getContractFactory('DUMMY')).deploy('Tether', 'USDT', 18);
+  DummyUSDT = await (await ethers.getContractFactory('DUMMY')).deploy('Tether', 'USDT', 6);
   await completed(DummyUSDT, 'USDT');
   SEuro = await (await ethers.getContractFactory('SEuro')).deploy('sEURO', 'SEUR', []);
   await completed(SEuro, 'SEuro');
@@ -102,7 +106,7 @@ const activateStaking = async() => {
 
 const mintUser = async (address) => {
   await SEuro.mint(address, etherBalances.HUNDRED_MILLION);
-  await DummyUSDT.mint(address, etherBalances.HUNDRED_MILLION);
+  await DummyUSDT.mint(address, parse6Dec(100_000_000));
   await DummyTST.mint(address, etherBalances.HUNDRED_MILLION);
 }
 

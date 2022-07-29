@@ -84,6 +84,15 @@ const format6Dec = (amount) => {
   return BigNumber.from(amount).div(sixDec);
 }
 
+const parse6Dec = (amount) => {
+  return BigNumber.from(amount).mul(sixDec);
+}
+
+const scaleUpForDecDiff = (reserve) => {
+  const scale = BigNumber.from(10).pow(12);
+  return BigNumber.from(reserve).mul(scale);
+}
+
 module.exports = {
   POSITION_MANAGER_ADDRESS,
   etherBalances,
@@ -99,6 +108,8 @@ module.exports = {
   durations,
   encodePriceSqrt,
   helperFastForwardTime,
-  format6Dec
+  format6Dec,
+  parse6Dec,
+  scaleUpForDecDiff
 }
 
