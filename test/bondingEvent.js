@@ -310,7 +310,7 @@ describe('BondingEvent', async () => {
         await BondingEvent.connect(owner).bond(
           customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
         );
-  
+
         const positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(1);
         const position = await BondingEvent.getPositionData(positions[0]);
@@ -318,14 +318,14 @@ describe('BondingEvent', async () => {
         expect(position.upperTick).to.equal(pricing.upperTick);
         expect(position.liquidity).to.be.gt(0);
       });
-  
+
       it('adds liquidity to existing position if one exists', async () => {
         const amountSEuro = etherBalances.TWO_MILLION;
         const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
         // approve twice as much as the bonding amount
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro.mul(2));
         await USDT.connect(customer).approve(BondingEvent.address, amountOther.mul(2));
-  
+
         await BondingEvent.connect(owner).bond(
           customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
         );
@@ -334,7 +334,7 @@ describe('BondingEvent', async () => {
         await BondingEvent.connect(owner).bond(
           customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
         );
-  
+
         positions = await BondingEvent.getPositions();
         expect(positions).to.eql(initialPositions);
         const position = await BondingEvent.getPositionData(positions[0]);
@@ -526,18 +526,3 @@ describe('BondingEvent', async () => {
       expect(collectedData.collectedTotal1).to.eq(collectedData.retractedAmount1.add(collectedData.feesCollected1));
     });
   });
- 
-  //
-  //
-  //
-  // --------------------------------------
-  // TODO:
-  // - make sure the principals / profits on bonds are correct, and based on both amounts sent in
-  // - fee collection?
-  // - restrict position data to owner?
-  // - transfer nfts?
-  // --------------------------------------
-  //
-  //
-  //
-});
