@@ -295,7 +295,7 @@ contract BondingEvent is AccessControl {
     function transferExcessToWallet(uint256 _addedAmount, uint256 _desiredAmount) private {
         uint256 excess = _desiredAmount - _addedAmount;
         if (excess > 0 && excessCollateralWallet != address(0)) {
-            TransferHelper.safeTransfer(OTHER_ADDRESS, excessCollateralWallet, excess);
+            TransferHelper.safeTransfer(SEURO_ADDRESS, excessCollateralWallet, excess);
         } 
     }
 
@@ -379,7 +379,7 @@ contract BondingEvent is AccessControl {
             console.log(otherAmount - added.otherAmount);
 
         emit LiquidityAdded(_user, added.tokenId, added.seuroAmount, added.otherAmount, added.liquidity);
-        transferExcessToWallet(added.otherAmount, otherAmount);
+        transferExcessToWallet(added.seuroAmount, _amountSEuro);
     }
 
     // We assume that there is a higher layer solution which helps to fetch the latest price as a quote.
