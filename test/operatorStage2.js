@@ -11,8 +11,8 @@ beforeEach(async () => {
   const ERC20Contract = await ethers.getContractFactory('DUMMY');
   const SEuroContract = await ethers.getContractFactory('SEuro');
   SEuro = await SEuroContract.deploy('sEURO', 'sEUR', [owner.address]);
-  USDT = await ERC20Contract.deploy('USDT', 'USDT', ethers.utils.parseEther('10000000'));
-  TST = await ERC20Contract.deploy('TST', 'TST', ethers.utils.parseEther('10000000'));
+  USDT = await ERC20Contract.deploy('USDT', 'USDT', 18);
+  TST = await ERC20Contract.deploy('TST', 'TST', 18);
 });
 
 describe('Stage 2', async () => {

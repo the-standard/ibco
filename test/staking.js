@@ -2,7 +2,7 @@ const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
 
-let owner, user, random, SEuro, TST, SEUROTST, TOTAL_SEURO, INTEREST;
+let owner, user, random, SEuro, TST, SEUROTST, TOTAL_SEURO, INTEREST, StakingContract;
 const { etherBalances } = require('./common.js');
 
 beforeEach(async () => {
@@ -10,13 +10,12 @@ beforeEach(async () => {
   const SEuroContract = await ethers.getContractFactory('SEuro');
   const ERC20Contract = await ethers.getContractFactory('DUMMY');
   SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
-  TST = await ERC20Contract.deploy('TST', 'TST', ethers.utils.parseEther('10000000'));
+  TST = await ERC20Contract.deploy('TST', 'TST', 18);
   TST_ADDRESS = TST.address;
   SEUR_ADDRESS = SEuro.address;
   TOTAL_SEURO = etherBalances["ONE_MILLION"];
   SEUROTST = 5000;
   INTEREST = 7000; // 7%
-  let StakingContract;
 });
 
 describe('Staking', async () => {

@@ -4,15 +4,21 @@ pragma solidity ^0.8.14;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract DUMMY is ERC20 {
-  constructor(
-    string memory name,
-    string memory symbol,
-    uint256 initialSupply
-  ) public ERC20(name, symbol) {
-    _mint(msg.sender, initialSupply);
-  }
+    uint8 private dec;
 
-  function mint(address to, uint256 amount) public {
+    constructor(
+        string memory name,
+        string memory symbol,
+        uint8 _decimals
+    ) public ERC20(name, symbol) {
+        dec = _decimals;
+    }
+
+    function mint(address to, uint256 amount) public {
         _mint(to, amount);
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return dec;
     }
 }

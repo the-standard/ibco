@@ -31,9 +31,9 @@ const getPricing = () => {
 const deployContracts = async () => {  
   const { externalContracts } = JSON.parse(fs.readFileSync('scripts/deploymentConfig.json'))[network.name];
 
-  DummyTST = await (await ethers.getContractFactory('DUMMY')).deploy('Standard Token', 'TST', 0);
+  DummyTST = await (await ethers.getContractFactory('DUMMY')).deploy('Standard Token', 'TST', 18);
   await completed(DummyTST, 'TST');
-  DummyUSDT = await (await ethers.getContractFactory('DUMMY')).deploy('Tether', 'USDT', 0);
+  DummyUSDT = await (await ethers.getContractFactory('DUMMY')).deploy('Tether', 'USDT', 18);
   await completed(DummyUSDT, 'USDT');
   SEuro = await (await ethers.getContractFactory('SEuro')).deploy('sEURO', 'SEUR', []);
   await completed(SEuro, 'SEuro');
