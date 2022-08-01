@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract Staking is ERC721URIStorage, Ownable {
+contract Staking is ERC721, Ownable {
     uint256 private _tokenId;
 
     bool public active;             // active or not, needs to be set manually
@@ -87,7 +87,6 @@ contract Staking is ERC721URIStorage, Ownable {
     }
 
     function mint(uint256 _amount) external {
-        // TODO CHORE needs refactor
         require(active == true, 'err-not-active');
         require(_amount >= minTST, 'err-not-min');
         require(block.timestamp >= windowStart, 'err-not-started');
