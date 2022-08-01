@@ -23,14 +23,15 @@ describe('Staking', async () => {
     const then = blockNum.timestamp + 600;
 
     StakingContract = await ethers.getContractFactory('Staking');
-    const Staking = await StakingContract.deploy("Staking", "STS", 1000, then, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+    const Staking = await StakingContract.deploy("Staking", "STS", 1000, then, then + 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
     expect(await Staking.name()).to.eq("Staking");
     expect(await Staking.symbol()).to.eq("STS");
 
     expect(await Staking.active()).to.eq(false);
-    expect(await Staking.startTime()).to.eq(1000);
-    expect(await Staking.endTime()).to.eq(then);
+    expect(await Staking.windowStart()).to.eq(1000);
+    expect(await Staking.windowEnd()).to.eq(then);
+    expect(await Staking.maturity()).to.eq(then + 5000);
     expect(await Staking.SEUROTST()).to.eq(SEUROTST);
     expect(await Staking.INTEREST()).to.eq(INTEREST);
     expect(await Staking.owner()).to.eq(owner.address);
@@ -44,7 +45,7 @@ describe('Staking', async () => {
 
   it('activates the pool', async () => {
     StakingContract = await ethers.getContractFactory('Staking');
-    const Staking = await StakingContract.deploy("Staking", "STS", 1000, 2000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+    const Staking = await StakingContract.deploy("Staking", "STS", 1000, 2000, 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
     expect(await Staking.active()).to.eq(false);
 
     await Staking.activate();
@@ -54,7 +55,7 @@ describe('Staking', async () => {
 
   it('disables the pool', async () => {
     StakingContract = await ethers.getContractFactory('Staking');
-    const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+    const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
     let disable = Staking.connect(user).disable();
     await expect(disable).to.be.revertedWith('Ownable: caller is not the owner')
@@ -77,7 +78,7 @@ describe('Staking', async () => {
   describe('SEURO balance stuff!', async () => {
     it('tests for the seuro balance', async () => {
       StakingContract = await ethers.getContractFactory('Staking');
-      const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+      const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
       await Staking.activate();
 
@@ -93,7 +94,7 @@ describe('Staking', async () => {
 
     it('tests for the seuro remaining', async () => {
       StakingContract = await ethers.getContractFactory('Staking');
-      const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+      const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
       await Staking.activate();
 
@@ -114,7 +115,7 @@ describe('Staking', async () => {
   describe('Minting, burning, rate cals!', async () => {
     it('mints a token and creates a position', async () => {
       StakingContract = await ethers.getContractFactory('Staking');
-      const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+      const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
       const weiValue = etherBalances["8K"];
       await expect(Staking.mint(weiValue)).to.be.revertedWith('err-not-active');
@@ -224,7 +225,7 @@ describe('Staking', async () => {
       const then = blockNum.timestamp + 600;
 
       StakingContract = await ethers.getContractFactory('Staking');
-      const Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+      const Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
       const weiValue = etherBalances["8K"];
 
@@ -267,7 +268,7 @@ describe('Staking', async () => {
       const then = blockNum.timestamp + 600;
 
       StakingContract = await ethers.getContractFactory('Staking');
-      let Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+      let Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, then + 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
       // activate the pool
       await Staking.activate()
@@ -287,7 +288,7 @@ describe('Staking', async () => {
       SEUROTST = 3250; // 0.0325
       weiValue = etherBalances["TWO_MILLION"];
 
-      Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+      Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, then + 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
       await Staking.activate()
 
       // 2,000,000 TST == 65,000 SEURO at a rate of 0.0325 SEURO:TST
@@ -304,7 +305,7 @@ describe('Staking', async () => {
       const then = blockNum.timestamp;
 
       StakingContract = await ethers.getContractFactory('Staking');
-      const Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+      const Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, then + 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
       const weiValue = etherBalances["8K"];
       await expect(Staking.mint(weiValue)).to.be.revertedWith('err-not-active');
@@ -326,10 +327,10 @@ describe('Staking', async () => {
       expect(balance).to.eq(0);
 
       let burn = Staking.connect(user).burn();
-      await expect(burn).to.be.revertedWith('err-pool-open');
+      await expect(burn).to.be.revertedWith('err-maturity');
 
       // move the time ahead
-      await ethers.provider.send("evm_increaseTime", [3601])
+      await ethers.provider.send("evm_increaseTime", [5001])
       await ethers.provider.send("evm_mine")
 
       // should burn now
@@ -362,7 +363,7 @@ describe('Staking', async () => {
       const then = blockNum.timestamp;
 
       StakingContract = await ethers.getContractFactory('Staking');
-      const Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+      const Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, then + 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
       let value = etherBalances.ONE_MILLION;
       await SEuro.mint(Staking.address, value);
@@ -396,7 +397,7 @@ describe('Staking', async () => {
       const then = blockNum.timestamp;
 
       StakingContract = await ethers.getContractFactory('Staking');
-      const Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+      const Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, then + 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
       await Staking.activate();
 
@@ -425,7 +426,7 @@ describe('Staking', async () => {
       const then = blockNum.timestamp;
 
       StakingContract = await ethers.getContractFactory('Staking');
-      const Staking = await StakingContract.deploy("Staking", "STS", 0, then + 600, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+      const Staking = await StakingContract.deploy("Staking", "STS", 0, then + 600, then + 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
       await Staking.activate();
 
@@ -467,7 +468,7 @@ describe('Staking', async () => {
       const then = blockNum.timestamp;
 
       StakingContract = await ethers.getContractFactory('Staking');
-      const Staking = await StakingContract.deploy("Staking", "STS", 0, then + 600, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+      const Staking = await StakingContract.deploy("Staking", "STS", 0, then + 600, then + 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
       await Staking.activate();
 
