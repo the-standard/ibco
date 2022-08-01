@@ -325,7 +325,7 @@ contract BondingEvent is AccessControl {
         );
     }
 
-    function ninetyNineNineNinePc(uint256 _amount) private returns (uint256) {
+    function ninetyNineNineNinePc(uint256 _amount) private pure returns (uint256) {
         return _amount * 9999 / 10000;
     }
 
