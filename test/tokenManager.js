@@ -1,9 +1,9 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
+const { WETH_ADDRESS } = require('./common');
 
 describe('TokenManager', async () => {
   const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
-  const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
   const WETH_DEC = 18;
   const WETH_USD_CL = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
   const WETH_CL_DEC = 8;
