@@ -16,7 +16,7 @@ contract TokenManager is Ownable {
     }
 
     /// @param _wethAddress address of WETH token
-    /// @param _wethDec dec of WETH token
+    /// @param _wethDec decimals of WETH token
     /// @param _ethUsdCL address of Chainlink data feed for ETH / USD
     /// @param _ethUsdCLDec number of decimals that ETH / USD data feed uses
     constructor(address _wethAddress, uint8 _wethDec, address _ethUsdCL, uint8 _ethUsdCLDec) {
@@ -41,6 +41,7 @@ contract TokenManager is Ownable {
     // Add a token to the accepted list of tokens
     /// @param _name 32-byte array value representation of the token symbol e.g. "WETH", "USDT"
     /// @param _addr the address of the token
+    /// @param _dec the decimals of the token
     /// @param _chainlinkAddr the address of the token / USD Chainlink data feed
     /// @param _chainlinkDec the number of decimals the Chainlink data feed uses
     function addAcceptedToken(bytes32 _name, address _addr, uint8 _dec, address _chainlinkAddr, uint8 _chainlinkDec) public onlyOwner {
