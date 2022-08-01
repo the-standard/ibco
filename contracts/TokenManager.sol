@@ -5,6 +5,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract TokenManager is Ownable {
 
+    bytes32 private WETH_NAME = bytes32("WETH");
+    uint8 private WETH_DEC = 18;
+
     mapping(bytes32 => Token) private tokens;
     bytes32[] tokenNames;
 
@@ -16,11 +19,10 @@ contract TokenManager is Ownable {
     }
 
     /// @param _wethAddress address of WETH token
-    /// @param _wethDec decimals of WETH token
     /// @param _ethUsdCL address of Chainlink data feed for ETH / USD
     /// @param _ethUsdCLDec number of decimals that ETH / USD data feed uses
-    constructor(address _wethAddress, uint8 _wethDec, address _ethUsdCL, uint8 _ethUsdCLDec) {
-        addDefaultTokens(_wethAddress, _wethDec, _ethUsdCL, _ethUsdCLDec);
+    constructor(address _wethAddress, address _ethUsdCL, uint8 _ethUsdCLDec) {
+        addDefaultTokens(_wethAddress, _ethUsdCL, _ethUsdCLDec);
     }
 
     // Gets the details for the given token, if it is accepted
@@ -29,8 +31,8 @@ contract TokenManager is Ownable {
         return tokens[_name];
     }
 
-    function addDefaultTokens(address _wethAddress, uint8 _wethDec, address _ethUsdCL, uint8 _ethUsdCLDec) private {
-        addAcceptedToken(bytes32("WETH"), _wethAddress, _wethDec, _ethUsdCL, _ethUsdCLDec);
+    function addDefaultTokens(address _wethAddress, address _ethUsdCL, uint8 _ethUsdCLDec) private {
+        addAcceptedToken(WETH_NAME, _wethAddress, WETH_DEC, _ethUsdCL, _ethUsdCLDec);
     }
 
     // Get an array of all the 32-byte arrays that represent accepted tokens
