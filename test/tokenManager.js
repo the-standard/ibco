@@ -9,7 +9,7 @@ describe('TokenManager', async () => {
   const WETH_CL_DEC = 8;
   const DAI = ethers.utils.formatBytes32String('DAI');
   const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
-  const DAI_DEC = 8;
+  const DAI_DEC = 18;
   const DAI_USD_CL = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
   const DAI_CL_DEC = 8;
   let TokenManager, owner, user;
