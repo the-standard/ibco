@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { DECIMALS, etherBalances } = require('./common');
+const { DECIMALS_18, etherBalances } = require('./common');
 
 describe('BondingCurve', async () => {
   let BondingCurve, SEuro, TestBondingCurve;
@@ -28,7 +28,7 @@ describe('BondingCurve', async () => {
 
       const actualSEuros = await BondingCurve.callStatic.calculatePrice(euros);
 
-      const expectedSeuros = euros.mul(DECIMALS).div(await getBucketPrice(0));
+      const expectedSeuros = euros.mul(DECIMALS_18).div(await getBucketPrice(0));
       expect(actualSEuros).to.equal(expectedSeuros);
     });
 
@@ -39,10 +39,10 @@ describe('BondingCurve', async () => {
       const actualSEurosReceived = await BondingCurve.callStatic.calculatePrice(eurosSpent);
 
       // purchase buys whole capacity of first bucket
-      const sEurosFromFirstBucket = (await getBucketPrice(0)).mul(BUCKET_SIZE).div(DECIMALS);
+      const sEurosFromFirstBucket = (await getBucketPrice(0)).mul(BUCKET_SIZE).div(DECIMALS_18);
       const remainingEuros = eurosSpent.sub(sEurosFromFirstBucket);
       // how many seuros the remaining euros buy from second bucket
-      const secondBucketSEuros = remainingEuros.mul(DECIMALS).div(await getBucketPrice(1));
+      const secondBucketSEuros = remainingEuros.mul(DECIMALS_18).div(await getBucketPrice(1));
       // total seuros bought should be one whole bucket + the amount bought from second bucket
       const expectedSEuros = BUCKET_SIZE.add(secondBucketSEuros);
       expect(actualSEurosReceived).to.equal(expectedSEuros);
@@ -55,11 +55,11 @@ describe('BondingCurve', async () => {
       const actualSEurosReceived = await BondingCurve.callStatic.calculatePrice(eurosSpent);
 
       // purchase buys whole capacity of first two buckets
-      const firstBucketCapacityInEuros = (await getBucketPrice(0)).mul(BUCKET_SIZE).div(DECIMALS);
-      const secondBucketCapacityInEuros = (await getBucketPrice(1)).mul(BUCKET_SIZE).div(DECIMALS);
+      const firstBucketCapacityInEuros = (await getBucketPrice(0)).mul(BUCKET_SIZE).div(DECIMALS_18);
+      const secondBucketCapacityInEuros = (await getBucketPrice(1)).mul(BUCKET_SIZE).div(DECIMALS_18);
       const remainingEuros = eurosSpent.sub(firstBucketCapacityInEuros).sub(secondBucketCapacityInEuros);
       // how many seuros the remaining euros buy from third bucket
-      const thirdBuckeSEuros = remainingEuros.mul(DECIMALS).div(await getBucketPrice(2));
+      const thirdBuckeSEuros = remainingEuros.mul(DECIMALS_18).div(await getBucketPrice(2));
       // total seuros bought should be two whole buckets + the amount bought from third bucket
       const expectedSEuros = BUCKET_SIZE.mul(2).add(thirdBuckeSEuros);
       expect(actualSEurosReceived).to.equal(expectedSEuros);
@@ -105,7 +105,7 @@ describe('BondingCurve', async () => {
     it('converts euro to seuro based on the initial price (read-only)', async () => {
       const { price } = await BondingCurve.currentBucket();
       const euros = etherBalances.TWO_MILLION;
-      const expectedSEuro = euros.mul(DECIMALS).div(price);
+      const expectedSEuro = euros.mul(DECIMALS_18).div(price);
       expect(await BondingCurve.readOnlyCalculatePrice(euros)).to.eq(expectedSEuro);
     });
 
@@ -113,7 +113,7 @@ describe('BondingCurve', async () => {
       await BondingCurve.updateCurrentBucket(etherBalances.HUNDRED_MILLION);
       const { price } = await BondingCurve.currentBucket();
       const euros = etherBalances.TWO_MILLION;
-      const expectedSEuro = euros.mul(DECIMALS).div(price);
+      const expectedSEuro = euros.mul(DECIMALS_18).div(price);
       expect(await BondingCurve.readOnlyCalculatePrice(euros)).to.eq(expectedSEuro);
     });
   });

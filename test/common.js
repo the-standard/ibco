@@ -38,8 +38,8 @@ const MAX_TICK = 887270;
 const DEFAULT_SQRT_PRICE = BigNumber.from(2).pow(96);
 const ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
 const STANDARD_TOKENS_PER_EUR = 20; // 1 TST = 0.05 EUR
-const DECIMALS = BigNumber.from(10).pow(18);
-const sixDec = BigNumber.from(10).pow(6);
+const DECIMALS_18 = BigNumber.from(10).pow(18);
+const DECIMALS_6 = BigNumber.from(10).pow(6);
 
 let rates = {
   HALF_PC: 500,
@@ -81,11 +81,11 @@ const helperFastForwardTime = async (seconds) => {
 }
 
 const format6Dec = (amount) => {
-  return BigNumber.from(amount).div(sixDec);
+  return BigNumber.from(amount).div(DECIMALS_6);
 }
 
 const parse6Dec = (amount) => {
-  return BigNumber.from(amount).mul(sixDec);
+  return BigNumber.from(amount).mul(DECIMALS_6);
 }
 
 const scaleUpForDecDiff = (reserve, decDiff) => {
@@ -103,7 +103,8 @@ module.exports = {
   DEFAULT_SQRT_PRICE,
   ONE_WEEK_IN_SECONDS,
   STANDARD_TOKENS_PER_EUR,
-  DECIMALS,
+  DECIMALS_18,
+  DECIMALS_6,
   rates,
   durations,
   encodePriceSqrt,
