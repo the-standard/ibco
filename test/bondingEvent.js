@@ -267,8 +267,9 @@ describe('BondingEvent', async () => {
       });
     });
 
-    describe('excess usdt', async () => {
+    describe.only('excess seuro', async () => {
       it('will transfer the excess sEURO if there is a designated wallet', async () => {
+        // difficult to test transfer of excess usdt, because it would require a mid-transaction price slip
         await BondingEvent.setExcessCollateralWallet(wallet.address);
         expect(await SEuro.balanceOf(wallet.address)).to.equal(0);
 
