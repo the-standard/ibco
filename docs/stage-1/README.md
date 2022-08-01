@@ -4,7 +4,7 @@ The sEURO offering is the first stage in the IBCO process. Users can obtain sEUR
 
 ### sEURO Offering Public APIs
 
-These are the functions exposed to the user in Stage 1.
+These are the functions exposed to the user in the sEURO Offering contract. This contract can be used to estimate a price for a given token, and perform a swap.
 
 **readOnlyCalculateSwap(bytes32 _token, uint256 _amount)**
 
@@ -26,7 +26,8 @@ These are the functions exposed to the user in Stage 1.
 
 ### Token Manager Public APIs
 
-These are the functions exposed to the user in Stage 1.
+These are the functions exposed to the user in the Token Manager contract. This contract can be used to get retrieve all accepted tokens for the sEURO Offering, and obtain the details for each token.
+
 **getAcceptedTokens()**
 
 *Description*: provides list of all ERC20 tokens that are swappable for sEURO
@@ -35,11 +36,11 @@ These are the functions exposed to the user in Stage 1.
 
 **get(bytes32 _name)**
 
-*Description*: provides details for the accepted token; TODO: also provide the name of the token
+*Description*: provides details for the accepted token
 
 *Input*: symbol of token as a 32-byte array (provided by **TokenManager**)
 
-*Output*: address of the token; address of the Chainlink data feed for its exchange rate with USD; number of decimals the Chainlink data feed uses
+*Output*: address of the token; decimals of the token; address of the Chainlink data feed for its exchange rate with USD; number of decimals the Chainlink data feed uses
 
 
 # Stage 1 Architecture

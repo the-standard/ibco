@@ -3,6 +3,7 @@ const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 
 const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
+const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
 
 // Only usable for tokens with 18 decimals such as TST and SEURO
 let etherBalances = {
@@ -95,6 +96,7 @@ const scaleUpForDecDiff = (reserve, decDiff) => {
 
 module.exports = {
   POSITION_MANAGER_ADDRESS,
+  WETH_ADDRESS,
   etherBalances,
   MOST_STABLE_FEE,
   STABLE_TICK_SPACING,

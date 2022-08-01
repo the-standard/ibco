@@ -1,11 +1,12 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
+const { WETH_ADDRESS } = require('./common');
 
 describe('SEuroOffering', async () => {
   const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
-  const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
   const CL_ETH_USD = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
   const CL_ETH_USD_DEC = 8;
+  const DAI_DEC = 18;
   const DAI_USD_CL = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
   const DAI_CL_DEC = 8;
   const EUR_USD_CL = '0xb49f677943BC038e9857d61E7d053CaA2C1734C1';
@@ -136,7 +137,7 @@ describe('SEuroOffering', async () => {
         const toSwap = ethers.utils.parseEther('1');
         const daiBytes = ethers.utils.formatBytes32String('DAI');
         const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
-        await TokenManager.connect(owner).addAcceptedToken(daiBytes, DAI_ADDRESS, DAI_USD_CL, DAI_CL_DEC);
+        await TokenManager.connect(owner).addAcceptedToken(daiBytes, DAI_ADDRESS, DAI_DEC, DAI_USD_CL, DAI_CL_DEC);
 
         await buyToken(user, DAI_ADDRESS, toSwap);
         const Dai = await ethers.getContractAt('IERC20', DAI_ADDRESS);
