@@ -21,12 +21,12 @@ const getPricing = () => {
   // 273300 and 276700 are the inverse of these prices
   return SEuro.address.toLowerCase() < DummyUSDT.address.toLowerCase() ?
     {
-      initial: encodePriceSqrt(114, scaleUpForDecDiff(100)),
+      initial: encodePriceSqrt(114, scaleUpForDecDiff(100, 12)),
       lowerTick: -276700,
       upperTick: -273300
     } :
     {
-      initial: encodePriceSqrt(scaleUpForDecDiff(100), 114),
+      initial: encodePriceSqrt(scaleUpForDecDiff(100, 12), 114),
       lowerTick: 273300,
       upperTick: 276700
     }

@@ -88,8 +88,8 @@ const parse6Dec = (amount) => {
   return BigNumber.from(amount).mul(sixDec);
 }
 
-const scaleUpForDecDiff = (reserve) => {
-  const scale = BigNumber.from(10).pow(12);
+const scaleUpForDecDiff = (reserve, decDiff) => {
+  const scale = BigNumber.from(10).pow(decDiff);
   return BigNumber.from(reserve).mul(scale);
 }
 
