@@ -64,8 +64,8 @@ contract SEuroOffering is Ownable {
     /// @param _token byte array value for the token that you'd like to estimate the exchange value for
     /// @param _amount the amount of the given token that you'd like to estimate the exchange value for
     function readOnlyCalculateSwap(bytes32 _token, uint256 _amount) external view returns (uint256) {
-        (, address chainlinkAddr, uint8 chainlinkDec) = tokenManager.get(_token);
-        return sEuroRateCalculator.readOnlyCalculate(_amount, chainlinkAddr, chainlinkDec);
+        TokenManager.Token memory token = tokenManager.get(_token);
+        return sEuroRateCalculator.readOnlyCalculate(_amount, token.chainlinkAddr, token.chainlinkDec);
     }
 
     // Swap any accepted ERC20 token for an equivalent amount of sEURO
@@ -73,28 +73,28 @@ contract SEuroOffering is Ownable {
     /// @param _token byte array value for the token that you'd like to exchange
     /// @param _amount the amount of the given token that you'd like to exchange for sEURO
     function swap(bytes32 _token, uint256 _amount) external ifActive {
-        (address addr, address chainlinkAddr, uint8 chainlinkDec) = tokenManager.get(_token);
-        IERC20 token = IERC20(addr);
-        require(token.balanceOf(msg.sender) >= _amount, "err-tok-bal");
-        require(token.allowance(msg.sender, address(this)) >= _amount, "err-tok-allow");
-        token.transferFrom(msg.sender, address(this), _amount);
-        uint256 euros = getEuros(_amount, chainlinkAddr, chainlinkDec);
+        TokenManager.Token memory token = tokenManager.get(_token);
+        IERC20 erc20Token = IERC20(token.addr);
+        require(erc20Token.balanceOf(msg.sender) >= _amount, "err-tok-bal");
+        require(erc20Token.allowance(msg.sender, address(this)) >= _amount, "err-tok-allow");
+        erc20Token.transferFrom(msg.sender, address(this), _amount);
+        uint256 euros = getEuros(_amount, token.chainlinkAddr, token.chainlinkDec);
         SEuro(seuro).mint(msg.sender, euros);
         bondingCurve.updateCurrentBucket(euros);
-        transferCollateral(token, _amount);
+        transferCollateral(erc20Token, _amount);
         emit Swap(_token, _amount, euros);
     }
 
     // Payable function that exchanges the ETH value of the transaction for an equivalent amount of sEURO
     function swapETH() external payable ifActive {
         uint256 amount = msg.value;
-        (address addr, address chainlinkAddr, uint8 chainlinkDec) = tokenManager.get(bytes32("WETH"));
-        WETH weth = WETH(addr);
+        TokenManager.Token memory token = tokenManager.get(bytes32("WETH"));
+        WETH weth = WETH(token.addr);
         weth.deposit{value: amount}();
-        uint256 euros = getEuros(amount, chainlinkAddr, chainlinkDec);
+        uint256 euros = getEuros(amount, token.chainlinkAddr, token.chainlinkDec);
         SEuro(seuro).mint(msg.sender, euros);
         bondingCurve.updateCurrentBucket(euros);
-        transferCollateral(IERC20(addr), amount);
+        transferCollateral(IERC20(token.addr), amount);
         emit Swap(bytes32("ETH"), amount, euros);
     }
 
