@@ -84,7 +84,6 @@ contract Staking is ERC721, Ownable {
     }
 
     function mint(uint256 _amount) external {
-        // TODO CHORE needs refactor
         require(active == true, 'err-not-active');
         require(_amount >= minTST, 'err-not-min');
         require(block.timestamp >= startTime, 'err-not-started');
