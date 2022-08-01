@@ -10,7 +10,7 @@ contract DUMMY is ERC20 {
         string memory name,
         string memory symbol,
         uint8 _decimals
-    ) public ERC20(name, symbol) {
+    ) ERC20(name, symbol) {
         dec = _decimals;
     }
 
