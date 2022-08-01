@@ -13,8 +13,9 @@ contract Staking is ERC721URIStorage, Ownable {
 
     uint public SEUROTST;           // SEURO:TST pair rate
     uint public INTEREST;           // Interest for the bond
-    uint256 public startTime;       // the start time for the 'stake'
-    uint256 public endTime;         // the end time for the 'stake'
+    uint256 public windowStart;     // the start time for the 'stake'
+    uint256 public windowEnd;       // the end time for the 'stake'
+    uint256 public maturity;        // the maturity date
     uint256 public initialised;     // the time we initialised the contract
     uint256 public SEURO_ALLOCATED; // the amount of seuro allocated, inc rewards
     uint256 private minTST;         // the min amount of tst we want to allow to bond
@@ -37,6 +38,7 @@ contract Staking is ERC721URIStorage, Ownable {
         string memory _symbol,
         uint256 _start,
         uint256 _end,
+        uint256 _maturity,
         address _TST_ADDRESS,
         address _SEURO_ADDRESS,
         uint _SEUROTST,
@@ -46,8 +48,9 @@ contract Staking is ERC721URIStorage, Ownable {
         INTEREST = _INTEREST;
         TST_ADDRESS = _TST_ADDRESS;
         SEURO_ADDRESS = _SEURO_ADDRESS;
-        startTime = _start;
-        endTime = _end;
+        windowStart = _start;
+        windowEnd = _end;
+        maturity = _maturity;
         initialised = block.timestamp;
 
         // TODO variable
@@ -87,8 +90,8 @@ contract Staking is ERC721URIStorage, Ownable {
         // TODO CHORE needs refactor
         require(active == true, 'err-not-active');
         require(_amount >= minTST, 'err-not-min');
-        require(block.timestamp >= startTime, 'err-not-started');
-        require(block.timestamp < endTime, 'err-finished');
+        require(block.timestamp >= windowStart, 'err-not-started');
+        require(block.timestamp < windowEnd, 'err-finished');
 
         // calculate the reward so we can also update the remaining SEURO
         uint256 total = reward(_amount);
@@ -127,7 +130,7 @@ contract Staking is ERC721URIStorage, Ownable {
     }
 
     function burn() public {
-        require(block.timestamp >= endTime, 'err-pool-open');
+        require(block.timestamp >= maturity, 'err-maturity');
 
         Position memory pos = _positions[msg.sender];
         require(pos.nonce > 0, 'err-not-valid');
