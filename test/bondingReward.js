@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, DECIMALS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, DECIMALS_18, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK } = require('./common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
 describe('BondingReward', async () => {
@@ -9,11 +9,11 @@ describe('BondingReward', async () => {
 
   beforeEach(async () => {
     [owner, customer] = await ethers.getSigners();
-    const ERC20Contract = await ethers.getContractFactory('DummyDec18');
+    const ERC20Contract = await ethers.getContractFactory('DUMMY');
     const SEuroContract = await ethers.getContractFactory('SEuro');
     SEuro = await SEuroContract.deploy('sEURO', 'sEUR', [owner.address]);
-    USDT = await ERC20Contract.deploy('USDT', 'USDT', ethers.utils.parseEther('10000000'));
-    TST = await ERC20Contract.deploy('TST', 'TST', ethers.utils.parseEther('10000000'));
+    USDT = await ERC20Contract.deploy('USDT', 'USDT', 6);
+    TST = await ERC20Contract.deploy('TST', 'TST', 18);
 
     const BondingEventContract = await ethers.getContractFactory('BondingEvent');
     const StorageContract = await ethers.getContractFactory('BondStorage');
@@ -55,7 +55,7 @@ describe('BondingReward', async () => {
       );
       bond = await BStorage.getBondAt(customer.address, 0);
       let principal = 2000000;
-      expect(bond.principal.div(DECIMALS)).to.equal(principal);
+      expect(bond.principal.div(DECIMALS_18)).to.equal(principal);
 
       actualClaim = await BStorage.getClaimAmount(customer.address);
       expect(actualClaim).to.equal(0);
@@ -71,7 +71,7 @@ describe('BondingReward', async () => {
       let profitStandard = profitSeuro * STANDARD_TOKENS_PER_EUR;
       expectedClaim = profitStandard.toString();
       // claim has been properly registered in bond backend
-      actualClaim = (await BStorage.getClaimAmount(customer.address)).div(DECIMALS).toString();
+      actualClaim = (await BStorage.getClaimAmount(customer.address)).div(DECIMALS_18).toString();
       expect(actualClaim).to.equal(expectedClaim);
 
       // verify TST balance is zero
@@ -80,13 +80,13 @@ describe('BondingReward', async () => {
       // claim the reward!
       await BStorage.connect(customer).claimReward(customer.address);
       // verify that reward is at user now
-      actualStandardBal = (await balanceTST()).div(DECIMALS).toString();
+      actualStandardBal = (await balanceTST()).div(DECIMALS_18).toString();
       expect(actualStandardBal).to.equal(expectedClaim);
       // verify that there is no claim anymore
-      actualClaim = (await BStorage.getClaimAmount(customer.address)).div(DECIMALS).toString();
+      actualClaim = (await BStorage.getClaimAmount(customer.address)).div(DECIMALS_18).toString();
       expect(actualClaim).to.equal('0');
 
-      let actualLeftover = (await TST.balanceOf(TGateway.address)).div(DECIMALS).toString();
+      let actualLeftover = (await TST.balanceOf(TGateway.address)).div(DECIMALS_18).toString();
       let maximumRewardSupply = 500 * 10 ** 6;
       let expectedLeftover = (maximumRewardSupply - profitStandard).toString();
       expect(actualLeftover).to.equal(expectedLeftover);

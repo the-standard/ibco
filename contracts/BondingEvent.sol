@@ -290,10 +290,10 @@ contract BondingEvent is AccessControl {
                 : AddedLiquidityResponse(tokenId, liquidity, amount1, amount0);
     }
 
-    function transferExcessToWallet(uint256 _addedAmount, uint256 _desiredAmount) private {
+    function transferExcessToWallet(uint256 _addedAmount, uint256 _desiredAmount, address _token) private {
         uint256 excess = _desiredAmount - _addedAmount;
         if (excess > 0 && excessCollateralWallet != address(0)) {
-            TransferHelper.safeTransfer(OTHER_ADDRESS, excessCollateralWallet, excess);
+            TransferHelper.safeTransfer(_token, excessCollateralWallet, excess);
         } 
     }
 
@@ -325,6 +325,10 @@ contract BondingEvent is AccessControl {
         );
     }
 
+    function ninetyNineNineNinePc(uint256 _amount) private pure returns (uint256) {
+        return _amount * 9999 / 10000;
+    }
+
     function addLiquidity(address _user, uint256 _amountSEuro)
         private
         onlyOperator
@@ -338,14 +342,17 @@ contract BondingEvent is AccessControl {
             int24 upperTick
         ) = getOtherAmount(_amountSEuro);
 
+
+        // Gives a 0.01 slippage tolerance to sEURO
+        // Due to the possible difference in accuracy between sEURO (18dec) and another token (possible 6dec)
         (
             uint256 amount0Desired,
             uint256 amount1Desired,
             uint256 amount0Min,
             uint256 amount1Min
         ) = pair.token0 == SEURO_ADDRESS
-                ? (_amountSEuro, otherAmount, _amountSEuro, uint256(0))
-                : (otherAmount, _amountSEuro, uint256(0), _amountSEuro);
+                ? (_amountSEuro, otherAmount, ninetyNineNineNinePc(_amountSEuro), uint256(0))
+                : (otherAmount, _amountSEuro, uint256(0), ninetyNineNineNinePc(_amountSEuro));
 
         approveAndTransfer(pair, _user, amount0Desired, amount1Desired);
 
@@ -366,7 +373,8 @@ contract BondingEvent is AccessControl {
             mintLiquidityPosition(params);
 
         emit LiquidityAdded(_user, added.tokenId, added.seuroAmount, added.otherAmount, added.liquidity);
-        transferExcessToWallet(added.otherAmount, otherAmount);
+        transferExcessToWallet(added.seuroAmount, _amountSEuro, SEURO_ADDRESS);
+        transferExcessToWallet(added.otherAmount, otherAmount, OTHER_ADDRESS);
     }
 
     // We assume that there is a higher layer solution which helps to fetch the latest price as a quote.
@@ -389,7 +397,7 @@ contract BondingEvent is AccessControl {
         // begin bonding event
         IBondStorage(bondStorageAddress).startBond(
             _user,
-            added.seuroAmount,
+            _amountSeuro,
             _rate,
             _maturityInWeeks,
             added.tokenId,
@@ -467,9 +475,6 @@ contract BondingEvent is AccessControl {
     // A tick range is considered viable for the bonding if the current price is within 40th and 60th percentile of tick range
     // If these ticks would not give us a viable ratio for bonding, we expand the tick range
     // Expanded by a magnitude of 100 ticks (ten times), then 1,000 ticks (ten times), then 10,000 etc, until viable
-    // Adds 0.01% to required other token amount, which:
-    // a) resolves a rounding discrepancy between Uniswap's LiquidityAmounts library and the NonfungiblePositionManager
-    // b) helps prevent price slippage issues when adding liquidity to the pool
     /// @param _amountSEuro The amount of sEURO token to bond
     /// @return amountOther The required amount of other token to bond with given sEURO amount
     /// @return lowerTick The lower tick of the viable price range
@@ -493,7 +498,7 @@ contract BondingEvent is AccessControl {
                 lowerTick,
                 upperTick,
                 seuroIsToken0
-            ) * 10001 / 10000;
+            );
     }
 
     function retractLiquidity(uint256 _tokenId, uint128 _liquidity) private returns (uint256 retractedLiquidity0, uint256 retractedLiquidity1) {
