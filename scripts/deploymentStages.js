@@ -43,9 +43,14 @@ const deployContracts = async () => {
   await completed(SEuro, 'SEuro');
   BondingCurve = await (await ethers.getContractFactory('BondingCurve')).deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   await completed(BondingCurve, 'BondingCurve')
-  SEuroCalculator = await (await ethers.getContractFactory('SEuroCalculator')).deploy(BondingCurve.address, externalContracts.eurUsdCl.address, externalContracts.eurUsdCl.dec);
+  SEuroCalculator = await (await ethers.getContractFactory('SEuroCalculator')).deploy(
+    BondingCurve.address, externalContracts.chainlink.eurUsd.address, externalContracts.chainlink.eurUsd.dec
+  );
   await completed(SEuroCalculator, 'SEuroCalculator')
-  const TokenManager = await (await ethers.getContractFactory('TokenManager')).deploy(externalContracts.weth, externalContracts.ethUsdCl.address, externalContracts.ethUsdCl.dec);
+  const TokenManager = await (await ethers.getContractFactory('TokenManager')).deploy(
+    externalContracts.weth.address, externalContracts.weth.dec,
+    externalContracts.chainlink.ethUsd.address, externalContracts.chainlink.ethUsd.dec
+  );
   await completed(TokenManager, 'TokenManager')
   SEuroOffering = await (await ethers.getContractFactory('SEuroOffering')).deploy(
     SEuro.address, SEuroCalculator.address, TokenManager.address, BondingCurve.address

@@ -2,28 +2,38 @@
     "localhost": {
         "externalContracts": {
             "uniswapLiquidityManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
-            "weth": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-            "eurUsdCl": {
-                "address": "0xb49f677943BC038e9857d61E7d053CaA2C1734C1",
-                "dec": 8
+            "weth": {
+                "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+                "dec": 18
             },
-            "ethUsdCl": {
-                "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
-                "dec": 8
+            "chainlink": {
+                "eurUsd": {
+                    "address": "0xb49f677943BC038e9857d61E7d053CaA2C1734C1",
+                    "dec": 8
+                },
+                "ethUsd": {
+                    "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+                    "dec": 8
+                }
             }
         }
     },
     "rinkeby": {
         "externalContracts": {
             "uniswapLiquidityManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
-            "weth": "0xc778417E063141139Fce010982780140Aa0cD5Ab",
-            "eurUsdCl": {
-                "address": "0x78F9e60608bF48a1155b4B2A5e31F32318a1d85F",
-                "dec": 8
+            "weth": {
+                "address": "0xc778417E063141139Fce010982780140Aa0cD5Ab",
+                "dec": 18
             },
-            "ethUsdCl": {
-                "address": "0x8A753747A1Fa494EC906cE90E9f37563A8AF630e",
-                "dec": 8
+            "chainlink": {
+                "eurUsd": {
+                    "address": "0x78F9e60608bF48a1155b4B2A5e31F32318a1d85F",
+                    "dec": 8
+                },
+                "ethUsd": {
+                    "address": "0x8A753747A1Fa494EC906cE90E9f37563A8AF630e",
+                    "dec": 8
+                }
             }
         }
     }
