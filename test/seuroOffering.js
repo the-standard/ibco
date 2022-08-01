@@ -4,7 +4,6 @@ const { WETH_ADDRESS } = require('./common');
 
 describe('SEuroOffering', async () => {
   const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
-  const WETH_DEC = 18;
   const CL_ETH_USD = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
   const CL_ETH_USD_DEC = 8;
   const DAI_DEC = 18;
@@ -55,7 +54,7 @@ describe('SEuroOffering', async () => {
     SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
     BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
     SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, EUR_USD_CL, EUR_USD_CL_DEC);
-    TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, WETH_DEC, CL_ETH_USD, CL_ETH_USD_DEC);
+    TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CL_ETH_USD, CL_ETH_USD_DEC);
     SEuroOffering = await SEuroOfferingContract.deploy(SEuro.address, SEuroCalculator.address, TokenManager.address, BondingCurve.address);
 
     await SEuro.connect(owner).grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), SEuroOffering.address)

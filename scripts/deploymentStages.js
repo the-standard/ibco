@@ -48,8 +48,7 @@ const deployContracts = async () => {
   );
   await completed(SEuroCalculator, 'SEuroCalculator')
   const TokenManager = await (await ethers.getContractFactory('TokenManager')).deploy(
-    externalContracts.weth.address, externalContracts.weth.dec,
-    externalContracts.chainlink.ethUsd.address, externalContracts.chainlink.ethUsd.dec
+    externalContracts.weth, externalContracts.chainlink.ethUsd.address, externalContracts.chainlink.ethUsd.dec
   );
   await completed(TokenManager, 'TokenManager')
   SEuroOffering = await (await ethers.getContractFactory('SEuroOffering')).deploy(
