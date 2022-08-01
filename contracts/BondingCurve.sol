@@ -27,7 +27,7 @@ contract BondingCurve is AccessControl {
     // index and price of current price bucket
     Bucket public currentBucket;
     mapping(uint32 => uint256) private bucketPricesCache;
-    uint256 private ibcoTotalSupply;
+    uint256 public ibcoTotalSupply;
 
     event PriceUpdated(uint32 index, uint256 price);
 
