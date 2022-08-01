@@ -290,10 +290,10 @@ contract BondingEvent is AccessControl {
                 : AddedLiquidityResponse(tokenId, liquidity, amount1, amount0);
     }
 
-    function transferExcessToWallet(uint256 _addedAmount, uint256 _desiredAmount) private {
+    function transferExcessToWallet(uint256 _addedAmount, uint256 _desiredAmount, address _token) private {
         uint256 excess = _desiredAmount - _addedAmount;
         if (excess > 0 && excessCollateralWallet != address(0)) {
-            TransferHelper.safeTransfer(SEURO_ADDRESS, excessCollateralWallet, excess);
+            TransferHelper.safeTransfer(_token, excessCollateralWallet, excess);
         } 
     }
 
@@ -373,7 +373,8 @@ contract BondingEvent is AccessControl {
             mintLiquidityPosition(params);
 
         emit LiquidityAdded(_user, added.tokenId, added.seuroAmount, added.otherAmount, added.liquidity);
-        transferExcessToWallet(added.seuroAmount, _amountSEuro);
+        transferExcessToWallet(added.seuroAmount, _amountSEuro, SEURO_ADDRESS);
+        transferExcessToWallet(added.otherAmount, otherAmount, OTHER_ADDRESS);
     }
 
     // We assume that there is a higher layer solution which helps to fetch the latest price as a quote.
