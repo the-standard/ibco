@@ -8,10 +8,10 @@ contract TokenManager is Ownable {
     bytes32 private WETH_NAME = bytes32("WETH");
     uint8 private WETH_DEC = 18;
 
-    mapping(bytes32 => Token) private tokens;
-    bytes32[] tokenNames;
+    Token[] private tokens;
 
     struct Token {
+        bytes32 name;
         address addr;
         uint8 dec;
         address chainlinkAddr;
@@ -27,8 +27,12 @@ contract TokenManager is Ownable {
 
     // Gets the details for the given token, if it is accepted
     /// @param _name 32-byte array value representation of the token symbol e.g. "WETH", "USDT"
-    function get(bytes32 _name) external view returns(Token memory) {
-        return tokens[_name];
+    function get(bytes32 _name) external view returns(Token memory token) {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (tokens[i].name == _name) {
+                token = tokens[i];
+            }
+        }
     }
 
     function addDefaultTokens(address _wethAddress, address _ethUsdCL, uint8 _ethUsdCLDec) private {
@@ -36,8 +40,8 @@ contract TokenManager is Ownable {
     }
 
     // Get an array of all the 32-byte arrays that represent accepted tokens
-    function getAcceptedTokens() external view returns (bytes32[] memory) {
-        return tokenNames;
+    function getAcceptedTokens() external view returns (Token[] memory) {
+        return tokens;
     }
 
     // Add a token to the accepted list of tokens
@@ -47,25 +51,23 @@ contract TokenManager is Ownable {
     /// @param _chainlinkAddr the address of the token / USD Chainlink data feed
     /// @param _chainlinkDec the number of decimals the Chainlink data feed uses
     function addAcceptedToken(bytes32 _name, address _addr, uint8 _dec, address _chainlinkAddr, uint8 _chainlinkDec) public onlyOwner {
-        tokens[_name] = Token(_addr, _dec, _chainlinkAddr, _chainlinkDec);
-        tokenNames.push(_name);
+        tokens.push(Token(_name, _addr, _dec, _chainlinkAddr, _chainlinkDec));
     }
 
     function deleteTokenName(uint256 index) private {
-        for (uint256 i = index; i < tokenNames.length - 1; i++) {
-            tokenNames[i] = tokenNames[i+1];
+        for (uint256 i = index; i < tokens.length - 1; i++) {
+            tokens[i] = tokens[i+1];
         }
-        tokenNames.pop();
+        tokens.pop();
     }
 
     // Remove accepted token from accepted list of tokens
     /// @param _name 32-byte array value representation of the token symbol e.g. "WETH", "USDT"
     function removeAcceptedToken(bytes32 _name) public onlyOwner {
-        for (uint256 i = 0; i < tokenNames.length; i++) {
-            if (tokenNames[i] == _name) {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (tokens[i].name == _name) {
                 deleteTokenName(i);
             }
         }
-        delete tokens[_name];
     }
 }
