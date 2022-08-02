@@ -32,6 +32,27 @@ const getPricing = () => {
     }
 }
 
+const createChainlinkMocks = async () => {
+  const dec = 8;
+  // ~$1.02 per €
+  let price = 102673000;
+  const EurUsdChainlink = await (await ethers.getContractFactory('Chainlink')).deploy(price);
+  // ~$1669 per eth
+  price = 166944811357
+  const EthUsdChainlink = await (await ethers.getContractFactory('Chainlink')).deploy(price);
+
+  return {
+    eurUsd: {
+      address: EurUsdChainlink.address,
+      dec: dec
+    },
+    ethUsd: {
+      address: EthUsdChainlink.address,
+      dec: dec
+    }
+  }
+}
+
 const deployContracts = async () => {  
   const { externalContracts } = JSON.parse(fs.readFileSync('scripts/deploymentConfig.json'))[network.name];
 
@@ -43,12 +64,15 @@ const deployContracts = async () => {
   await completed(SEuro, 'SEuro');
   BondingCurve = await (await ethers.getContractFactory('BondingCurve')).deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   await completed(BondingCurve, 'BondingCurve')
+  const chainlink = !!externalContracts.chainlink ?
+    externalContracts.chainlink :
+    await createChainlinkMocks();
   SEuroCalculator = await (await ethers.getContractFactory('SEuroCalculator')).deploy(
-    BondingCurve.address, externalContracts.chainlink.eurUsd.address, externalContracts.chainlink.eurUsd.dec
+    BondingCurve.address, chainlink.eurUsd.address, chainlink.eurUsd.dec
   );
   await completed(SEuroCalculator, 'SEuroCalculator')
   const TokenManager = await (await ethers.getContractFactory('TokenManager')).deploy(
-    externalContracts.weth, externalContracts.chainlink.ethUsd.address, externalContracts.chainlink.ethUsd.dec
+    externalContracts.weth, chainlink.ethUsd.address, chainlink.ethUsd.dec
   );
   await completed(TokenManager, 'TokenManager')
   SEuroOffering = await (await ethers.getContractFactory('SEuroOffering')).deploy(

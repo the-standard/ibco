@@ -32,15 +32,7 @@ These are the functions exposed to the user in the Token Manager contract. This 
 
 *Description*: provides list of all ERC20 tokens that are swappable for sEURO
 
-*Output*: list of 32-byte array representations of token symbols e.g. `0x5553445400000000000000000000000000000000000000000000000000000000` = `WETH`
-
-**get(bytes32 _name)**
-
-*Description*: provides details for the accepted token
-
-*Input*: symbol of token as a 32-byte array (provided by **TokenManager**)
-
-*Output*: address of the token; decimals of the token; address of the Chainlink data feed for its exchange rate with USD; number of decimals the Chainlink data feed uses
+*Output*: list of token details: symbol (converted to 32-byte array), address, decimals, Chainlink TOK/USD data feed address, Chainlink data feed decimals
 
 
 # Stage 1 Architecture

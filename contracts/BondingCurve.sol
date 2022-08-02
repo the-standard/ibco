@@ -17,8 +17,8 @@ contract BondingCurve is AccessControl {
 	bytes32 public constant UPDATER = keccak256("UPDATER");
 	bytes32 public constant CALCULATOR = keccak256("CALCULATOR");
 
+    uint256 public immutable maxSupply;
     uint256 private immutable initialPrice;
-    uint256 private immutable maxSupply;
     uint256 private immutable k;
     int128 private immutable j;
     uint256 private immutable bucketSize;
