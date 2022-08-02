@@ -1,5 +1,46 @@
-# Bonding Event Architecture
+# Stage 2 APIs
+
 The bonding event is the second stage in the IBCO process and takes place after the user has obtained sEUROs through the bonding curve in Stage 1.
+
+### Operator Stage 2 Public APIs
+
+These are the functions exposed to the user in the Operator Stage 2 contract. This contract can be used to create a bond of sEURO and another token, in order to receive TST once the bond matures.
+
+**showRates()**
+
+*Description*: gets available bond options
+
+*Output*: list of available bond options, as a yield rate and duration (in weeks)
+
+**newBond(address _user, uint256 _amountSeuro, uint256 _rate)**
+
+*Description*: creates a new bond for the duration that is applicable to the given rate. Transfers given sEURO amount, and an amount of the other bonding token (the amount is dictated by the requirements of the Uniswap liquidity pool at that time)
+
+*Input*: address of user creating bond; amount of sEURO to bond; chosen bond rate
+
+**refreshBond(address _user)**
+
+*Description*: refreshes status of bond
+
+*Input*: address of user creating bond
+
+### Bonding Event Public APIs
+
+These are the functions exposed to the user in the Bonding Event contract. This contract can be used to retrieve details about the bonding event and Uniswap liquidity pool
+
+**SEURO_ADDRESS()**
+
+**OTHER_ADDRESS()**
+
+*Description*: the addresses of the two ERC20 tokens involved in the bonding event
+
+**getOtherAmount(uint256 _amountSEuro)**
+
+*Description*: calculates how much of the other token is required in order to bond with the given amount of sEURO
+
+*Input*: amount of sEURO to bond
+
+*Output*: required amount of other token
 
 
 ### Contracts
