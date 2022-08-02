@@ -1,10 +1,24 @@
 const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 const { expect } = require('chai');
-const { etherBalances, WETH_ADDRESS, DAI_ADDRESS, USDT_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD, CHAINLINK_USDT_USD, CHAINLINK_EUR_USD, format6Dec, parse6Dec } = require('./common')
+const { etherBalances, WETH_ADDRESS, DAI_ADDRESS, USDT_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD, CHAINLINK_USDT_USD, CHAINLINK_EUR_USD, parse6Dec, WETH_BYTES, DAI_BYTES } = require('./common')
 
 describe('SEuroCalculator', async () => {
   const CALCULATOR_FIXED_POINT = BigNumber.from(10).pow(BigNumber.from(18));
+  const WETH_TOKEN = {
+    name: WETH_BYTES,
+    addr: WETH_ADDRESS,
+    dec: 18,
+    chainlinkAddr: CHAINLINK_ETH_USD,
+    chainlinkDec: CHAINLINK_DEC
+  };
+  const DAI_TOKEN = {
+    name: DAI_BYTES,
+    addr: DAI_ADDRESS,
+    dec: 18,
+    chainlinkAddr: CHAINLINK_DAI_USD,
+    chainlinkDec: CHAINLINK_DEC
+  };
   let SEuroCalculator, BondingCurve;
 
   beforeEach(async () => {
@@ -38,31 +52,20 @@ describe('SEuroCalculator', async () => {
 
   it('calculates the seuros for weth', async () => {
     const amount = ethers.utils.parseEther('1');
-    const token = {
-      addr: WETH_ADDRESS,
-      dec: 18,
-      chainlinkAddr: CHAINLINK_ETH_USD,
-      chainlinkDec: CHAINLINK_DEC
-    };
-    const seuros = await SEuroCalculator.callStatic.calculate(amount, token);
-    expect(seuros).to.equal(await expectedSEuros(token, amount));
+    const seuros = await SEuroCalculator.callStatic.calculate(amount, WETH_TOKEN);
+    expect(seuros).to.equal(await expectedSEuros(WETH_TOKEN, amount));
   });
 
   it('calculates the rate for other tokens', async () => {
     const amount = etherBalances['10K'];
-    const token = {
-      addr: DAI_ADDRESS,
-      dec: 18,
-      chainlinkAddr: CHAINLINK_DAI_USD,
-      chainlinkDec: CHAINLINK_DEC
-    };
-    const seuros = await SEuroCalculator.callStatic.calculate(amount, token);
-    expect(seuros).to.equal(await expectedSEuros(token, amount));
+    const seuros = await SEuroCalculator.callStatic.calculate(amount, DAI_TOKEN);
+    expect(seuros).to.equal(await expectedSEuros(DAI_TOKEN, amount));
   });
 
   it('calculates the rate for 6 decimal tokens', async () => {
     const amount = parse6Dec(1000);
     const token = {
+      name: ethers.utils.formatBytes32String('USDT'),
       addr: USDT_ADDRESS,
       dec: 6,
       chainlinkAddr: CHAINLINK_USDT_USD,
@@ -74,27 +77,15 @@ describe('SEuroCalculator', async () => {
 
   it('does not do state-changing calculation unless called by offering contract', async () => {
     const amount = etherBalances['10K'];
-    const token = {
-      addr: DAI_ADDRESS,
-      dec: 18,
-      chainlinkAddr: CHAINLINK_DAI_USD,
-      chainlinkDec: CHAINLINK_DEC
-    };
-    await expect(SEuroCalculator.connect(offering).calculate(amount, token)).to.be.revertedWith('invalid-user');
+    await expect(SEuroCalculator.connect(offering).calculate(amount, DAI_TOKEN)).to.be.revertedWith('invalid-user');
 
     await SEuroCalculator.grantRole(await SEuroCalculator.OFFERING(), offering.address);
-    await expect(SEuroCalculator.connect(offering).calculate(amount, token)).not.to.be.reverted;
+    await expect(SEuroCalculator.connect(offering).calculate(amount, DAI_TOKEN)).not.to.be.reverted;
   });
 
   it('calculates using read-only bonding curve', async () => {
     const amount = etherBalances.TWO_MILLION;
-    const token = {
-      addr: DAI_ADDRESS,
-      dec: 18,
-      chainlinkAddr: CHAINLINK_DAI_USD,
-      chainlinkDec: CHAINLINK_DEC
-    };
-    const seuros = await SEuroCalculator.readOnlyCalculate(amount, token);
-    expect(seuros).to.equal(await expectedSEuros(token, amount));
+    const seuros = await SEuroCalculator.readOnlyCalculate(amount, DAI_TOKEN);
+    expect(seuros).to.equal(await expectedSEuros(DAI_TOKEN, amount));
   });
 });

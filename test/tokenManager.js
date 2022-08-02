@@ -1,11 +1,9 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { WETH_ADDRESS, DAI_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD } = require('./common');
+const { WETH_ADDRESS, DAI_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD, WETH_BYTES, DAI_BYTES } = require('./common');
 
 describe('TokenManager', async () => {
-  const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
   const WETH_DEC = 18;
-  const DAI_BYTES = ethers.utils.formatBytes32String('DAI');
   const DAI_DEC = 18;
   const WETH_TOKEN = [WETH_BYTES, WETH_ADDRESS, 18, CHAINLINK_ETH_USD, CHAINLINK_DEC];
   const DAI_TOKEN = [DAI_BYTES, DAI_ADDRESS, 18, CHAINLINK_DAI_USD, CHAINLINK_DEC];

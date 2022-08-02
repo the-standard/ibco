@@ -1,9 +1,8 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS } = require('./common');
+const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS, WETH_BYTES, DAI_BYTES } = require('./common');
 
 describe('SEuroOffering', async () => {
-  const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
   const DAI_DEC = 18;
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
@@ -22,6 +21,7 @@ describe('SEuroOffering', async () => {
 
   async function getEthToSEuro(amount) {
     const token = {
+      name: WETH_BYTES,
       addr: WETH_ADDRESS,
       dec: 18,
       chainlinkAddr: CHAINLINK_ETH_USD,
@@ -32,6 +32,7 @@ describe('SEuroOffering', async () => {
 
   async function getDaiToSEuro(amount) {
     const token = {
+      name: DAI_BYTES,
       addr: DAI_ADDRESS,
       dec: 18,
       chainlinkAddr: CHAINLINK_DAI_USD,
@@ -141,9 +142,8 @@ describe('SEuroOffering', async () => {
 
       it('will swap for any accepted token', async () => {
         const toSwap = ethers.utils.parseEther('1');
-        const daiBytes = ethers.utils.formatBytes32String('DAI');
         const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
-        await TokenManager.connect(owner).addAcceptedToken(daiBytes, DAI_ADDRESS, DAI_DEC, CHAINLINK_DAI_USD, CHAINLINK_DEC);
+        await TokenManager.connect(owner).addAcceptedToken(DAI_BYTES, DAI_ADDRESS, DAI_DEC, CHAINLINK_DAI_USD, CHAINLINK_DEC);
 
         await buyToken(user, DAI_ADDRESS, toSwap);
         const Dai = await ethers.getContractAt('IERC20', DAI_ADDRESS);
@@ -151,8 +151,8 @@ describe('SEuroOffering', async () => {
         await Dai.connect(user).approve(SEuroOffering.address, userTokens);
 
         const expectedEuros = await getDaiToSEuro(userTokens);
-        const swap = SEuroOffering.connect(user).swap(daiBytes, userTokens);
-        await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs(daiBytes, userTokens, expectedEuros);
+        const swap = SEuroOffering.connect(user).swap(DAI_BYTES, userTokens);
+        await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs(DAI_BYTES, userTokens, expectedEuros);
         const userSEuroBalance = await SEuro.balanceOf(user.address);
         expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
       });
