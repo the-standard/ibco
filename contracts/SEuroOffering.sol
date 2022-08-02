@@ -64,6 +64,7 @@ contract SEuroOffering is Ownable {
     /// @param _token byte array value for the token that you'd like to estimate the exchange value for
     /// @param _amount the amount of the given token that you'd like to estimate the exchange value for
     function readOnlyCalculateSwap(bytes32 _token, uint256 _amount) external view returns (uint256) {
+        if (_token == bytes32("ETH")) _token = bytes32("WETH");
         TokenManager.Token memory token = tokenManager.get(_token);
         return sEuroRateCalculator.readOnlyCalculate(_amount, token);
     }
