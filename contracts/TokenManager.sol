@@ -33,6 +33,7 @@ contract TokenManager is Ownable {
                 token = tokens[i];
             }
         }
+        require(token.name != bytes32(0), "err-tok-not-found");
     }
 
     function addDefaultTokens(address _wethAddress, address _ethUsdCL, uint8 _ethUsdCLDec) private {
