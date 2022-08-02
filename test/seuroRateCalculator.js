@@ -29,8 +29,8 @@ describe('SEuroCalculator', async () => {
 
   async function getBaseEurRate(clTokUsd) {
     const eurUsdCl = await SEuroCalculator.EUR_USD_CL();
-    const tokUsdRate = (await (await ethers.getContractAt('Chainlink', clTokUsd)).latestRoundData()).answer;
-    const eurUsdRate = (await (await ethers.getContractAt('Chainlink', eurUsdCl)).latestRoundData()).answer;
+    const tokUsdRate = (await (await ethers.getContractAt('IChainlink', clTokUsd)).latestRoundData()).answer;
+    const eurUsdRate = (await (await ethers.getContractAt('IChainlink', eurUsdCl)).latestRoundData()).answer;
     return CALCULATOR_FIXED_POINT.mul(tokUsdRate).div(eurUsdRate);
   }
 

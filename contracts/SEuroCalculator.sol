@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "contracts/BondingCurve.sol";
-import "contracts/interfaces/Chainlink.sol";
+import "contracts/interfaces/IChainlink.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract SEuroCalculator is AccessControl {
@@ -36,8 +36,8 @@ contract SEuroCalculator is AccessControl {
     }
 
     function calculateBaseRate(address _tokUsdCl, uint8 _tokUsdDec) private view returns (uint256) {
-        (,int256 tokUsd,,,) = Chainlink(_tokUsdCl).latestRoundData();
-        (,int256 eurUsd,,,) = Chainlink(EUR_USD_CL).latestRoundData();
+        (,int256 tokUsd,,,) = IChainlink(_tokUsdCl).latestRoundData();
+        (,int256 eurUsd,,,) = IChainlink(EUR_USD_CL).latestRoundData();
         return FIXED_POINT * uint256(tokUsd) / uint256(eurUsd) / 10 ** (_tokUsdDec - EUR_USD_CL_DEC);
     }
 
