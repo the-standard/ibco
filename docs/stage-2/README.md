@@ -12,11 +12,11 @@ These are the functions exposed to the user in the Operator Stage 2 contract. Th
 
 *Output*: list of available bond options, as a yield rate and duration (in weeks)
 
-**newBond(address _user, uint256 _amountSeuro, uint256 _rate)**
+**newBond(uint256 _amountSeuro, uint256 _rate)**
 
 *Description*: creates a new bond for the duration that is applicable to the given rate. Transfers given sEURO amount, and an amount of the other bonding token (the amount is dictated by the requirements of the Uniswap liquidity pool at that time)
 
-*Input*: address of user creating bond; amount of sEURO to bond; chosen bond rate
+*Input*: amount of sEURO to bond; chosen bond rate
 
 **refreshBond(address _user)**
 
@@ -46,25 +46,25 @@ These are the functions exposed to the user in the Bonding Event contract. This 
 
 These are the functions exposed to the user in the Bond Storage contract. This contract can be used to retrieve data about the status of user's bond.
 
-**getActiveBonds(address _user)**
+**getActiveBonds()**
 
-*Description*: gets amount of active bonds for a user
+*Description*: gets amount of active bonds for sender
 
-**getUserBonds(address _user)**
+**getUserBonds()**
 
-*Description*: gets all bonds for user
+*Description*: gets all bonds for sender
 
-**getBondAt(address _user, uint256 index)**
+**getBondAt(, uint256 index)**
 
-*Description*: gets a single bond for a user
+*Description*: gets a single bond for sender
 
-**getProfit(address _user)**
+**getProfit()**
 
-*Description*: gets total profit for user's bonds
+*Description*: gets total profit for sender's bonds
 
-**getClaimAmount(address _user)**
+**getClaimAmount()**
 
-*Description*: gets claimable amount of TST for user
+*Description*: gets claimable amount of TST for sender
 
 
 ### Contracts
