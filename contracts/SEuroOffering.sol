@@ -40,8 +40,8 @@ contract SEuroOffering is Ownable {
         _;
     }
 
-    function getEuros(uint256 _amount, address _chainlinkAddr, uint8 _chainlinkDec) private returns (uint256) {
-        return sEuroRateCalculator.calculate(_amount, _chainlinkAddr, _chainlinkDec);
+    function getEuros(uint256 _amount, TokenManager.Token memory _token) private returns (uint256) {
+        return sEuroRateCalculator.calculate(_amount, _token);
     }
 
     function activated() private view returns (bool) {
@@ -65,7 +65,7 @@ contract SEuroOffering is Ownable {
     /// @param _amount the amount of the given token that you'd like to estimate the exchange value for
     function readOnlyCalculateSwap(bytes32 _token, uint256 _amount) external view returns (uint256) {
         TokenManager.Token memory token = tokenManager.get(_token);
-        return sEuroRateCalculator.readOnlyCalculate(_amount, token.chainlinkAddr, token.chainlinkDec);
+        return sEuroRateCalculator.readOnlyCalculate(_amount, token);
     }
 
     // Swap any accepted ERC20 token for an equivalent amount of sEURO
@@ -78,7 +78,7 @@ contract SEuroOffering is Ownable {
         require(erc20Token.balanceOf(msg.sender) >= _amount, "err-tok-bal");
         require(erc20Token.allowance(msg.sender, address(this)) >= _amount, "err-tok-allow");
         erc20Token.transferFrom(msg.sender, address(this), _amount);
-        uint256 euros = getEuros(_amount, token.chainlinkAddr, token.chainlinkDec);
+        uint256 euros = getEuros(_amount, token);
         SEuro(seuro).mint(msg.sender, euros);
         bondingCurve.updateCurrentBucket(euros);
         transferCollateral(erc20Token, _amount);
@@ -91,7 +91,7 @@ contract SEuroOffering is Ownable {
         TokenManager.Token memory token = tokenManager.get(bytes32("WETH"));
         WETH weth = WETH(token.addr);
         weth.deposit{value: amount}();
-        uint256 euros = getEuros(amount, token.chainlinkAddr, token.chainlinkDec);
+        uint256 euros = getEuros(amount, token);
         SEuro(seuro).mint(msg.sender, euros);
         bondingCurve.updateCurrentBucket(euros);
         transferCollateral(IERC20(token.addr), amount);

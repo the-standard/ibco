@@ -1,16 +1,10 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { WETH_ADDRESS } = require('./common');
+const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD } = require('./common');
 
 describe('SEuroOffering', async () => {
   const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
-  const CL_ETH_USD = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
-  const CL_ETH_USD_DEC = 8;
   const DAI_DEC = 18;
-  const DAI_USD_CL = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
-  const DAI_CL_DEC = 8;
-  const EUR_USD_CL = '0xb49f677943BC038e9857d61E7d053CaA2C1734C1';
-  const EUR_USD_CL_DEC = 8;
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
@@ -27,11 +21,11 @@ describe('SEuroOffering', async () => {
   }
 
   async function getEthToSEuro(amount) {
-    return await SEuroCalculator.callStatic.calculate(amount, CL_ETH_USD, CL_ETH_USD_DEC);
+    return await SEuroCalculator.callStatic.calculate(amount, CHAINLINK_ETH_USD, CHAINLINK_DEC);
   }
 
   async function getDaiToSEuro(amount) {
-    return await SEuroCalculator.callStatic.calculate(amount, DAI_USD_CL, DAI_CL_DEC);
+    return await SEuroCalculator.callStatic.calculate(amount, CHAINLINK_DAI_USD, CHAINLINK_DEC);
   }
 
   async function getBucketPrice(index) {
@@ -53,8 +47,8 @@ describe('SEuroOffering', async () => {
     WETH = await ethers.getContractAt('WETH', WETH_ADDRESS);
     SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
     BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
-    SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, EUR_USD_CL, EUR_USD_CL_DEC);
-    TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CL_ETH_USD, CL_ETH_USD_DEC);
+    SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, CHAINLINK_EUR_USD, CHAINLINK_DEC);
+    TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC);
     SEuroOffering = await SEuroOfferingContract.deploy(SEuro.address, SEuroCalculator.address, TokenManager.address, BondingCurve.address);
 
     await SEuro.connect(owner).grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), SEuroOffering.address)
@@ -137,7 +131,7 @@ describe('SEuroOffering', async () => {
         const toSwap = ethers.utils.parseEther('1');
         const daiBytes = ethers.utils.formatBytes32String('DAI');
         const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
-        await TokenManager.connect(owner).addAcceptedToken(daiBytes, DAI_ADDRESS, DAI_DEC, DAI_USD_CL, DAI_CL_DEC);
+        await TokenManager.connect(owner).addAcceptedToken(daiBytes, DAI_ADDRESS, DAI_DEC, CHAINLINK_DAI_USD, CHAINLINK_DEC);
 
         await buyToken(user, DAI_ADDRESS, toSwap);
         const Dai = await ethers.getContractAt('IERC20', DAI_ADDRESS);

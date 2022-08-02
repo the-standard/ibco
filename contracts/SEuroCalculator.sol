@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "contracts/BondingCurve.sol";
+import "contracts/TokenManager.sol";
 import "contracts/interfaces/IChainlink.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
@@ -45,20 +46,18 @@ contract SEuroCalculator is AccessControl {
     // This function (subsequently in the Bonding Curve) caches price calculations for efficiency
     // It is therefore a state-changing function
     /// @param _amount the amount of the given token that you'd like to calculate the exchange value for
-    /// @param _tokUsdCl address of the Chainlink data feed for the token you'd like to calculate (token / USD)
-    /// @param _tokUsdDec the number of decimals the given Chainlink data feed uses
-    function calculate(uint256 _amount, address _tokUsdCl, uint8 _tokUsdDec) external onlyOffering returns (uint256) {
-        uint256 euros = calculateBaseRate(_tokUsdCl, _tokUsdDec) * _amount / FIXED_POINT;
+    /// @param _token Token Manager Token for which you'd like to calculate
+    function calculate(uint256 _amount, TokenManager.Token memory _token) external onlyOffering returns (uint256) {
+        uint256 euros = calculateBaseRate(_token.chainlinkAddr, _token.chainlinkDec) * _amount / 10 ** _token.dec;
         return bondingCurve.calculatePrice(euros);
     }
 
     // A read-only function to estimate how much sEURO would be received, given the amount and relevant Chainlink data feed
     // This function provides a simplified calculation and is therefore just an estimation
     /// @param _amount the amount of the given token that you'd like to estimate the exchange value for
-    /// @param _tokUsdCl address of the Chainlink data feed for the token you'd like to estimate (token / USD)
-    /// @param _tokUsdDec the number of decimals the given Chainlink data feed uses
-    function readOnlyCalculate(uint256 _amount, address _tokUsdCl, uint8 _tokUsdDec) external view returns (uint256) {
-        uint256 euros = calculateBaseRate(_tokUsdCl, _tokUsdDec) * _amount / FIXED_POINT;
+    /// @param _token Token Manager Token for which you'd like to estimate
+    function readOnlyCalculate(uint256 _amount, TokenManager.Token memory _token) external view returns (uint256) {
+        uint256 euros = calculateBaseRate(_token.chainlinkAddr, _token.chainlinkDec) * _amount / 10 ** _token.dec;
         return bondingCurve.readOnlyCalculatePrice(euros);
     }
 }

@@ -1,27 +1,22 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { WETH_ADDRESS } = require('./common');
+const { WETH_ADDRESS, DAI_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD } = require('./common');
 
 describe('TokenManager', async () => {
   const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
   const WETH_DEC = 18;
-  const WETH_USD_CL = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
-  const WETH_CL_DEC = 8;
   const DAI = ethers.utils.formatBytes32String('DAI');
-  const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
   const DAI_DEC = 18;
-  const DAI_USD_CL = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
-  const DAI_CL_DEC = 8;
   let TokenManager, owner, user;
 
   beforeEach(async () => {
     [owner, user] = await ethers.getSigners();
     const TokenManagerContract = await ethers.getContractFactory('TokenManager');
-    TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, WETH_USD_CL, WETH_CL_DEC);
+    TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC);
   });
 
   it('gets list of accepted tokens', async () => {
-    await TokenManager.connect(owner).addAcceptedToken(DAI, DAI_ADDRESS, DAI_DEC, DAI_USD_CL, DAI_CL_DEC);
+    await TokenManager.connect(owner).addAcceptedToken(DAI, DAI_ADDRESS, DAI_DEC, CHAINLINK_DAI_USD, CHAINLINK_DEC);
     const acceptedTokens = await TokenManager.getAcceptedTokens();
 
     const tokens = [WETH_BYTES, DAI];
@@ -33,15 +28,14 @@ describe('TokenManager', async () => {
 
     expect(acceptedTokens.addr).to.equal(WETH_ADDRESS);
     expect(acceptedTokens.dec).to.equal(WETH_DEC);
-    expect(acceptedTokens.chainlinkAddr).to.equal(WETH_USD_CL);
-    expect(acceptedTokens.chainlinkDec).to.equal(WETH_CL_DEC);
+    expect(acceptedTokens.chainlinkAddr).to.equal(CHAINLINK_ETH_USD);
+    expect(acceptedTokens.chainlinkDec).to.equal(CHAINLINK_DEC);
   });
 
   describe('adding tokens', async () => {
-    const DAI_CL_DEC = 8;
 
     it('allows owner to add new token', async () => {
-      await TokenManager.connect(owner).addAcceptedToken(DAI, DAI_ADDRESS, DAI_DEC, DAI_USD_CL, DAI_CL_DEC);
+      await TokenManager.connect(owner).addAcceptedToken(DAI, DAI_ADDRESS, DAI_DEC, CHAINLINK_DAI_USD, CHAINLINK_DEC);
       const acceptedTokens = await TokenManager.getAcceptedTokens();
 
       const tokens = [WETH_BYTES, DAI];
@@ -49,7 +43,7 @@ describe('TokenManager', async () => {
     });
 
     it('does not allow non-owner to add token', async () => {
-      const addAcceptedToken = TokenManager.connect(user).addAcceptedToken(DAI, DAI_ADDRESS, DAI_DEC, DAI_USD_CL, DAI_CL_DEC);
+      const addAcceptedToken = TokenManager.connect(user).addAcceptedToken(DAI, DAI_ADDRESS, DAI_DEC, CHAINLINK_DAI_USD, CHAINLINK_DEC);
       await expect(addAcceptedToken).to.be.revertedWith('Ownable: caller is not the owner');
 
       const acceptedTokens = await TokenManager.getAcceptedTokens();
@@ -61,7 +55,7 @@ describe('TokenManager', async () => {
   describe('removing tokens', async () => {
 
     it('allows owner to remove new token', async () => {
-      await TokenManager.connect(owner).addAcceptedToken(DAI, DAI_ADDRESS, DAI_DEC, DAI_USD_CL, DAI_CL_DEC);
+      await TokenManager.connect(owner).addAcceptedToken(DAI, DAI_ADDRESS, DAI_DEC, CHAINLINK_DAI_USD, CHAINLINK_DEC);
       expect(await TokenManager.getAcceptedTokens()).to.eql([WETH_BYTES, DAI]);
 
       await TokenManager.connect(owner).removeAcceptedToken(DAI);
@@ -69,7 +63,7 @@ describe('TokenManager', async () => {
     });
 
     it('does not allow non-owner to remove token', async () => {
-      await TokenManager.connect(owner).addAcceptedToken(DAI, DAI_ADDRESS, DAI_DEC, DAI_USD_CL, DAI_CL_DEC);
+      await TokenManager.connect(owner).addAcceptedToken(DAI, DAI_ADDRESS, DAI_DEC, CHAINLINK_DAI_USD, CHAINLINK_DEC);
       expect(await TokenManager.getAcceptedTokens()).to.eql([WETH_BYTES, DAI]);
 
       const removeToken = TokenManager.connect(user).removeAcceptedToken(DAI);
