@@ -26,7 +26,7 @@ These are the functions exposed to the user in the Operator Stage 2 contract. Th
 
 ### Bonding Event Public APIs
 
-These are the functions exposed to the user in the Bonding Event contract. This contract can be used to retrieve details about the bonding event and Uniswap liquidity pool
+These are the functions exposed to the user in the Bonding Event contract. This contract can be used to retrieve details about the bonding event and Uniswap liquidity pool.
 
 **SEURO_ADDRESS()**
 
@@ -41,6 +41,30 @@ These are the functions exposed to the user in the Bonding Event contract. This 
 *Input*: amount of sEURO to bond
 
 *Output*: required amount of other token
+
+### Bond Storage Public APIs
+
+These are the functions exposed to the user in the Bond Storage contract. This contract can be used to retrieve data about the status of user's bond.
+
+**getActiveBonds(address _user)**
+
+*Description*: gets amount of active bonds for a user
+
+**getUserBonds(address _user)**
+
+*Description*: gets all bonds for user
+
+**getBondAt(address _user, uint256 index)**
+
+*Description*: gets a single bond for a user
+
+**getProfit(address _user)**
+
+*Description*: gets total profit for user's bonds
+
+**getClaimAmount(address _user)**
+
+*Description*: gets claimable amount of TST for user
 
 
 ### Contracts
