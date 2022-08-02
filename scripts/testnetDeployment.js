@@ -2,7 +2,7 @@ const fs = require('fs');
 const { ethers, network } = require('hardhat');
 const { deployContracts, mintUser } = require('./deploymentStages');
 
-const CHAINS = {rinkeby: 4}
+const CHAINS = {rinkeby: 4, goerli: 5}
 
 async function main() {
   const contractAddresses = await deployContracts();
