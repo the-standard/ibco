@@ -40,7 +40,7 @@ contract TokenManager is Ownable {
         addAcceptedToken(WETH_NAME, _wethAddress, WETH_DEC, _ethUsdCL, _ethUsdCLDec);
     }
 
-    // Get an array of all the 32-byte arrays that represent accepted tokens
+    // Get an array of all the accepted tokens
     function getAcceptedTokens() external view returns (Token[] memory) {
         return tokens;
     }
