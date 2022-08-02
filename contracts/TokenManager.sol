@@ -55,7 +55,7 @@ contract TokenManager is Ownable {
         tokens.push(Token(_name, _addr, _dec, _chainlinkAddr, _chainlinkDec));
     }
 
-    function deleteTokenName(uint256 index) private {
+    function deleteToken(uint256 index) private {
         for (uint256 i = index; i < tokens.length - 1; i++) {
             tokens[i] = tokens[i+1];
         }
@@ -67,7 +67,7 @@ contract TokenManager is Ownable {
     function removeAcceptedToken(bytes32 _name) public onlyOwner {
         for (uint256 i = 0; i < tokens.length; i++) {
             if (tokens[i].name == _name) {
-                deleteTokenName(i);
+                deleteToken(i);
             }
         }
     }
