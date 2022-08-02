@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD } = require('./common');
+const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS } = require('./common');
 
 describe('SEuroOffering', async () => {
   const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
@@ -21,11 +21,23 @@ describe('SEuroOffering', async () => {
   }
 
   async function getEthToSEuro(amount) {
-    return await SEuroCalculator.callStatic.calculate(amount, CHAINLINK_ETH_USD, CHAINLINK_DEC);
+    const token = {
+      addr: WETH_ADDRESS,
+      dec: 18,
+      chainlinkAddr: CHAINLINK_ETH_USD,
+      chainlinkDec: CHAINLINK_DEC
+    };
+    return await SEuroCalculator.callStatic.calculate(amount, token);
   }
 
   async function getDaiToSEuro(amount) {
-    return await SEuroCalculator.callStatic.calculate(amount, CHAINLINK_DAI_USD, CHAINLINK_DEC);
+    const token = {
+      addr: DAI_ADDRESS,
+      dec: 18,
+      chainlinkAddr: CHAINLINK_DAI_USD,
+      chainlinkDec: CHAINLINK_DEC
+    };
+    return await SEuroCalculator.callStatic.calculate(amount, token);
   }
 
   async function getBucketPrice(index) {

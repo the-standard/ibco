@@ -60,7 +60,7 @@ describe('SEuroCalculator', async () => {
     expect(seuros).to.equal(await expectedSEuros(token, amount));
   });
 
-  it.only('calculates the rate for 6 decimal tokens', async () => {
+  it('calculates the rate for 6 decimal tokens', async () => {
     const amount = parse6Dec(1000);
     const token = {
       addr: USDT_ADDRESS,
