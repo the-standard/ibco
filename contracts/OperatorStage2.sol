@@ -105,13 +105,12 @@ contract OperatorStage2 is AccessControl {
 	}
 
 	function newBond(
-		address _user,
 		uint256 _amountSeuro,
 		uint256 _rate
 	) public {
 		uint256 wks = allowedYieldToWeeks[_rate];
 		require(wks > 0, "err-missing-rate");
-		bondingEvent.bond(_user, _amountSeuro, wks, _rate);
+		bondingEvent.bond(msg.sender, _amountSeuro, wks, _rate);
 	}
 
 	function refreshBond(address _user) public {
