@@ -301,7 +301,7 @@ describe('BondingEvent', async () => {
 
         const positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(1);
-        const position = await BondingEvent.getPositionData(positions[0]);
+        const position = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
         expect(position.lowerTick).to.equal(pricing.lowerTick);
         expect(position.upperTick).to.equal(pricing.upperTick);
         expect(position.liquidity).to.be.gt(0);
@@ -318,14 +318,15 @@ describe('BondingEvent', async () => {
           customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
         );
         let initialPositions = await BondingEvent.getPositions();
-        const initialLiquidityTotal = (await BondingEvent.getPositionData(initialPositions[0])).liquidity;
+        const initialLiquidityTotal = (await BondingEvent.getPositionByTokenId(initialPositions[0].tokenId)).liquidity;
         await BondingEvent.connect(owner).bond(
           customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
         );
 
         positions = await BondingEvent.getPositions();
-        expect(positions).to.eql(initialPositions);
-        const position = await BondingEvent.getPositionData(positions[0]);
+        expect(positions.length).to.equal(1);
+        const position = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
+        expect(position.tokenId).to.equal(initialPositions[0].tokenId);
         expect(position.lowerTick).to.equal(pricing.lowerTick);
         expect(position.upperTick).to.equal(pricing.upperTick);
         const expectedLiquidity = initialLiquidityTotal.mul(2);
@@ -344,7 +345,7 @@ describe('BondingEvent', async () => {
 
         let positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(1);
-        let position = await BondingEvent.getPositionData(positions[0]);
+        let position = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
         expect(position.lowerTick).to.equal(pricing.lowerTick);
         expect(position.upperTick).to.equal(pricing.upperTick);
         expect(position.liquidity).to.be.gt(0);
@@ -364,7 +365,7 @@ describe('BondingEvent', async () => {
 
         positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(2);
-        let secondPosition = await BondingEvent.getPositionData(positions[1]);
+        let secondPosition = await BondingEvent.getPositionByTokenId(positions[1].tokenId);
         // since swap, new tick is at 275420 - shifting lower tick to 272900 and upper to 277100 puts at in middle 20%
         const expectedDiff = 400;
         expect(secondPosition.lowerTick).to.equal(pricing.lowerTick - expectedDiff);
@@ -474,11 +475,11 @@ describe('BondingEvent', async () => {
       expect(positions).to.be.length(2);
       await swap(USDT, SEuro, etherBalances['125K'].mul(5));
 
-      await expect(BondingEvent.clearPositionAndBurn(positions[0])).to.be.revertedWith('err-no-wallet-assigned');
+      await expect(BondingEvent.clearPositionAndBurn(positions[0].tokenId)).to.be.revertedWith('err-no-wallet-assigned');
 
       await BondingEvent.setExcessCollateralWallet(wallet.address);
 
-      const collect = BondingEvent.clearPositionAndBurn(positions[0]);
+      const collect = BondingEvent.clearPositionAndBurn(positions[0].tokenId);
 
       await expect(collect).not.to.be.reverted;
       // remove the liquidity position token

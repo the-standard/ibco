@@ -30,9 +30,7 @@ contract BondingEvent is AccessControl {
 
     INonfungiblePositionManager private immutable manager;
     IRatioCalculator private immutable ratioCalculator;
-    uint256[] private positions;
-    mapping(uint256 => Position) private positionData;
-    mapping(bytes32 => uint256) private positionsByTicks;
+    Position[] private positions;
 
     // https://docs.uniswap.org/protocol/reference/core/libraries/Tick
     int24 public lowerTickDefault;
@@ -59,6 +57,7 @@ contract BondingEvent is AccessControl {
     );
 
     struct Position {
+        uint256 tokenId;
         int24 lowerTick;
         int24 upperTick;
         uint128 liquidity;
@@ -181,18 +180,33 @@ contract BondingEvent is AccessControl {
     }
 
     // Gets all the Uniswap liquidity pool token IDs that this pool manages
-    function getPositions() external view returns (uint256[] memory) {
+    function getPositions() external view returns (Position[] memory) {
         return positions;
     }
 
     // Gets data for the given position token ID
     /// @param _tokenId the ID of the position token
-    function getPositionData(uint256 _tokenId)
-        external
+    function getPositionByTokenId(uint256 _tokenId)
+        public
         view
-        returns (Position memory)
+        returns (Position memory position)
     {
-        return positionData[_tokenId];
+        for (uint256 i = 0; i < positions.length; i++) {
+            if (positions[i].tokenId == _tokenId) position = positions[i];
+        }
+        require(position.tokenId != 0, 'err-pos-not-found');
+    }
+
+    function getPositionIdByTicks(int24 _lowerTick, int24 _upperTick) private view returns (uint256 positionId) {
+        for (uint256 i = 0; i < positions.length; i++) {
+            if (positions[i].lowerTick == _lowerTick && positions[i].upperTick == _upperTick) positionId = positions[i].tokenId;
+        }
+    }
+
+    function getIndexOfPosition(uint256 _tokenId) private view returns (uint256 index) {
+        for (uint256 i = 0; i < positions.length; i++) {
+            if (positions[i].tokenId == _tokenId) index = i;
+        }
     }
 
     struct AddLiquidityParams {
@@ -245,19 +259,26 @@ contract BondingEvent is AccessControl {
             uint256 amount0,
             uint256 amount1
         ) = manager.mint(mintParams);
-
-        positions.push(tokenId);
-        positionData[tokenId] = Position(
+        
+        positions.push(Position(
+            tokenId,
             params.lowerTick,
             params.upperTick,
             liquidity
-        );
-        positionsByTicks[encodedTicks(params.lowerTick, params.upperTick)] = tokenId;
+        ));
 
         return
             params.token0 == SEURO_ADDRESS
                 ? AddedLiquidityResponse(tokenId, liquidity, amount0, amount1)
                 : AddedLiquidityResponse(tokenId, liquidity, amount1, amount0);
+    }
+
+    function increasePositionLiquidity(uint256 _tokenId, uint128 _liquidity) private {
+        uint256 i = getIndexOfPosition(_tokenId);
+        Position memory position = positions[i];
+        if (position.tokenId == _tokenId) {
+            positions[i].liquidity = position.liquidity + _liquidity;
+        }
     }
 
     function increaseExistingLiquidity(AddLiquidityParams memory params, uint256 tokenId) private
@@ -281,8 +302,9 @@ contract BondingEvent is AccessControl {
             uint256 amount0, 
             uint256 amount1
         ) = manager.increaseLiquidity(increaseParams);
-
-        positionData[tokenId].liquidity += liquidity;
+        
+        // getPositionByTokenId(tokenId).liquidity += liquidity;
+        increasePositionLiquidity(tokenId, liquidity);
 
         return
             params.token0 == SEURO_ADDRESS
@@ -367,7 +389,7 @@ contract BondingEvent is AccessControl {
             amount1Min
         );
 
-        uint256 positionId = positionsByTicks[encodedTicks(lowerTick, upperTick)];
+        uint256 positionId = getPositionIdByTicks(lowerTick, upperTick);
         added = positionId > 0 ?
             increaseExistingLiquidity(params, positionId) :
             mintLiquidityPosition(params);
@@ -535,23 +557,21 @@ contract BondingEvent is AccessControl {
         positions.pop();
     }
 
-    function deletePosition(uint256 _tokenId, int24 _positionLowerTick, int24 _positionUpperTick) private {
-        delete positionData[_tokenId];
-        delete positionsByTicks[encodedTicks(_positionLowerTick, _positionUpperTick)];
+    function deletePosition(uint256 _tokenId) private {
         for (uint256 i = 0; i < positions.length; i++) {
-            if (positions[i] == _tokenId) deletePositionFromArray(i);
+            if (positions[i].tokenId == _tokenId) deletePositionFromArray(i);
         }
     }
 
     function clearPositionAndBurn(uint256 _tokenId) external onlyPoolOwner {
         require(excessCollateralWallet != address(0), "err-no-wallet-assigned");
-        (,,,,,int24 positionLowerTick, int24 positionUpperTick, uint128 liquidity,,,,) = manager.positions(_tokenId);
+        (,,,,,,,uint128 liquidity,,,,) = manager.positions(_tokenId);
         (uint256 retractedAmount0, uint256 retractedAmount1) = retractLiquidity(_tokenId, liquidity);
         (uint256 collectedAmount0, uint256 collectedAmount1) = collectAll(_tokenId);
         uint256 feesCollected0 = collectedAmount0 - retractedAmount0;
         uint256 feesCollected1 = collectedAmount1 - retractedAmount1;
         burnToken(_tokenId);
-        deletePosition(_tokenId, positionLowerTick, positionUpperTick);
+        deletePosition(_tokenId);
         emit LiquidityCollected(_tokenId, retractedAmount0, retractedAmount1, feesCollected0, feesCollected1, collectedAmount0, collectedAmount1);
     }
 }
