@@ -46,23 +46,23 @@ These are the functions exposed to the user in the Bonding Event contract. This 
 
 These are the functions exposed to the user in the Bond Storage contract. This contract can be used to retrieve data about the status of user's bond.
 
-**getActiveBonds()**
+**getActiveBonds(address_user)**
 
 *Description*: gets amount of active bonds for sender
 
-**getUserBonds()**
+**getUserBonds(address_user)**
 
 *Description*: gets all bonds for sender
 
-**getBondAt(, uint256 index)**
+**getBondAt(address_user, uint256 index)**
 
 *Description*: gets a single bond for sender
 
-**getProfit()**
+**getProfit(address_user)**
 
 *Description*: gets total profit for sender's bonds
 
-**getClaimAmount()**
+**getClaimAmount(address_user)**
 
 *Description*: gets claimable amount of TST for sender
 
