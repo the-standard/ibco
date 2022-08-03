@@ -26,7 +26,7 @@ These are the functions exposed to the user in the sEURO Offering contract. This
 
 ### Token Manager Public APIs
 
-These are the functions exposed to the user in the Token Manager contract. This contract can be used to get retrieve all accepted tokens for the sEURO Offering, and obtain the details for each token.
+These are the functions exposed to the user in the Token Manager contract. This contract can be used to retrieve all accepted tokens for the sEURO Offering, and obtain the details for each token.
 
 **getAcceptedTokens()**
 
