@@ -420,11 +420,11 @@ contract BondingEvent is AccessControl {
         IBondStorage(bondStorageAddress).startBond(
             _user,
             _amountSeuro,
+            added.otherAmount,
             _rate,
             _maturityInWeeks,
             added.tokenId,
-            added.liquidity,
-            added.otherAmount
+            added.liquidity
         );
     }
 

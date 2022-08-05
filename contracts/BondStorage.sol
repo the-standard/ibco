@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./StandardTokenGateway.sol";
 
+import "hardhat/console.sol";
 
 contract BondStorage is AccessControl {
 	bytes32 public constant WHITELIST_BOND_STORAGE = keccak256("WHITELIST_BOND_STORAGE");
@@ -36,11 +37,12 @@ contract BondStorage is AccessControl {
 
 	// Bond is a traditional bond: exchanged for a principal with a fixed rate and maturity
 	struct Bond {
-		uint256 principal;      // amount in sEURO
-		uint256 rate;           // example: 500 is 0.5 pc per annum (= 0.005)
-		uint256 maturity;       // in amount of weeks
-		bool tapped;            // if we squeezed the profit from this bond
-		PositionMetaData data;  // liquidity position data
+		uint256 principalSeuro;  // amount in sEURO
+		uint256 principalOther;  // amount in sEURO
+		uint256 rate;            // example: 500 is 0.5 pc per annum (= 0.005)
+		uint256 maturity;        // in amount of weeks
+		bool tapped;             // if we squeezed the profit from this bond
+		PositionMetaData data;   // liquidity position data
 	}
 
 	// BondRecord holds the main data
@@ -71,8 +73,8 @@ contract BondStorage is AccessControl {
 		issuedBonds[_user].isActive = true;
 	}
 
-	function addBond(address _user, uint256 _principal, uint256 _rate, uint256 maturityDate, PositionMetaData memory _data) private {
-		issuedBonds[_user].bonds.push(Bond(_principal, _rate, maturityDate, false, _data));
+	function addBond(address _user, uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 maturityDate, PositionMetaData memory _data) private {
+		issuedBonds[_user].bonds.push(Bond(_principalSeuro, _principalOther, _rate, maturityDate, false, _data));
 	}
 
 	function tapBond(address _user, uint256 index) private {
@@ -92,13 +94,15 @@ contract BondStorage is AccessControl {
 
 	// Returns the total payout and the accrued interest ("profit") component separately.
 	// Both the payout and the profit is in sEURO.
-	function calculateBond(Bond memory bond) private pure returns (uint256, uint256) {
+	function calculateBond(Bond memory bond) private pure returns (uint256 seuroPayout, uint256 seuroProfit, uint256 otherPayout, uint256 otherProfit) {
 		// basic (rate * principal) calculations
 		uint256 rateFactor = 100000; // due to the way we store interest rates
-		uint256 ratePrincipal = bond.rate * bond.principal;
-		uint256 profit = ratePrincipal / rateFactor;
-		uint256 fullPayout = bond.principal + profit;
-		return (fullPayout, profit);
+		uint256 seuroRatePrincipal = bond.rate * bond.principalSeuro;
+		seuroProfit = seuroRatePrincipal / rateFactor;
+		seuroPayout = bond.principalSeuro + seuroProfit;
+		uint256 otherRatePrincipal = bond.rate * bond.principalOther;
+		otherProfit = otherRatePrincipal / rateFactor;
+		otherPayout = bond.principalOther + otherProfit;
 	}
 
 	function incrementActiveBonds(address _user) private {
@@ -119,10 +123,10 @@ contract BondStorage is AccessControl {
 		return current + _maturityInWeeks * secondsPerWeek;
 	}
 
-	function isBondingPossible(uint256 _principal, uint256 _rate, uint256 _maturityInWeeks) private view returns (bool, uint256) {
-		Bond memory dummyBond = Bond(_principal, _rate, _maturityInWeeks, false, PositionMetaData(0, 0, 0, 0));
-		(uint256 payout, ) = calculateBond(dummyBond);
-		uint256 tokenPayout = toStandardTokens(payout);
+	function isBondingPossible(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturityInWeeks) private view returns (bool, uint256) {
+		Bond memory dummyBond = Bond(_principalSeuro, _principalOther, _rate, _maturityInWeeks, false, PositionMetaData(0, 0, 0, 0));
+		(uint256 seuroPayout,, uint256 otherPayout,) = calculateBond(dummyBond);
+		uint256 tokenPayout = toStandardTokens(seuroPayout) + toStandardTokens(otherPayout);
 		uint256 actualSupply = tokenGateway.getRewardSupply();
 		// if we are able to payout this bond in TST
 		return (tokenPayout < actualSupply, tokenPayout);
@@ -143,14 +147,14 @@ contract BondStorage is AccessControl {
 
 	function startBond(
 		address _user,
-		uint256 _amountSeuroPrincipal,
+		uint256 _principalSeuro,
+		uint256 _principalOther,
 		uint256 _rate,
 		uint256 _maturityInWeeks,
 		uint256 _tokenId,
-		uint128 _liquidity,
-		uint256 _amountOther
+		uint128 _liquidity
 	) external {
-		(bool ok, uint256 futurePayout) = isBondingPossible(_amountSeuroPrincipal, _rate, _maturityInWeeks);
+		(bool ok, uint256 futurePayout) = isBondingPossible(_principalSeuro, _principalOther, _rate, _maturityInWeeks);
 		require(ok == true, "err-insuff-tst-supply");
 
 		uint256 maturityDate = maturityDateAfterWeeks(_maturityInWeeks);
@@ -163,8 +167,8 @@ contract BondStorage is AccessControl {
 		tokenGateway.decreaseRewardSupply(futurePayout);
 
 		// finalise record of bond
-		PositionMetaData memory data = PositionMetaData(_tokenId, _liquidity, _amountSeuroPrincipal, _amountOther);
-		addBond(_user, _amountSeuroPrincipal, _rate, maturityDate, data);
+		PositionMetaData memory data = PositionMetaData(_tokenId, _liquidity, _principalSeuro, _principalOther);
+		addBond(_user, _principalSeuro, _principalOther, _rate, maturityDate, data);
 		incrementActiveBonds(_user);
 	}
 
@@ -188,9 +192,9 @@ contract BondStorage is AccessControl {
 
 				// here we calculate how much we are paying out in sEUR in total and the
 				// profit component, also in sEUR.
-				(uint256 totalPayoutSeuro, uint256 profitSeuro) = calculateBond(bonds[i]);
-				uint256 payoutTok = toStandardTokens(totalPayoutSeuro);
-				uint256 profitTok = toStandardTokens(profitSeuro);
+				(uint256 totalPayoutSeuro, uint256 profitSeuro, uint256 totalPayoutOther, uint256 profitOther) = calculateBond(bonds[i]);
+				uint256 payoutTok = toStandardTokens(totalPayoutSeuro) + toStandardTokens(totalPayoutOther);
+				uint256 profitTok = toStandardTokens(profitSeuro) + toStandardTokens(profitOther);
 
 				// increase the user's accumulated profit. only for show or as "fun to know"
 				increaseProfitAmount(_user, profitTok);

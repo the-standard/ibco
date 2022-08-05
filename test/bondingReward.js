@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, DECIMALS_18, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK } = require('./common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
 describe('BondingReward', async () => {
@@ -47,48 +47,45 @@ describe('BondingReward', async () => {
 
   describe('bonding', async () => {
     it('successfully transfers TSTs to the user and adjusts gateway contract', async () => {
-      let actualClaim, expectedClaim, bond, actualStandardBal;
-
       await TGateway.connect(owner).setStorageAddress(BStorage.address);
+      const amountSEuro = etherBalances.TWO_MILLION;
+      const {amountOther} = await BondingEvent.getOtherAmount(amountSEuro);
       await BondingEvent.connect(owner).bond(
         customer.address, etherBalances.TWO_MILLION, durations.ONE_WEEK, rates.TEN_PC
       );
-      bond = await BStorage.getBondAt(customer.address, 0);
-      let principal = 2000000;
-      expect(bond.principal.div(DECIMALS_18)).to.equal(principal);
+      const bond = await BStorage.getBondAt(customer.address, 0);
+      expect(bond.principalSeuro).to.eq(amountSEuro);
+      expect(bond.principalOther).to.eq(amountOther);
 
-      actualClaim = await BStorage.getClaimAmount(customer.address);
+      let actualClaim = await BStorage.getClaimAmount(customer.address);
       expect(actualClaim).to.equal(0);
 
       await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
 
       actualClaim = await BStorage.getClaimAmount(customer.address);
       expect(actualClaim).to.equal(0);
-
       await BStorage.connect(customer).refreshBondStatus(customer.address);
 
-      let profitSeuro = principal * 1.1; // ten percent rate
-      let profitStandard = profitSeuro * STANDARD_TOKENS_PER_EUR;
-      expectedClaim = profitStandard.toString();
+      const payoutSeuro = amountSEuro.add(amountSEuro.div(10)); // ten percent rate
+      const payoutOther = amountOther.add(amountOther.div(10)); // ten percent rate
+      const payoutStandard = (payoutSeuro.mul(STANDARD_TOKENS_PER_EUR)).add(payoutOther.mul(STANDARD_TOKENS_PER_EUR));
       // claim has been properly registered in bond backend
-      actualClaim = (await BStorage.getClaimAmount(customer.address)).div(DECIMALS_18).toString();
-      expect(actualClaim).to.equal(expectedClaim);
+      actualClaim = await BStorage.getClaimAmount(customer.address);
+      expect(actualClaim).to.equal(payoutStandard);
 
       // verify TST balance is zero
-      actualStandardBal = await balanceTST();
+      let actualStandardBal = await balanceTST();
       expect(actualStandardBal).to.equal(0);
       // claim the reward!
       await BStorage.connect(customer).claimReward(customer.address);
       // verify that reward is at user now
-      actualStandardBal = (await balanceTST()).div(DECIMALS_18).toString();
-      expect(actualStandardBal).to.equal(expectedClaim);
+      expect(await balanceTST()).to.equal(payoutStandard);
       // verify that there is no claim anymore
-      actualClaim = (await BStorage.getClaimAmount(customer.address)).div(DECIMALS_18).toString();
-      expect(actualClaim).to.equal('0');
+      expect(await BStorage.getClaimAmount(customer.address)).to.equal(0);
 
-      let actualLeftover = (await TST.balanceOf(TGateway.address)).div(DECIMALS_18).toString();
-      let maximumRewardSupply = 500 * 10 ** 6;
-      let expectedLeftover = (maximumRewardSupply - profitStandard).toString();
+      let actualLeftover = await TST.balanceOf(TGateway.address);
+      let maximumRewardSupply = etherBalances.FIVE_HUNDRED_MILLION;
+      let expectedLeftover = maximumRewardSupply.sub(payoutStandard);
       expect(actualLeftover).to.equal(expectedLeftover);
     });
   });
