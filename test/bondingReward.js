@@ -1,8 +1,10 @@
 const { ethers } = require('hardhat');
+const { BigNumber } = ethers;
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK } = require('./common.js');
-bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
+const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, CHAINLINK_DEC } = require('./common.js');
+bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
+const eurUsdPrice = 105000000;
 
 describe('BondingReward', async () => {
   let owner, customer, SEuro, TST, USDT, BondingEvent, BStorage, TGateway, RatioCalculator;
@@ -20,7 +22,8 @@ describe('BondingReward', async () => {
     const TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
     const RatioCalculatorContract = await ethers.getContractFactory('RatioCalculator');
 
-    TGateway = await TokenGatewayContract.deploy(TST.address, SEuro.address);
+    const ChainlinkEurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(eurUsdPrice);
+    TGateway = await TokenGatewayContract.deploy(TST.address, SEuro.address, ChainlinkEurUsd.address, CHAINLINK_DEC);
     BStorage = await StorageContract.deploy(TGateway.address);
     RatioCalculator = await RatioCalculatorContract.deploy();
     BondingEvent = await BondingEventContract.deploy(
@@ -43,6 +46,12 @@ describe('BondingReward', async () => {
 
   async function balanceTST() {
     return TST.balanceOf(customer.address);
+  }
+
+  const otherToEur = (amount) => {
+    const chainlinkDecScale = BigNumber.from(10).pow(CHAINLINK_DEC);
+    // divides by eur / usd to convert to euro amount, multiplies by chainlink dec scale to cancel out division by eurUsdPrice price
+    return amount.mul(chainlinkDecScale).div(eurUsdPrice);
   }
 
   describe('bonding', async () => {
@@ -68,7 +77,7 @@ describe('BondingReward', async () => {
 
       const payoutSeuro = amountSEuro.add(amountSEuro.div(10)); // ten percent rate
       const payoutOther = amountOther.add(amountOther.div(10)); // ten percent rate
-      const payoutStandard = (payoutSeuro.mul(STANDARD_TOKENS_PER_EUR)).add(payoutOther.mul(STANDARD_TOKENS_PER_EUR));
+      const payoutStandard = (payoutSeuro.mul(STANDARD_TOKENS_PER_EUR)).add(otherToEur(payoutOther).mul(STANDARD_TOKENS_PER_EUR));
       // claim has been properly registered in bond backend
       actualClaim = await BStorage.getClaimAmount(customer.address);
       expect(actualClaim).to.equal(payoutStandard);

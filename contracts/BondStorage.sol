@@ -126,21 +126,10 @@ contract BondStorage is AccessControl {
 	function isBondingPossible(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturityInWeeks) private view returns (bool, uint256) {
 		Bond memory dummyBond = Bond(_principalSeuro, _principalOther, _rate, _maturityInWeeks, false, PositionMetaData(0, 0, 0, 0));
 		(uint256 seuroPayout,, uint256 otherPayout,) = calculateBond(dummyBond);
-		uint256 tokenPayout = toStandardTokens(seuroPayout) + toStandardTokens(otherPayout);
+		uint256 tokenPayout = tokenGateway.seuroToStandardToken(seuroPayout) + tokenGateway.otherToStandardToken(otherPayout);
 		uint256 actualSupply = tokenGateway.getRewardSupply();
 		// if we are able to payout this bond in TST
 		return (tokenPayout < actualSupply, tokenPayout);
-	}
-
-	function toStandardTokens(uint256 _amountSeuro) private view returns (uint256) {
-		uint256 result;
-		(uint256 currTokPrice, bool inverted) = tokenGateway.getStandardTokenPrice();
-		if (inverted) {
-			result = _amountSeuro * currTokPrice;
-		} else {
-			result = _amountSeuro / currTokPrice;
-		}
-		return result;
 	}
 
 	/// ================ BondStorage public APIs ==============
@@ -193,8 +182,8 @@ contract BondStorage is AccessControl {
 				// here we calculate how much we are paying out in sEUR in total and the
 				// profit component, also in sEUR.
 				(uint256 totalPayoutSeuro, uint256 profitSeuro, uint256 totalPayoutOther, uint256 profitOther) = calculateBond(bonds[i]);
-				uint256 payoutTok = toStandardTokens(totalPayoutSeuro) + toStandardTokens(totalPayoutOther);
-				uint256 profitTok = toStandardTokens(profitSeuro) + toStandardTokens(profitOther);
+				uint256 payoutTok = tokenGateway.seuroToStandardToken(totalPayoutSeuro) + tokenGateway.otherToStandardToken(totalPayoutOther);
+				uint256 profitTok = tokenGateway.seuroToStandardToken(profitSeuro) + tokenGateway.otherToStandardToken(profitOther);
 
 				// increase the user's accumulated profit. only for show or as "fun to know"
 				increaseProfitAmount(_user, profitTok);
