@@ -9,17 +9,14 @@ import "contracts/StandardTokenGateway.sol";
 contract OperatorStage2 is AccessControl {
 	bytes32 public constant OPERATOR_STAGE_2 = keccak256("OPERATOR_STAGE_2");
 
-	// BondStorage contract address
-	address public storageAddress;
-	BondStorage bondStorage;
+	// BondStorage dependency
+	BondStorage public bondStorage;
 
-	// BondingEvent contract
-	address public eventAddress;
-	BondingEvent bondingEvent;
+	// BondingEvent dependency
+	BondingEvent public bondingEvent;
 
-	// StandardTokenGateway contract
-	address public gatewayAddress;
-	StandardTokenGateway tokenGateway;
+	// StandardTokenGateway dependency
+	StandardTokenGateway public tokenGateway;
 
 	struct BondRate {
 		uint256 rate;
@@ -48,21 +45,18 @@ contract OperatorStage2 is AccessControl {
 	}
 
 	function setStorage(address _newAddress) public onlyOperatorStage2 {
-		require(_newAddress != storageAddress, "err-same-address");
-		storageAddress = _newAddress;
-		bondStorage = BondStorage(storageAddress);
+		require(_newAddress != address(bondStorage), "err-same-address");
+		bondStorage = BondStorage(_newAddress);
 	}
 
 	function setBonding(address _newAddress) public onlyOperatorStage2 {
-		require(_newAddress != eventAddress, "err-same-address");
-		eventAddress = _newAddress;
-		bondingEvent = BondingEvent(eventAddress);
+		require(_newAddress != address(bondingEvent), "err-same-address");
+		bondingEvent = BondingEvent(_newAddress);
 	}
 
 	function setGateway(address _newAddress) public onlyOperatorStage2 {
-		require(_newAddress != gatewayAddress, "err-same-address");
-		gatewayAddress = _newAddress;
-		tokenGateway = StandardTokenGateway(gatewayAddress);
+		require(_newAddress != address(tokenGateway), "err-same-address");
+		tokenGateway = StandardTokenGateway(_newAddress);
 	}
 
 	// Adds a new rate that allows a user to bond with
