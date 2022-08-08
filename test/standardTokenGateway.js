@@ -1,7 +1,6 @@
 const { ethers } = require('hardhat');
-const { BigNumber } = ethers;
 const { expect } = require('chai');
-const { CHAINLINK_DEC, etherBalances, DEFAULT_CHAINLINK_EUR_USD_PRICE } = require('./common');
+const { CHAINLINK_DEC, etherBalances, DEFAULT_CHAINLINK_EUR_USD_PRICE, defaultConvertUsdToEur } = require('./common');
 
 describe('StandardTokenGateway', async () => {
   let StandardTokenGateway;
@@ -17,19 +16,13 @@ describe('StandardTokenGateway', async () => {
     );
   });
 
-  const otherToEur = amount => {
-    const chainlinkDecScale = BigNumber.from(10).pow(CHAINLINK_DEC);
-    // divides by eur / usd to convert to euro amount, multiplies by chainlink dec scale to cancel out division by eurUsdPrice price
-    return amount.mul(chainlinkDecScale).div(eurUsdPrice);
-  };
-
   it('provides the TST exchange for sEURO and the other asset', async () => {
     const TSTPrice = await StandardTokenGateway.tokenPrice();
     const amount = etherBalances['10K'];
     let expectedTST = amount.mul(TSTPrice);
     expect(await StandardTokenGateway.seuroToStandardToken(amount)).to.equal(expectedTST);
 
-    expectedTST = otherToEur(amount).mul(TSTPrice);
+    expectedTST = defaultConvertUsdToEur(amount).mul(TSTPrice);
     expect(await StandardTokenGateway.otherToStandardToken(amount)).to.equal(expectedTST);
   });
 });

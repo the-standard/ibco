@@ -1,8 +1,7 @@
 const { ethers } = require('hardhat');
-const { BigNumber } = ethers;
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, etherBalances, rates, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, DEFAULT_CHAINLINK_EUR_USD_PRICE, CHAINLINK_DEC } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, etherBalances, rates, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, DEFAULT_CHAINLINK_EUR_USD_PRICE, CHAINLINK_DEC, defaultConvertUsdToEur } = require('./common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 
 let owner, customer, SEuro, TST, USDT;
@@ -90,16 +89,10 @@ describe('Stage 2', async () => {
           return {seuroPrincipal, otherPrincipal};
         }
 
-        const otherToEur = amount => {
-          const chainlinkDecScale = BigNumber.from(10).pow(CHAINLINK_DEC);
-          // divides by eur / usd to convert to euro amount, multiplies by chainlink dec scale to cancel out division by eurUsdPrice price
-          return amount.mul(chainlinkDecScale).div(DEFAULT_CHAINLINK_EUR_USD_PRICE);
-        }
-
         async function expectedTokBalance(seuroPrincipal, otherPrincipal, ratePc) {
           let payoutSeuro = seuroPrincipal.mul(100 + ratePc).div(100);
           let payoutOther = otherPrincipal.mul(100 + ratePc).div(100);
-          let expectedStandardBal = (payoutSeuro.mul(STANDARD_TOKENS_PER_EUR)).add(otherToEur(payoutOther).mul(STANDARD_TOKENS_PER_EUR));
+          let expectedStandardBal = (payoutSeuro.mul(STANDARD_TOKENS_PER_EUR)).add(defaultConvertUsdToEur(payoutOther).mul(STANDARD_TOKENS_PER_EUR));
           let actualStandardBal = await customerBalance();
           expect(actualStandardBal).to.equal(expectedStandardBal);
         }

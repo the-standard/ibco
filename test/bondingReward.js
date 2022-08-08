@@ -1,8 +1,7 @@
 const { ethers } = require('hardhat');
-const { BigNumber } = ethers;
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE, defaultConvertUsdToEur } = require('./common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 const eurUsdPrice = DEFAULT_CHAINLINK_EUR_USD_PRICE;
 
@@ -48,12 +47,6 @@ describe('BondingReward', async () => {
     return TST.balanceOf(customer.address);
   }
 
-  const otherToEur = (amount) => {
-    const chainlinkDecScale = BigNumber.from(10).pow(CHAINLINK_DEC);
-    // divides by eur / usd to convert to euro amount, multiplies by chainlink dec scale to cancel out division by eurUsdPrice price
-    return amount.mul(chainlinkDecScale).div(eurUsdPrice);
-  }
-
   describe('bonding', async () => {
     it('successfully transfers TSTs to the user and adjusts gateway contract', async () => {
       await TGateway.connect(owner).setStorageAddress(BStorage.address);
@@ -77,7 +70,7 @@ describe('BondingReward', async () => {
 
       const payoutSeuro = amountSEuro.add(amountSEuro.div(10)); // ten percent rate
       const payoutOther = amountOther.add(amountOther.div(10)); // ten percent rate
-      const payoutStandard = (payoutSeuro.mul(STANDARD_TOKENS_PER_EUR)).add(otherToEur(payoutOther).mul(STANDARD_TOKENS_PER_EUR));
+      const payoutStandard = (payoutSeuro.mul(STANDARD_TOKENS_PER_EUR)).add(defaultConvertUsdToEur(payoutOther).mul(STANDARD_TOKENS_PER_EUR));
       // claim has been properly registered in bond backend
       actualClaim = await BStorage.getClaimAmount(customer.address);
       expect(actualClaim).to.equal(payoutStandard);

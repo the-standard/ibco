@@ -106,6 +106,11 @@ const scaleUpForDecDiff = (reserve, decDiff) => {
   return BigNumber.from(reserve).mul(scale);
 }
 
+const defaultConvertUsdToEur = amount => {
+  const chainlinkDecScale = BigNumber.from(10).pow(CHAINLINK_DEC);
+  return amount.mul(chainlinkDecScale).div(DEFAULT_CHAINLINK_EUR_USD_PRICE);
+}
+
 module.exports = {
   POSITION_MANAGER_ADDRESS,
   WETH_ADDRESS,
@@ -135,6 +140,7 @@ module.exports = {
   helperFastForwardTime,
   format6Dec,
   parse6Dec,
-  scaleUpForDecDiff
+  scaleUpForDecDiff,
+  defaultConvertUsdToEur
 }
 
