@@ -32,10 +32,6 @@ contract StandardTokenGateway is AccessControl {
 	// Enabled when the price is less than 1
 	bool public inversed;
 
-    // used to convert other token to seuro value (before converting to TST)
-    address public chainlinkEurOther;
-    uint8 public chainlinkDec;
-
 	// The amount of TST tokens that are to be paid out in the future.
 	uint256 public pendingPayout;
 
@@ -51,7 +47,7 @@ contract StandardTokenGateway is AccessControl {
 
 	bytes32 public constant TST_TOKEN_GATEWAY = keccak256("TST_TOKEN_GATEWAY");
 
-	constructor(address _tokenAddress, address _seuroToken, address _chainlinkEurOther, uint8 _chainlinkDec) {
+	constructor(address _tokenAddress, address _seuroToken) {
 		_setupRole(TST_TOKEN_GATEWAY, msg.sender);
 		TOKEN_ADDRESS = _tokenAddress;
 		TOKEN = IERC20(TOKEN_ADDRESS);
@@ -61,8 +57,6 @@ contract StandardTokenGateway is AccessControl {
 		TST_MAX_AMOUNT = one_billion * decimals;
 		bondRewardPoolSupply = 0;
 		isActive = true;
-        chainlinkEurOther = _chainlinkEurOther;
-        chainlinkDec = _chainlinkDec;
 	}
 
 	modifier onlyGatewayOwner {
@@ -106,18 +100,6 @@ contract StandardTokenGateway is AccessControl {
 	function getSeuroStandardTokenPrice() public view returns (uint256, bool) {
 		return (tokenPrice, inversed);
 	}
-
-    function seuroToStandardToken(uint256 _seuroAmount) public view returns (uint256) {
-        return inversed ?
-            _seuroAmount * tokenPrice :
-            _seuroAmount / tokenPrice;
-    }
-
-    function otherToStandardToken(uint256 _otherAmount) external view returns (uint256) {
-        (,int256 eurOtherRate,,,) = IChainlink(chainlinkEurOther).latestRoundData();
-        uint256 seuroValue = _otherAmount * 10 ** chainlinkDec / uint256(eurOtherRate);
-        return seuroToStandardToken(seuroValue);
-    }
 
 	function getRewardSupply() public view returns (uint256) {
 		return bondRewardPoolSupply;

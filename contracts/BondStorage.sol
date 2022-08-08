@@ -11,9 +11,17 @@ contract BondStorage is AccessControl {
 	// Standard Token data feed
 	StandardTokenGateway private tokenGateway;
 
-	constructor(address _gatewayAddress) {
+    // used to convert other token to seuro value (before converting to TST)
+    // dec should be default chainlink 8 for default 18 dec tokens (to match sEURO)
+    // dec should be 20 when other asset is a 6 dec token
+    address public chainlinkEurOther;
+    uint8 public otherUsdDec;
+
+	constructor(address _gatewayAddress, address _chainlinkEurOther, uint8 _otherUsdDec) {
 		_setupRole(WHITELIST_BOND_STORAGE, msg.sender);
 		tokenGateway = StandardTokenGateway(_gatewayAddress);
+        chainlinkEurOther = _chainlinkEurOther;
+        otherUsdDec = _otherUsdDec;
 	}
 
 	modifier onlyOwner {
@@ -121,10 +129,23 @@ contract BondStorage is AccessControl {
 		return current + _maturityInWeeks * secondsPerWeek;
 	}
 
+    function seuroToStandardToken(uint256 _amount) private view returns(uint256) {
+        (uint256 price, bool inversed) = tokenGateway.getSeuroStandardTokenPrice();
+        return inversed ?
+            _amount * price :
+            _amount / price;
+    }
+
+    function otherTokenToStandardToken(uint256 _amount) private view returns(uint256) {
+        (,int256 eurOtherRate,,,) = IChainlink(chainlinkEurOther).latestRoundData();
+        uint256 seuros = _amount * 10 ** otherUsdDec / uint256(eurOtherRate);
+        return seuroToStandardToken(seuros);
+    }
+
 	function isBondingPossible(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturityInWeeks) private view returns (bool, uint256) {
 		Bond memory dummyBond = Bond(_principalSeuro, _principalOther, _rate, _maturityInWeeks, false, PositionMetaData(0, 0, 0, 0));
 		(uint256 seuroPayout,, uint256 otherPayout,) = calculateBond(dummyBond);
-		uint256 tokenPayout = tokenGateway.seuroToStandardToken(seuroPayout) + tokenGateway.otherToStandardToken(otherPayout);
+		uint256 tokenPayout = seuroToStandardToken(seuroPayout) + otherTokenToStandardToken(otherPayout);
 		uint256 actualSupply = tokenGateway.getRewardSupply();
 		// if we are able to payout this bond in TST
 		return (tokenPayout < actualSupply, tokenPayout);
@@ -180,8 +201,8 @@ contract BondStorage is AccessControl {
 				// here we calculate how much we are paying out in sEUR in total and the
 				// profit component, also in sEUR.
 				(uint256 totalPayoutSeuro, uint256 profitSeuro, uint256 totalPayoutOther, uint256 profitOther) = calculateBond(bonds[i]);
-				uint256 payoutTok = tokenGateway.seuroToStandardToken(totalPayoutSeuro) + tokenGateway.otherToStandardToken(totalPayoutOther);
-				uint256 profitTok = tokenGateway.seuroToStandardToken(profitSeuro) + tokenGateway.otherToStandardToken(profitOther);
+				uint256 payoutTok = seuroToStandardToken(totalPayoutSeuro) + otherTokenToStandardToken(totalPayoutOther);
+				uint256 profitTok = seuroToStandardToken(profitSeuro) + otherTokenToStandardToken(profitOther);
 
 				// increase the user's accumulated profit. only for show or as "fun to know"
 				increaseProfitAmount(_user, profitTok);
