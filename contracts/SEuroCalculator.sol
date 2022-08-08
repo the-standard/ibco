@@ -10,11 +10,11 @@ contract SEuroCalculator is AccessControl {
     // multiplier used to assist calculation of fractions
     uint256 public constant FIXED_POINT = 1_000_000_000_000_000_000;
     // address of Offering contract, the key dependent of this contract
-	bytes32 public constant OFFERING = keccak256("OFFERING");
+    bytes32 public constant OFFERING = keccak256("OFFERING");
 
     address public immutable EUR_USD_CL;
     uint8 public immutable EUR_USD_CL_DEC;
-	bytes32 public constant DEFAULT_ADMIN = keccak256("DEFAULT_ADMIN");
+    bytes32 public constant DEFAULT_ADMIN = keccak256("DEFAULT_ADMIN");
 
     BondingCurve private bondingCurve;
 
@@ -24,7 +24,7 @@ contract SEuroCalculator is AccessControl {
     constructor(address _bondingCurve, address _eurUsdCl, uint8 _eurUsdDec) {
         _grantRole(DEFAULT_ADMIN, msg.sender);
         _setRoleAdmin(OFFERING, DEFAULT_ADMIN);
-		grantRole(OFFERING, msg.sender);
+        grantRole(OFFERING, msg.sender);
 
         bondingCurve = BondingCurve(_bondingCurve);
         EUR_USD_CL = _eurUsdCl;
@@ -32,7 +32,7 @@ contract SEuroCalculator is AccessControl {
     }
 
     modifier onlyOffering {
-		require(hasRole(OFFERING, msg.sender), "invalid-user");
+        require(hasRole(OFFERING, msg.sender), "invalid-user");
         _;
     }
 

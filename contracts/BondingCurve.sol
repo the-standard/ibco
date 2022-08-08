@@ -13,9 +13,9 @@ contract BondingCurve is AccessControl {
     uint256 private constant FINAL_PRICE = 1_000_000_000_000_000_000;
     uint8 private constant J_NUMERATOR = 1;
     uint8 private constant J_DENOMINATOR = 5;
-	bytes32 public constant DEFAULT_ADMIN = keccak256("DEFAULT_ADMIN");
-	bytes32 public constant UPDATER = keccak256("UPDATER");
-	bytes32 public constant CALCULATOR = keccak256("CALCULATOR");
+    bytes32 public constant DEFAULT_ADMIN = keccak256("DEFAULT_ADMIN");
+    bytes32 public constant UPDATER = keccak256("UPDATER");
+    bytes32 public constant CALCULATOR = keccak256("CALCULATOR");
 
     uint256 public immutable maxSupply;
     uint256 private immutable initialPrice;
@@ -45,11 +45,11 @@ contract BondingCurve is AccessControl {
     // j = 0.2, a constant which dictates the shape of the curve
     // i = the initial price of sEURO in Bonding Curve
     constructor(uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
-		_grantRole(DEFAULT_ADMIN, msg.sender);
+        _grantRole(DEFAULT_ADMIN, msg.sender);
         _setRoleAdmin(UPDATER, DEFAULT_ADMIN);
         _setRoleAdmin(CALCULATOR, DEFAULT_ADMIN);
-		grantRole(UPDATER, msg.sender);
-		grantRole(CALCULATOR, msg.sender);
+        grantRole(UPDATER, msg.sender);
+        grantRole(CALCULATOR, msg.sender);
 
         initialPrice = _initialPrice;
         maxSupply = _maxSupply;
@@ -62,12 +62,12 @@ contract BondingCurve is AccessControl {
     }
 
     modifier onlyUpdater {
-		require(hasRole(UPDATER, msg.sender), "invalid-user");
+        require(hasRole(UPDATER, msg.sender), "invalid-user");
         _;
     }
 
     modifier onlyCalculator {
-		require(hasRole(CALCULATOR, msg.sender), "invalid-user");
+        require(hasRole(CALCULATOR, msg.sender), "invalid-user");
         _;
     }
 

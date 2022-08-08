@@ -79,15 +79,15 @@ contract BondingEvent is AccessControl {
     /// @param _fee the fee amount for the pool you are initialising (https://docs.uniswap.org/protocol/concepts/V3-overview/fees#swap-fees)
     constructor(
         address _seuroAddress,
-        address _otherAddress,
-        address _manager,
-        address _bondStorageAddress,
-        address _operatorAddress,
-        address _ratioCalculatorAddress,
-        uint160 _initialPrice,
-        int24 _lowerTickDefault,
-        int24 _upperTickDefault,
-        uint24 _fee
+address _otherAddress,
+address _manager,
+address _bondStorageAddress,
+address _operatorAddress,
+address _ratioCalculatorAddress,
+uint160 _initialPrice,
+int24 _lowerTickDefault,
+int24 _upperTickDefault,
+uint24 _fee
     ) {
         _setupRole(WHITELIST_BONDING_EVENT, msg.sender);
         SEURO_ADDRESS = _seuroAddress;
@@ -128,8 +128,8 @@ contract BondingEvent is AccessControl {
 
     // Sets address of wallet, which will receive excess bonding collateral
     function setExcessCollateralWallet(address _excessCollateralWallet)
-        external
-        onlyPoolOwner
+    external
+    onlyPoolOwner
     {
         excessCollateralWallet = _excessCollateralWallet;
     }
@@ -142,9 +142,9 @@ contract BondingEvent is AccessControl {
     }
 
     function _validTicks(int24 newLower, int24 newHigher)
-        private
-        view
-        onlyPoolOwner
+    private
+    view
+    onlyPoolOwner
     {
         require(
             newLower % tickSpacing == 0 && newHigher % tickSpacing == 0,
@@ -162,9 +162,9 @@ contract BondingEvent is AccessControl {
     // Compares the Standard Euro token to another token and returns them in ascending order
     function getAscendingPair() public view returns (Pair memory pair) {
         return
-            SEURO_ADDRESS < OTHER_ADDRESS
-                ? Pair(SEURO_ADDRESS, OTHER_ADDRESS)
-                : Pair(OTHER_ADDRESS, SEURO_ADDRESS);
+        SEURO_ADDRESS < OTHER_ADDRESS
+            ? Pair(SEURO_ADDRESS, OTHER_ADDRESS)
+            : Pair(OTHER_ADDRESS, SEURO_ADDRESS);
     }
 
     function initialisePool(uint160 _price, uint24 _fee) private {
@@ -187,9 +187,9 @@ contract BondingEvent is AccessControl {
     // Gets data for the given position token ID
     /// @param _tokenId the ID of the position token
     function getPositionByTokenId(uint256 _tokenId)
-        public
-        view
-        returns (Position memory position)
+    public
+    view
+    returns (Position memory position)
     {
         for (uint256 i = 0; i < positions.length; i++) {
             if (positions[i].tokenId == _tokenId) position = positions[i];
@@ -232,25 +232,25 @@ contract BondingEvent is AccessControl {
     }
 
     function mintLiquidityPosition(AddLiquidityParams memory params)
-        private
-        returns (
-            AddedLiquidityResponse memory
-        )
+    private
+    returns (
+        AddedLiquidityResponse memory
+    )
     {
         INonfungiblePositionManager.MintParams
-            memory mintParams = INonfungiblePositionManager.MintParams({
-                token0: params.token0,
-                token1: params.token1,
-                fee: FEE,
-                tickLower: params.lowerTick,
-                tickUpper: params.upperTick,
-                amount0Desired: params.amount0Desired,
-                amount1Desired: params.amount1Desired,
-                amount0Min: params.amount0Min,
-                amount1Min: params.amount1Min,
-                recipient: address(this),
-                deadline: block.timestamp
-            });
+        memory mintParams = INonfungiblePositionManager.MintParams({
+            token0: params.token0,
+            token1: params.token1,
+            fee: FEE,
+            tickLower: params.lowerTick,
+            tickUpper: params.upperTick,
+            amount0Desired: params.amount0Desired,
+            amount1Desired: params.amount1Desired,
+            amount0Min: params.amount0Min,
+            amount1Min: params.amount1Min,
+            recipient: address(this),
+            deadline: block.timestamp
+        });
 
         // provide liquidity to the pool
         (
@@ -259,7 +259,7 @@ contract BondingEvent is AccessControl {
             uint256 amount0,
             uint256 amount1
         ) = manager.mint(mintParams);
-        
+
         positions.push(Position(
             tokenId,
             params.lowerTick,
@@ -268,9 +268,9 @@ contract BondingEvent is AccessControl {
         ));
 
         return
-            params.token0 == SEURO_ADDRESS
-                ? AddedLiquidityResponse(tokenId, liquidity, amount0, amount1)
-                : AddedLiquidityResponse(tokenId, liquidity, amount1, amount0);
+        params.token0 == SEURO_ADDRESS
+            ? AddedLiquidityResponse(tokenId, liquidity, amount0, amount1)
+            : AddedLiquidityResponse(tokenId, liquidity, amount1, amount0);
     }
 
     function increasePositionLiquidity(uint256 _tokenId, uint128 _liquidity) private {
@@ -282,34 +282,34 @@ contract BondingEvent is AccessControl {
     }
 
     function increaseExistingLiquidity(AddLiquidityParams memory params, uint256 tokenId) private
-        returns (
-            AddedLiquidityResponse memory
-        )
+    returns (
+        AddedLiquidityResponse memory
+    )
     {
         INonfungiblePositionManager.IncreaseLiquidityParams
-            memory increaseParams = INonfungiblePositionManager
-                .IncreaseLiquidityParams({
-                    tokenId: tokenId,
-                    amount0Desired: params.amount0Desired,
-                    amount1Desired: params.amount1Desired,
-                    amount0Min: params.amount0Min,
-                    amount1Min: params.amount1Min,
-                    deadline: block.timestamp
-                });
+        memory increaseParams = INonfungiblePositionManager
+        .IncreaseLiquidityParams({
+            tokenId: tokenId,
+            amount0Desired: params.amount0Desired,
+            amount1Desired: params.amount1Desired,
+            amount0Min: params.amount0Min,
+            amount1Min: params.amount1Min,
+            deadline: block.timestamp
+        });
 
         (
             uint128 liquidity,
             uint256 amount0, 
             uint256 amount1
         ) = manager.increaseLiquidity(increaseParams);
-        
+
         // getPositionByTokenId(tokenId).liquidity += liquidity;
         increasePositionLiquidity(tokenId, liquidity);
 
         return
-            params.token0 == SEURO_ADDRESS
-                ? AddedLiquidityResponse(tokenId, liquidity, amount0, amount1)
-                : AddedLiquidityResponse(tokenId, liquidity, amount1, amount0);
+        params.token0 == SEURO_ADDRESS
+            ? AddedLiquidityResponse(tokenId, liquidity, amount0, amount1)
+            : AddedLiquidityResponse(tokenId, liquidity, amount1, amount0);
     }
 
     function transferExcessToWallet(uint256 _addedAmount, uint256 _desiredAmount, address _token) private {
@@ -352,9 +352,9 @@ contract BondingEvent is AccessControl {
     }
 
     function addLiquidity(address _user, uint256 _amountSEuro)
-        private
-        onlyOperator
-        returns (AddedLiquidityResponse memory added)
+    private
+    onlyOperator
+    returns (AddedLiquidityResponse memory added)
     {
         Pair memory pair = getAscendingPair();
 
@@ -373,30 +373,30 @@ contract BondingEvent is AccessControl {
             uint256 amount0Min,
             uint256 amount1Min
         ) = pair.token0 == SEURO_ADDRESS
-                ? (_amountSEuro, otherAmount, ninetyNineNineNinePc(_amountSEuro), uint256(0))
-                : (otherAmount, _amountSEuro, uint256(0), ninetyNineNineNinePc(_amountSEuro));
+            ? (_amountSEuro, otherAmount, ninetyNineNineNinePc(_amountSEuro), uint256(0))
+            : (otherAmount, _amountSEuro, uint256(0), ninetyNineNineNinePc(_amountSEuro));
 
-        approveAndTransfer(pair, _user, amount0Desired, amount1Desired);
+            approveAndTransfer(pair, _user, amount0Desired, amount1Desired);
 
-        AddLiquidityParams memory params = AddLiquidityParams(
-            pair.token0,
-            pair.token1,
-            lowerTick,
-            upperTick,
-            amount0Desired,
-            amount1Desired,
-            amount0Min,
-            amount1Min
-        );
+            AddLiquidityParams memory params = AddLiquidityParams(
+                pair.token0,
+                pair.token1,
+                lowerTick,
+                upperTick,
+                amount0Desired,
+                amount1Desired,
+                amount0Min,
+                amount1Min
+            );
 
-        uint256 positionId = getPositionIdByTicks(lowerTick, upperTick);
-        added = positionId > 0 ?
-            increaseExistingLiquidity(params, positionId) :
-            mintLiquidityPosition(params);
+            uint256 positionId = getPositionIdByTicks(lowerTick, upperTick);
+            added = positionId > 0 ?
+                increaseExistingLiquidity(params, positionId) :
+                mintLiquidityPosition(params);
 
-        emit LiquidityAdded(_user, added.tokenId, added.seuroAmount, added.otherAmount, added.liquidity);
-        transferExcessToWallet(added.seuroAmount, _amountSEuro, SEURO_ADDRESS);
-        transferExcessToWallet(added.otherAmount, otherAmount, OTHER_ADDRESS);
+            emit LiquidityAdded(_user, added.tokenId, added.seuroAmount, added.otherAmount, added.liquidity);
+            transferExcessToWallet(added.seuroAmount, _amountSEuro, SEURO_ADDRESS);
+            transferExcessToWallet(added.otherAmount, otherAmount, OTHER_ADDRESS);
     }
 
     // We assume that there is a higher layer solution which helps to fetch the latest price as a quote.
@@ -502,47 +502,47 @@ contract BondingEvent is AccessControl {
     /// @return lowerTick The lower tick of the viable price range
     /// @return upperTick The upper tick of the viable price range
     function getOtherAmount(uint256 _amountSEuro)
-        public
-        view
-        returns (
-            uint256 amountOther,
-            int24 lowerTick,
-            int24 upperTick
-        )
+    public
+    view
+    returns (
+        uint256 amountOther,
+        int24 lowerTick,
+        int24 upperTick
+    )
     {
         (uint160 price,,,,,,) = pool.slot0();
         Pair memory pair = getAscendingPair();
         bool seuroIsToken0 = pair.token0 == SEURO_ADDRESS;
         (lowerTick, upperTick) = getViableTickRange(price);
         amountOther = ratioCalculator.getRatioForSEuro(
-                _amountSEuro,
-                price,
-                lowerTick,
-                upperTick,
-                seuroIsToken0
-            );
+            _amountSEuro,
+            price,
+            lowerTick,
+            upperTick,
+            seuroIsToken0
+        );
     }
 
     function retractLiquidity(uint256 _tokenId, uint128 _liquidity) private returns (uint256 retractedLiquidity0, uint256 retractedLiquidity1) {
         INonfungiblePositionManager.DecreaseLiquidityParams memory params = 
             INonfungiblePositionManager.DecreaseLiquidityParams({
-                tokenId: _tokenId,
-                liquidity: _liquidity,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: block.timestamp
-            });
+            tokenId: _tokenId,
+            liquidity: _liquidity,
+            amount0Min: 0,
+            amount1Min: 0,
+            deadline: block.timestamp
+        });
         (retractedLiquidity0, retractedLiquidity1) = manager.decreaseLiquidity(params);
     }
 
     function collectAll(uint256 _tokenId) private returns (uint256 collectedFees0, uint256 collectedFees1) {
         INonfungiblePositionManager.CollectParams memory params = 
             INonfungiblePositionManager.CollectParams({
-                tokenId: _tokenId,
-                recipient: excessCollateralWallet,
-                amount0Max: MAX_UINT_128,
-                amount1Max: MAX_UINT_128
-            });
+            tokenId: _tokenId,
+            recipient: excessCollateralWallet,
+            amount0Max: MAX_UINT_128,
+            amount1Max: MAX_UINT_128
+        });
         (collectedFees0, collectedFees1) = manager.collect(params);
     }
 
