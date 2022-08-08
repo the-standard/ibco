@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { POSITION_MANAGER_ADDRESS, DECIMALS_18, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, DECIMALS_18, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE } = require('./common.js');
 
 let owner, customer, wallet, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, BondingEventContract, RatioCalculator, pricing, SwapManager;
 
@@ -17,8 +17,9 @@ describe('BondingEvent', async () => {
     SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
     TST = await ERC20Contract.deploy('TST', 'TST', 18);
     USDT = await ERC20Contract.deploy('USDT', 'USDT', 6);
+    const ChainlinkEurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
     TokenGateway = await TokenGatewayContract.deploy(TST.address, SEuro.address);
-    BondStorage = await BondStorageContract.deploy(TokenGateway.address);
+    BondStorage = await BondStorageContract.deploy(TokenGateway.address, ChainlinkEurUsd.address, CHAINLINK_DEC);
     RatioCalculator = await RatioCalculatorContract.deploy();
   });
 
@@ -145,6 +146,7 @@ describe('BondingEvent', async () => {
       await BondingEvent.connect(owner).bond(
         customer.address, seuroAmount, durationInWeeks, rateFormat,
       );
+      return amountOther;
     }
 
     async function expectedTokProfit(seuroProfit) {
@@ -155,7 +157,7 @@ describe('BondingEvent', async () => {
 
     describe('bond', async () => {
       it('bonds sEURO and USDT for 52 weeks and receives correct seuro profit', async () => {
-        await testStartBond(etherBalances.TWO_MILLION, durations.ONE_YR_WEEKS,
+        const amountOther = await testStartBond(etherBalances.TWO_MILLION, durations.ONE_YR_WEEKS,
           rates.TEN_PC, USDT
         );
 
@@ -164,9 +166,11 @@ describe('BondingEvent', async () => {
         expect(bondsAmount).to.equal(1);
 
         const firstBond = await helperGetBondAt(0);
-        let actualPrincipal = firstBond.principal;
+        let seuroPrincipal = firstBond.principalSeuro;
+        let otherPrincipal = firstBond.principalOther;
         let actualRate = firstBond.rate;
-        expect(actualPrincipal).to.equal(etherBalances.TWO_MILLION);
+        expect(seuroPrincipal).to.equal(etherBalances.TWO_MILLION);
+        expect(otherPrincipal).to.equal(amountOther);
         expect(actualRate).to.equal(rates.TEN_PC);
 
         await helperFastForwardTime(52 * ONE_WEEK_IN_SECONDS);
@@ -177,7 +181,7 @@ describe('BondingEvent', async () => {
       });
 
       it('bonds with an amount less than one million and receives correct seuro profit', async () => {
-        await testStartBond(etherBalances['100K'], durations.ONE_WEEK,
+        const amountOther = await testStartBond(etherBalances['100K'], durations.ONE_WEEK,
           rates.TEN_PC, USDT
         );
 
@@ -186,10 +190,11 @@ describe('BondingEvent', async () => {
         expect(bondsAmount).to.equal(1);
 
         const firstBond = await helperGetBondAt(0);
-        let actualPrincipal = firstBond.principal;
+        let seuroPrincipal = firstBond.principalSeuro;
+        let otherPrincipal = firstBond.principalOther;
         let actualRate = firstBond.rate;
-        // TODO how should principal be calculated?
-        expect(actualPrincipal).to.equal(etherBalances['100K']);
+        expect(seuroPrincipal).to.equal(etherBalances['100K']);
+        expect(otherPrincipal).to.equal(amountOther);
         expect(actualRate).to.equal(rates.TEN_PC);
 
         await helperFastForwardTime(ONE_WEEK_IN_SECONDS);

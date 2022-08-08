@@ -4,12 +4,12 @@ pragma solidity ^0.8.0;
 interface IBondStorage {
     function startBond(
         address _user,
-        uint256 _principal,
+        uint256 _principalSEuro,
+        uint256 _principalOther,
         uint256 _rate,
         uint256 _maturity,
         uint256 _tokenId,
-        uint128 _liquidity,
-        uint256 _amountOther
+        uint128 _liquidity
     ) external;
 
     function refreshBondStatus(address _user) external;

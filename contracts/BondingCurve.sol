@@ -13,9 +13,9 @@ contract BondingCurve is AccessControl {
     uint256 private constant FINAL_PRICE = 1_000_000_000_000_000_000;
     uint8 private constant J_NUMERATOR = 1;
     uint8 private constant J_DENOMINATOR = 5;
-	bytes32 public constant DEFAULT_ADMIN = keccak256("DEFAULT_ADMIN");
-	bytes32 public constant UPDATER = keccak256("UPDATER");
-	bytes32 public constant CALCULATOR = keccak256("CALCULATOR");
+    bytes32 public constant DEFAULT_ADMIN = keccak256("DEFAULT_ADMIN");
+    bytes32 public constant UPDATER = keccak256("UPDATER");
+    bytes32 public constant CALCULATOR = keccak256("CALCULATOR");
 
     uint256 public immutable maxSupply;
     uint256 private immutable initialPrice;
@@ -44,12 +44,16 @@ contract BondingCurve is AccessControl {
     // m = max supply of Bonding Curve
     // j = 0.2, a constant which dictates the shape of the curve
     // i = the initial price of sEURO in Bonding Curve
-    constructor(uint256 _initialPrice, uint256 _maxSupply, uint256 _bucketSize) {
-		_grantRole(DEFAULT_ADMIN, msg.sender);
+    constructor(
+        uint256 _initialPrice,
+        uint256 _maxSupply,
+        uint256 _bucketSize
+    ) {
+        _grantRole(DEFAULT_ADMIN, msg.sender);
         _setRoleAdmin(UPDATER, DEFAULT_ADMIN);
         _setRoleAdmin(CALCULATOR, DEFAULT_ADMIN);
-		grantRole(UPDATER, msg.sender);
-		grantRole(CALCULATOR, msg.sender);
+        grantRole(UPDATER, msg.sender);
+        grantRole(CALCULATOR, msg.sender);
 
         initialPrice = _initialPrice;
         maxSupply = _maxSupply;
@@ -61,37 +65,53 @@ contract BondingCurve is AccessControl {
         updateCurrentBucket(ibcoTotalSupply);
     }
 
-    modifier onlyUpdater {
-		require(hasRole(UPDATER, msg.sender), "invalid-user");
+    modifier onlyUpdater() {
+        require(hasRole(UPDATER, msg.sender), "invalid-user");
         _;
     }
 
-    modifier onlyCalculator {
-		require(hasRole(CALCULATOR, msg.sender), "invalid-user");
+    modifier onlyCalculator() {
+        require(hasRole(CALCULATOR, msg.sender), "invalid-user");
         _;
     }
 
     // Read only function to estimate the amount of sEURO for given euros
     // Based on the current price alone, so not necessarily accurate
     /// @param _euroAmount amount of euros for which you want to estimate conversion into sEURO
-    function readOnlyCalculatePrice(uint256 _euroAmount) external view returns (uint256) {
+    function readOnlyCalculatePrice(uint256 _euroAmount)
+        external
+        view
+        returns (uint256)
+    {
         return convertEuroToSeuro(_euroAmount, currentBucket.price);
     }
 
     // Calculates exactly how much sEURO is equivalent to given euros
     // Caches price calculations and is therefore a state-changing function
     /// @param _euroAmount amount of euros for which you want to calculate conversion into sEURO
-    function calculatePrice(uint256 _euroAmount) external onlyCalculator returns (uint256) {
+    function calculatePrice(uint256 _euroAmount)
+        external
+        onlyCalculator
+        returns (uint256)
+    {
         uint256 _sEuroTotal = 0;
         uint256 remainingEuros = _euroAmount;
         uint32 bucketIndex = currentBucket.index;
         uint256 bucketPrice = currentBucket.price;
         while (remainingEuros > 0) {
-            uint256 remainingInSeuro = convertEuroToSeuro(remainingEuros, bucketPrice);
-            uint256 remainingCapacityInBucket = getRemainingCapacityInBucket(bucketIndex);
+            uint256 remainingInSeuro = convertEuroToSeuro(
+                remainingEuros,
+                bucketPrice
+            );
+            uint256 remainingCapacityInBucket = getRemainingCapacityInBucket(
+                bucketIndex
+            );
             if (remainingInSeuro > remainingCapacityInBucket) {
                 _sEuroTotal += remainingCapacityInBucket;
-                remainingEuros -= convertSeuroToEuro(remainingCapacityInBucket, bucketPrice);
+                remainingEuros -= convertSeuroToEuro(
+                    remainingCapacityInBucket,
+                    bucketPrice
+                );
                 bucketIndex++;
                 bucketPrice = getBucketPrice(bucketIndex);
                 continue;
@@ -110,10 +130,14 @@ contract BondingCurve is AccessControl {
         uint32 previous = currentBucket.index;
         currentBucket = Bucket(bucketIndex, getBucketPrice(bucketIndex));
         delete bucketPricesCache[bucketIndex];
-        if (previous != bucketIndex) emit PriceUpdated(currentBucket.index, currentBucket.price);
+        if (previous != bucketIndex)
+            emit PriceUpdated(currentBucket.index, currentBucket.price);
     }
 
-    function getBucketPrice(uint32 _bucketIndex) internal returns (uint256 _price) {
+    function getBucketPrice(uint32 _bucketIndex)
+        internal
+        returns (uint256 _price)
+    {
         if (_bucketIndex >= finalBucketIndex) return FINAL_PRICE;
         uint256 cachedPrice = bucketPricesCache[_bucketIndex];
         if (cachedPrice > 0) return cachedPrice;
@@ -127,25 +151,43 @@ contract BondingCurve is AccessControl {
         cacheBucketPrice(_bucketIndex, _price);
     }
 
-    function convertEuroToSeuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
-        return _amount * 10 ** 18 / _rate;
+    function convertEuroToSeuro(uint256 _amount, uint256 _rate)
+        private
+        pure
+        returns (uint256)
+    {
+        return (_amount * 10**18) / _rate;
     }
 
-    function getRemainingCapacityInBucket(uint32 _bucketIndex) private view returns(uint256) {
+    function getRemainingCapacityInBucket(uint32 _bucketIndex)
+        private
+        view
+        returns (uint256)
+    {
         uint256 bucketCapacity = (_bucketIndex + 1) * bucketSize;
         uint256 diff = bucketCapacity - ibcoTotalSupply;
         return diff > bucketSize ? bucketSize : diff;
     }
 
-    function convertSeuroToEuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
-        return _amount * _rate / 10 ** 18;
+    function convertSeuroToEuro(uint256 _amount, uint256 _rate)
+        private
+        pure
+        returns (uint256)
+    {
+        return (_amount * _rate) / 10**18;
     }
 
-    function getMedianToken(uint32 _bucketIndex) private view returns (uint256) {
+    function getMedianToken(uint32 _bucketIndex)
+        private
+        view
+        returns (uint256)
+    {
         return _bucketIndex * bucketSize + bucketSize / 2;
     }
 
-    function cacheBucketPrice(uint32 _bucketIndex, uint256 _bucketPrice) private {
+    function cacheBucketPrice(uint32 _bucketIndex, uint256 _bucketPrice)
+        private
+    {
         bucketPricesCache[_bucketIndex] = _bucketPrice;
     }
 }
