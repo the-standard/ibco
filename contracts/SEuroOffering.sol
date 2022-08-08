@@ -17,9 +17,9 @@ contract SEuroOffering is Ownable {
     uint256 private start;
     uint256 private stop;
     address private seuro;
-    SEuroCalculator private sEuroRateCalculator;    
-    TokenManager private tokenManager;
-    BondingCurve private bondingCurve;
+    SEuroCalculator public sEuroRateCalculator;    
+    TokenManager public tokenManager;
+    BondingCurve public bondingCurve;
 
     event Swap(bytes32 _token, uint256 amountIn, uint256 amountOut);
 
@@ -38,6 +38,23 @@ contract SEuroOffering is Ownable {
         bool isActive = activated() && notEnded();
         require(isActive, "err-ibco-inactive");
         _;
+    }
+
+    modifier validUpdate(address _newAddress) {
+        require(_newAddress != address(0), "err-addr-invalid");
+        _;
+    }
+
+    function setCalculator(address _newAddress) external onlyOwner validUpdate(_newAddress) {
+        sEuroRateCalculator = SEuroCalculator(_newAddress);
+    }
+
+    function setTokenManager(address _newAddress) external onlyOwner validUpdate(_newAddress) {
+        tokenManager = TokenManager(_newAddress);
+    }
+
+    function setBondingCurve(address _newAddress) external onlyOwner validUpdate(_newAddress) {
+        bondingCurve = BondingCurve(_newAddress);
     }
 
     function getEuros(uint256 _amount, TokenManager.Token memory _token) private returns (uint256) {
