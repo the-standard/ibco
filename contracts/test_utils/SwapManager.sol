@@ -25,16 +25,16 @@ contract SwapManager {
         uint160 sqrtPriceLimitX96 = 0;
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-            .ExactInputSingleParams(
-                tokenIn,
-                tokenOut,
-                fee,
-                recipient,
-                deadline,
-                amountIn,
-                amountOutMinimum,
-                sqrtPriceLimitX96
-            );
+        .ExactInputSingleParams(
+            tokenIn,
+            tokenOut,
+            fee,
+            recipient,
+            deadline,
+            amountIn,
+            amountOutMinimum,
+            sqrtPriceLimitX96
+        );
 
         router.exactInputSingle{value: msg.value}(params);
     }
@@ -44,16 +44,16 @@ contract SwapManager {
         TransferHelper.safeApprove(_tokenIn, address(router), _amountIn);
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-            .ExactInputSingleParams({
-                tokenIn: _tokenIn,
-                tokenOut: _tokenOut,
-                fee: _fee,
-                recipient: msg.sender,
-                deadline: block.timestamp,
-                amountIn: _amountIn,
-                amountOutMinimum: 1,
-                sqrtPriceLimitX96: 0
-            });
+        .ExactInputSingleParams({
+            tokenIn: _tokenIn,
+            tokenOut: _tokenOut,
+            fee: _fee,
+            recipient: msg.sender,
+            deadline: block.timestamp,
+            amountIn: _amountIn,
+            amountOutMinimum: 1,
+            sqrtPriceLimitX96: 0
+        });
 
         router.exactInputSingle(params);
     }

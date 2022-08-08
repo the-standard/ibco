@@ -11,15 +11,15 @@ contract Chainlink is IChainlink {
     }
 
     function latestRoundData()
-        external
-        view
-        returns (
-            uint80,
-            int256 answer,
-            uint256,
-            uint256,
-            uint80
-        )
+    external
+    view
+    returns (
+        uint80,
+        int256 answer,
+        uint256,
+        uint256,
+        uint80
+    )
     {
         return (0, price, 0, 0, 0);
     }
