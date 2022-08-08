@@ -353,7 +353,6 @@ contract BondingEvent is AccessControl {
 
     function addLiquidity(address _user, uint256 _amountSEuro)
         private
-        onlyOperator
         returns (AddedLiquidityResponse memory added)
     {
         Pair memory pair = getAscendingPair();
