@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
+import "contracts/interfaces/IChainlink.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -96,7 +97,7 @@ contract StandardTokenGateway is AccessControl {
 		_;
 	}
 
-	function getStandardTokenPrice() public view returns (uint256, bool) {
+	function getSeuroStandardTokenPrice() public view returns (uint256, bool) {
 		return (tokenPrice, inversed);
 	}
 

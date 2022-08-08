@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, DECIMALS_18, etherBalances, rates, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, etherBalances, rates, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, DEFAULT_CHAINLINK_EUR_USD_PRICE, CHAINLINK_DEC, defaultConvertUsdToEur } = require('./common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 
 let owner, customer, SEuro, TST, USDT;
@@ -29,8 +29,9 @@ describe('Stage 2', async () => {
   context('operator contract deployed and connected', async () => {
     beforeEach(async () => {
       RatioCalculator = await RatioCalculatorContract.deploy();
+      const ChainlinkEurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
       TGateway = await TokenGatewayContract.deploy(TST.address, SEuro.address);
-      BStorage = await StorageContract.deploy(TGateway.address);
+      BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, CHAINLINK_DEC);
       BondingEvent = await BondingEventContract.deploy(
         SEuro.address, USDT.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
         RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
@@ -57,23 +58,26 @@ describe('Stage 2', async () => {
           await OP2.connect(owner).setGateway(TGateway.address);
         });
 
-        async function formatCustomerBalance() {
-          return (await TST.balanceOf(customer.address)).div(DECIMALS_18).toString();
+        async function customerBalance() {
+          return (await TST.balanceOf(customer.address));
         }
 
-        async function testingSuite(seuroAmount, inputRate, inputDurationWeeks) {
-          await OP2.connect(customer).newBond(seuroAmount, inputRate);
+        async function testingSuite(amountSeuro, inputRate, inputDurationWeeks) {
+          const { amountOther } = await BondingEvent.getOtherAmount(amountSeuro);
+          await OP2.connect(customer).newBond(amountSeuro, inputRate);
 
           await BStorage.connect(customer).refreshBondStatus(customer.address);
 
-          let actualBalance = await formatCustomerBalance();
-          expect(actualBalance).to.equal('0');
+          let actualBalance = await customerBalance();
+          expect(actualBalance).to.equal(0);
 
           let firstBond = await BStorage.getBondAt(customer.address, 0);
-          let actualPrincipal = firstBond.principal;
-          let actualRate = firstBond.rate;
-          expect(actualPrincipal).to.equal(etherBalances['125K']);
-          expect(actualRate).to.equal(inputRate);
+          let seuroPrincipal = firstBond.principalSeuro;
+          let otherPrincipal = firstBond.principalOther;
+          let rate = firstBond.rate;
+          expect(seuroPrincipal).to.equal(amountSeuro);
+          expect(otherPrincipal).to.equal(amountOther);
+          expect(rate).to.equal(inputRate);
 
           if (inputDurationWeeks == 0) {
             inputDurationWeeks = 52;
@@ -82,25 +86,27 @@ describe('Stage 2', async () => {
           await helperFastForwardTime(inputDurationWeeks * ONE_WEEK_IN_SECONDS);
           await OP2.connect(customer).refreshBond(customer.address);
           await OP2.connect(customer).claim();
+          return {seuroPrincipal, otherPrincipal};
         }
 
-        async function expectedTokBalance(principal, rateMultiplier) {
-          let profitSeuro = principal * rateMultiplier;
-          let expectedStandardBal = (profitSeuro * STANDARD_TOKENS_PER_EUR).toString();
-          let actualStandardBal = await formatCustomerBalance();
+        async function expectedTokBalance(seuroPrincipal, otherPrincipal, ratePc) {
+          let payoutSeuro = seuroPrincipal.mul(100 + ratePc).div(100);
+          let payoutOther = otherPrincipal.mul(100 + ratePc).div(100);
+          let expectedStandardBal = (payoutSeuro.mul(STANDARD_TOKENS_PER_EUR)).add(defaultConvertUsdToEur(payoutOther).mul(STANDARD_TOKENS_PER_EUR));
+          let actualStandardBal = await customerBalance();
           expect(actualStandardBal).to.equal(expectedStandardBal);
         }
 
         it('transfers TST rewards successfully when bonding with a custom rate', async () => {
           await OP2.connect(owner).addRate(rates.TWENTY_PC, 1);
-          await testingSuite(etherBalances['125K'], rates.TWENTY_PC, 1);
-          await expectedTokBalance(125000, 1.2);
+          const {seuroPrincipal, otherPrincipal} = await testingSuite(etherBalances['125K'], rates.TWENTY_PC, 1);
+          await expectedTokBalance(seuroPrincipal, otherPrincipal, 20);
         });
 
         it('transfers TST rewards successfully when bonding with the default rate', async () => {
           let twoPercent = 2000;
-          await testingSuite(etherBalances['125K'], twoPercent, 52);
-          await expectedTokBalance(125000, 1.02);
+          const {seuroPrincipal, otherPrincipal} = await testingSuite(etherBalances['125K'], twoPercent, 52);
+          await expectedTokBalance(seuroPrincipal, otherPrincipal, 2);
         });
 
         it('reverts when trying to bond with a non-added rate', async () => {
