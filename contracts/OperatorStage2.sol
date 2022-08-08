@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "contracts/BondStorage.sol";
 import "contracts/BondingEvent.sol";
-import "contracts/StandardTokenGateway.sol";
 
 contract OperatorStage2 is AccessControl {
 	bytes32 public constant OPERATOR_STAGE_2 = keccak256("OPERATOR_STAGE_2");
@@ -14,9 +13,6 @@ contract OperatorStage2 is AccessControl {
 
 	// BondingEvent dependency
 	BondingEvent public bondingEvent;
-
-	// StandardTokenGateway dependency
-	StandardTokenGateway public tokenGateway;
 
 	struct BondRate {
 		uint256 rate;
@@ -52,11 +48,6 @@ contract OperatorStage2 is AccessControl {
 	function setBonding(address _newAddress) public onlyOperatorStage2 {
 		require(_newAddress != address(bondingEvent), "err-same-address");
 		bondingEvent = BondingEvent(_newAddress);
-	}
-
-	function setGateway(address _newAddress) public onlyOperatorStage2 {
-		require(_newAddress != address(tokenGateway), "err-same-address");
-		tokenGateway = StandardTokenGateway(_newAddress);
 	}
 
 	// Adds a new rate that allows a user to bond with
