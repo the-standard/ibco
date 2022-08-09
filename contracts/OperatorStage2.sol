@@ -4,8 +4,9 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "contracts/BondStorage.sol";
 import "contracts/BondingEvent.sol";
+import "contracts/Pausable.sol";
 
-contract OperatorStage2 is AccessControl {
+contract OperatorStage2 is AccessControl, Pausable {
 	bytes32 public constant OPERATOR_STAGE_2 = keccak256("OPERATOR_STAGE_2");
 
 	// BondStorage dependency
@@ -92,17 +93,17 @@ contract OperatorStage2 is AccessControl {
 	function newBond(
 		uint256 _amountSeuro,
 		uint256 _rate
-	) public {
+	) public ifNotPaused {
 		uint256 wks = allowedYieldToWeeks[_rate];
 		require(wks > 0, "err-missing-rate");
 		bondingEvent.bond(msg.sender, _amountSeuro, wks, _rate);
 	}
 
-	function refreshBond(address _user) public {
+	function refreshBond(address _user) public ifNotPaused {
 		bondStorage.refreshBondStatus(_user);
 	}
 
-	function claim() public {
+	function claim() public ifNotPaused {
 		bondStorage.claimReward(msg.sender);
 	}
 }

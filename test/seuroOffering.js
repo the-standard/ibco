@@ -202,8 +202,8 @@ describe('SEuroOffering', async () => {
           expect(await SEuroOffering.paused()).to.equal(true);
     
           let swap = SEuroOffering.swap(WETH_BYTES, etherBalances['8K']);
-          let swapETH = SEuroOffering.swapETH({value: etherBalances['8K']});
           await expect(swap).to.be.revertedWith('err-paused');
+          let swapETH = SEuroOffering.swapETH({value: etherBalances['8K']});
           await expect(swapETH).to.be.revertedWith('err-paused');
 
           let unpause = SEuroOffering.connect(user).unpause();
@@ -214,8 +214,8 @@ describe('SEuroOffering', async () => {
           expect(await SEuroOffering.paused()).to.equal(false);
     
           swap = SEuroOffering.swap(WETH_BYTES, etherBalances['8K']);
-          swapETH = SEuroOffering.swapETH({value: etherBalances['8K']});
           await expect(swap).not.to.be.revertedWith('err-paused');
+          swapETH = SEuroOffering.swapETH({value: etherBalances['8K']});
           await expect(swapETH).not.to.be.revertedWith('err-paused');
         });
       });
