@@ -40,20 +40,20 @@ contract SEuroOffering is Ownable {
         _;
     }
 
-    modifier validUpdate(address _newAddress) {
+    modifier validAddress(address _newAddress) {
         require(_newAddress != address(0), "err-addr-invalid");
         _;
     }
 
-    function setCalculator(address _newAddress) external onlyOwner validUpdate(_newAddress) {
+    function setCalculator(address _newAddress) external onlyOwner validAddress(_newAddress) {
         sEuroRateCalculator = SEuroCalculator(_newAddress);
     }
 
-    function setTokenManager(address _newAddress) external onlyOwner validUpdate(_newAddress) {
+    function setTokenManager(address _newAddress) external onlyOwner validAddress(_newAddress) {
         tokenManager = TokenManager(_newAddress);
     }
 
-    function setBondingCurve(address _newAddress) external onlyOwner validUpdate(_newAddress) {
+    function setBondingCurve(address _newAddress) external onlyOwner validAddress(_newAddress) {
         bondingCurve = BondingCurve(_newAddress);
     }
 
