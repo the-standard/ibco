@@ -7,7 +7,8 @@ describe('SEuroOffering', async () => {
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
-  let SEuroOffering, SEuro, BondingCurve, SEuroCalculator, TokenManager, WETH, owner, user, collateralWallet;
+  let SEuroOffering, SEuro, BondingCurve, SEuroCalculator, TokenManager, WETH,
+  owner, user, collateralWallet, BondingCurveContract, SEuroCalculatorContract, TokenManagerContract;
 
   async function buyWETH(signer, amount) {
     await WETH.connect(signer).deposit({ value: amount });
@@ -53,9 +54,9 @@ describe('SEuroOffering', async () => {
 
     const SEuroContract = await ethers.getContractFactory('SEuro');
     const SEuroOfferingContract = await ethers.getContractFactory('SEuroOffering');
-    const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
-    const SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');
-    const TokenManagerContract = await ethers.getContractFactory('TokenManager');
+    BondingCurveContract = await ethers.getContractFactory('BondingCurve');
+    SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');
+    TokenManagerContract = await ethers.getContractFactory('TokenManager');
 
     WETH = await ethers.getContractAt('WETH', WETH_ADDRESS);
     SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
@@ -269,6 +270,34 @@ describe('SEuroOffering', async () => {
       const seuros = await SEuroOffering.readOnlyCalculateSwap(wethBytes, toSwap);
 
       expect(seuros).to.equal(expectedSeuros);
+    });
+  });
+
+  describe('dependencies', async () => {
+    it('updates the dependencies if contract owner', async () => {
+      const newTokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC);
+      const newBondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
+      const newCalculator = await SEuroCalculatorContract.deploy(newBondingCurve.address, CHAINLINK_EUR_USD, CHAINLINK_DEC);
+
+      let updateTokenManager = SEuroOffering.connect(user).setTokenManager(newTokenManager.address);
+      let updateBondingCurve = SEuroOffering.connect(user).setBondingCurve(newBondingCurve.address);
+      let updateCalculator = SEuroOffering.connect(user).setCalculator(newCalculator.address);
+      await expect(updateTokenManager).to.be.revertedWith('Ownable: caller is not the owner');
+      await expect(updateBondingCurve).to.be.revertedWith('Ownable: caller is not the owner');
+      await expect(updateCalculator).to.be.revertedWith('Ownable: caller is not the owner');
+      expect(await SEuroOffering.tokenManager()).to.equal(TokenManager.address);
+      expect(await SEuroOffering.sEuroRateCalculator()).to.equal(SEuroCalculator.address);
+      expect(await SEuroOffering.bondingCurve()).to.equal(BondingCurve.address);
+
+      updateTokenManager = SEuroOffering.connect(owner).setTokenManager(newTokenManager.address);
+      updateBondingCurve = SEuroOffering.connect(owner).setBondingCurve(newBondingCurve.address);
+      updateCalculator = SEuroOffering.connect(owner).setCalculator(newCalculator.address);
+      await expect(updateTokenManager).not.to.be.reverted;
+      await expect(updateBondingCurve).not.to.be.reverted;
+      await expect(updateCalculator).not.to.be.reverted;
+      expect(await SEuroOffering.tokenManager()).to.equal(newTokenManager.address);
+      expect(await SEuroOffering.sEuroRateCalculator()).to.equal(newCalculator.address);
+      expect(await SEuroOffering.bondingCurve()).to.equal(newBondingCurve.address);
     });
   });
 });
