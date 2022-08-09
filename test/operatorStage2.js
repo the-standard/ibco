@@ -37,6 +37,8 @@ describe('Stage 2', async () => {
         RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
       );
       OP2 = await OperatorStage2.deploy();
+      await BStorage.grantRole(await BStorage.WHITELIST_BOND_STORAGE(), BondingEvent.address);
+      await BStorage.grantRole(await BStorage.WHITELIST_BOND_STORAGE(), OP2.address);
     });
 
     describe('bonding and rewards happy case, various pool prices', async () => {
@@ -55,7 +57,6 @@ describe('Stage 2', async () => {
           await BondingEvent.connect(owner).setOperator(OP2.address);
           await OP2.connect(owner).setStorage(BStorage.address);
           await OP2.connect(owner).setBonding(BondingEvent.address);
-          await OP2.connect(owner).setGateway(TGateway.address);
         });
 
         async function customerBalance() {
@@ -66,7 +67,7 @@ describe('Stage 2', async () => {
           const { amountOther } = await BondingEvent.getOtherAmount(amountSeuro);
           await OP2.connect(customer).newBond(amountSeuro, inputRate);
 
-          await BStorage.connect(customer).refreshBondStatus(customer.address);
+          await OP2.connect(customer).refreshBond(customer.address);
 
           let actualBalance = await customerBalance();
           expect(actualBalance).to.equal(0);
