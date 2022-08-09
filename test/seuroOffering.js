@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS, WETH_BYTES, DAI_BYTES } = require('./common');
+const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS, WETH_BYTES, DAI_BYTES, etherBalances } = require('./common');
 
 describe('SEuroOffering', async () => {
   const DAI_DEC = 18;
@@ -8,7 +8,7 @@ describe('SEuroOffering', async () => {
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
   let SEuroOffering, SEuro, BondingCurve, SEuroCalculator, TokenManager, WETH,
-  owner, user, collateralWallet, BondingCurveContract, SEuroCalculatorContract, TokenManagerContract;
+    owner, user, collateralWallet, BondingCurveContract, SEuroCalculatorContract, TokenManagerContract;
 
   async function buyWETH(signer, amount) {
     await WETH.connect(signer).deposit({ value: amount });
@@ -17,7 +17,7 @@ describe('SEuroOffering', async () => {
   async function buyToken(signer, token, amount) {
     const SwapManagerContract = await ethers.getContractFactory('SwapManager');
     const SwapManager = await SwapManagerContract.deploy();
-    await SwapManager.connect(signer).swapEthForToken(token, {value: amount});
+    await SwapManager.connect(signer).swapEthForToken(token, { value: amount });
   }
 
   async function getEthToSEuro(amount) {
@@ -65,7 +65,7 @@ describe('SEuroOffering', async () => {
     TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC);
     SEuroOffering = await SEuroOfferingContract.deploy(SEuro.address, SEuroCalculator.address, TokenManager.address, BondingCurve.address);
 
-    await SEuro.connect(owner).grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), SEuroOffering.address)
+    await SEuro.connect(owner).grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), SEuroOffering.address);
     await SEuroCalculator.grantRole(await SEuroCalculator.OFFERING(), SEuroOffering.address);
     await BondingCurve.grantRole(await BondingCurve.UPDATER(), SEuroOffering.address);
     await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), SEuroCalculator.address);
@@ -83,7 +83,7 @@ describe('SEuroOffering', async () => {
 
       const swap = SEuroOffering.connect(user).swapETH({ value: toSwap });
 
-      await expect(swap).to.be.revertedWith('err-ibco-inactive')
+      await expect(swap).to.be.revertedWith('err-ibco-inactive');
       const userSEuroBalance = await SEuro.balanceOf(user.address);
       expect(userSEuroBalance).to.eq(0);
     });
@@ -95,7 +95,7 @@ describe('SEuroOffering', async () => {
 
       const swap = SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
 
-      await expect(swap).to.be.revertedWith('err-ibco-inactive')
+      await expect(swap).to.be.revertedWith('err-ibco-inactive');
       const userSEuroBalance = await SEuro.balanceOf(user.address);
       expect(userSEuroBalance).to.eq(0);
     });
@@ -124,7 +124,7 @@ describe('SEuroOffering', async () => {
 
         const swap = SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
 
-        await expect(swap).to.be.revertedWith('err-tok-allow')
+        await expect(swap).to.be.revertedWith('err-tok-allow');
         const userSEuroBalance = await SEuro.balanceOf(user.address);
         expect(userSEuroBalance.toString()).to.equal('0');
       });
@@ -136,7 +136,7 @@ describe('SEuroOffering', async () => {
 
         const swap = SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
 
-        await expect(swap).to.be.revertedWith('err-tok-bal')
+        await expect(swap).to.be.revertedWith('err-tok-bal');
         const userSEuroBalance = await SEuro.balanceOf(user.address);
         expect(userSEuroBalance.toString()).to.equal('0');
       });
@@ -189,6 +189,34 @@ describe('SEuroOffering', async () => {
           const bucket = await BondingCurve.currentBucket();
           expect(bucket.index).to.equal(1);
           expect(bucket.price).to.equal(await getBucketPrice(1));
+        });
+      });
+
+      describe('pausing', async () => {
+        it('will not allow state-changing functions when paused', async () => {
+          let pause = SEuroOffering.connect(user).pause();
+          await expect(pause).to.be.revertedWith('Ownable: caller is not the owner');
+          expect(await SEuroOffering.paused()).to.equal(false);
+          pause = SEuroOffering.connect(owner).pause();
+          await expect(pause).not.to.be.reverted;
+          expect(await SEuroOffering.paused()).to.equal(true);
+    
+          let swap = SEuroOffering.swap(WETH_BYTES, etherBalances['8K']);
+          let swapETH = SEuroOffering.swapETH({value: etherBalances['8K']});
+          await expect(swap).to.be.revertedWith('err-paused');
+          await expect(swapETH).to.be.revertedWith('err-paused');
+
+          let unpause = SEuroOffering.connect(user).unpause();
+          await expect(unpause).to.be.revertedWith('Ownable: caller is not the owner');
+          expect(await SEuroOffering.paused()).to.equal(true);
+          unpause = SEuroOffering.connect(owner).unpause();
+          await expect(unpause).not.to.be.reverted;
+          expect(await SEuroOffering.paused()).to.equal(false);
+    
+          swap = SEuroOffering.swap(WETH_BYTES, etherBalances['8K']);
+          swapETH = SEuroOffering.swapETH({value: etherBalances['8K']});
+          await expect(swap).not.to.be.revertedWith('err-paused');
+          await expect(swapETH).not.to.be.revertedWith('err-paused');
         });
       });
     });

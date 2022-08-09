@@ -8,8 +8,9 @@ import "contracts/SEuro.sol";
 import "contracts/SEuroCalculator.sol";
 import "contracts/TokenManager.sol";
 import "contracts/BondingCurve.sol";
+import "contracts/Pausable.sol";
 
-contract SEuroOffering is Ownable {
+contract SEuroOffering is Ownable, Pausable {
     // address of the wallet which will receive the collateral provided in swap and swapETH
     address public collateralWallet;
 
@@ -90,7 +91,7 @@ contract SEuroOffering is Ownable {
     // Accepted tokens and their byte array values are dictated by the TokenManager contract
     /// @param _token byte array value for the token that you'd like to exchange
     /// @param _amount the amount of the given token that you'd like to exchange for sEURO
-    function swap(bytes32 _token, uint256 _amount) external ifActive {
+    function swap(bytes32 _token, uint256 _amount) external ifActive ifNotPaused {
         TokenManager.Token memory token = tokenManager.get(_token);
         IERC20 erc20Token = IERC20(token.addr);
         require(erc20Token.balanceOf(msg.sender) >= _amount, "err-tok-bal");
@@ -104,7 +105,7 @@ contract SEuroOffering is Ownable {
     }
 
     // Payable function that exchanges the ETH value of the transaction for an equivalent amount of sEURO
-    function swapETH() external payable ifActive {
+    function swapETH() external payable ifActive ifNotPaused {
         uint256 amount = msg.value;
         TokenManager.Token memory token = tokenManager.get(bytes32("WETH"));
         WETH weth = WETH(token.addr);

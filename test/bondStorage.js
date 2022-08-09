@@ -12,7 +12,7 @@ describe('BondStorage', async () => {
       await expect(update).to.be.revertedWith('invalid-user');
       expect(await BondStorage.tokenGateway()).to.equal(gateway1.address);
 
-      update = BondStorage.setTokenGateway(gateway2.address);
+      update = BondStorage.connect(owner).setTokenGateway(gateway2.address);
       await expect(update).not.to.be.reverted;
       expect(await BondStorage.tokenGateway()).to.equal(gateway2.address);
     });
