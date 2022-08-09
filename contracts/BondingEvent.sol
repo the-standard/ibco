@@ -26,10 +26,11 @@ contract BondingEvent is AccessControl {
     address public operatorAddress;
     // receives any excess USDT from the bonding event
     address public excessCollateralWallet;
+    // calculates ratio required to add liquidity to a pool
+    IRatioCalculator public ratioCalculator;
     IUniswapV3Pool public pool;
+    INonfungiblePositionManager public manager;
 
-    INonfungiblePositionManager private immutable manager;
-    IRatioCalculator private immutable ratioCalculator;
     Position[] private positions;
 
     // https://docs.uniswap.org/protocol/reference/core/libraries/Tick
@@ -116,22 +117,31 @@ contract BondingEvent is AccessControl {
         _;
     }
 
+    modifier validAddress(address _newAddress) {
+        require(_newAddress != address(0), "err-invalid-addr");
+        _;
+    }
+
     // Sets address of Bond Storage contract, which manages customer bonds
-    function setStorageContract(address _newAddress) public onlyPoolOwner {
+    function setStorageContract(address _newAddress) public onlyPoolOwner validAddress(_newAddress) {
         bondStorageAddress = _newAddress;
     }
 
     // Sets address of operator contract, the key dependent of this contract
-    function setOperator(address _newAddress) public onlyPoolOwner {
+    function setOperator(address _newAddress) public onlyPoolOwner validAddress(_newAddress) {
         operatorAddress = _newAddress;
     }
 
     // Sets address of wallet, which will receive excess bonding collateral
-    function setExcessCollateralWallet(address _excessCollateralWallet)
+    function setExcessCollateralWallet(address _newAddress)
         external
-        onlyPoolOwner
+        onlyPoolOwner validAddress(_newAddress)
     {
-        excessCollateralWallet = _excessCollateralWallet;
+        excessCollateralWallet = _newAddress;
+    }
+
+    function setRatioCalculator(address _newAddress) external onlyPoolOwner validAddress(_newAddress) {
+        ratioCalculator = IRatioCalculator(_newAddress);
     }
 
     // Sets default lower and upper tick for liquidity positions, if valid

@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./StandardTokenGateway.sol";
 
 contract BondStorage is AccessControl {
+    bytes32 public constant WHITELIST_ADMIN = keccak256("WHITELIST_ADMIN");
     bytes32 public constant WHITELIST_BOND_STORAGE = keccak256("WHITELIST_BOND_STORAGE");
 
     // Standard Token data feed
@@ -18,7 +19,9 @@ contract BondStorage is AccessControl {
     uint8 public otherUsdDec;
 
     constructor(address _gatewayAddress, address _chainlinkEurOther, uint8 _otherUsdDec) {
-        _setupRole(WHITELIST_BOND_STORAGE, msg.sender);
+        _grantRole(WHITELIST_ADMIN, msg.sender);
+        _setRoleAdmin(WHITELIST_BOND_STORAGE, WHITELIST_ADMIN);
+        grantRole(WHITELIST_BOND_STORAGE, msg.sender);
         tokenGateway = StandardTokenGateway(_gatewayAddress);
         chainlinkEurOther = _chainlinkEurOther;
         otherUsdDec = _otherUsdDec;
