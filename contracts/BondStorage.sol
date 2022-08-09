@@ -10,7 +10,7 @@ contract BondStorage is AccessControl {
     bytes32 public constant WHITELIST_BOND_STORAGE = keccak256("WHITELIST_BOND_STORAGE");
 
     // Standard Token data feed
-    StandardTokenGateway private tokenGateway;
+    StandardTokenGateway public tokenGateway;
 
     // used to convert other token to seuro value (before converting to TST)
     // dec should be default chainlink 8 for default 18 dec tokens (to match sEURO)
@@ -67,6 +67,11 @@ contract BondStorage is AccessControl {
 
     function setBondingEvent(address _address) external onlyWhitelisted {
         grantRole(WHITELIST_BOND_STORAGE, _address);
+    }
+
+    function setTokenGateway(address _newAddress) external onlyWhitelisted {
+        require(_newAddress != address(0), "invalid-user");
+        tokenGateway = StandardTokenGateway(_newAddress);
     }
 
     function isInitialised(address _user) private view returns (bool) {
