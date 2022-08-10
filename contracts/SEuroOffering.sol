@@ -35,10 +35,7 @@ contract SEuroOffering is Ownable, Pausable {
 
     modifier ifActive() { require(activated() && notEnded(), "err-ibco-inactive"); _; }
 
-    modifier validAddress(address _newAddress) {
-        require(_newAddress != address(0), "err-addr-invalid");
-        _;
-    }
+    modifier validAddress(address _newAddress) { require(_newAddress != address(0), "err-addr-invalid"); _; }
 
     function setCalculator(address _newAddress) external onlyOwner validAddress(_newAddress) {
         sEuroRateCalculator = SEuroCalculator(_newAddress);
