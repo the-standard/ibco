@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.15;
 
 import "contracts/BondingCurve.sol";
 import "contracts/TokenManager.sol";
@@ -14,7 +14,6 @@ contract SEuroCalculator is AccessControl {
 
     address public immutable EUR_USD_CL;
     uint8 public immutable EUR_USD_CL_DEC;
-	bytes32 public constant DEFAULT_ADMIN = keccak256("DEFAULT_ADMIN");
 
     BondingCurve public bondingCurve;
 
@@ -22,8 +21,8 @@ contract SEuroCalculator is AccessControl {
     /// @param _eurUsdCl address of Chainlink data feed for EUR / USD
     /// @param _eurUsdDec number of decimals that EUR / USD data feed uses
     constructor(address _bondingCurve, address _eurUsdCl, uint8 _eurUsdDec) {
-        _grantRole(DEFAULT_ADMIN, msg.sender);
-        _setRoleAdmin(OFFERING, DEFAULT_ADMIN);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setRoleAdmin(OFFERING, DEFAULT_ADMIN_ROLE);
 		grantRole(OFFERING, msg.sender);
 
         bondingCurve = BondingCurve(_bondingCurve);
@@ -31,17 +30,16 @@ contract SEuroCalculator is AccessControl {
         EUR_USD_CL_DEC = _eurUsdDec;
     }
 
-    modifier only(bytes32 _role) {
-        require(hasRole(_role, msg.sender), "invalid-user");
-        _;
-    }
+    modifier onlyAdmin() { require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "invalid-admin"); _; }
 
-    function setBondingCurve(address _newAddress) external only(DEFAULT_ADMIN) {
+    modifier onlyOffering() { require(hasRole(OFFERING, msg.sender), "invalid-calculator-offering"); _; }
+
+    function setBondingCurve(address _newAddress) external onlyAdmin {
         require(_newAddress != address(0), "err-invalid-err");
         bondingCurve = BondingCurve(_newAddress);
     }
 
-    function calculateBaseRate(address _tokUsdCl, uint8 _tokUsdDec) private view returns (uint256) {
+    function calculateEuroRate(address _tokUsdCl, uint8 _tokUsdDec) private view returns (uint256) {
         (,int256 tokUsd,,,) = IChainlink(_tokUsdCl).latestRoundData();
         (,int256 eurUsd,,,) = IChainlink(EUR_USD_CL).latestRoundData();
         return FIXED_POINT * uint256(tokUsd) / uint256(eurUsd) / 10 ** (_tokUsdDec - EUR_USD_CL_DEC);
@@ -52,8 +50,8 @@ contract SEuroCalculator is AccessControl {
     // It is therefore a state-changing function
     /// @param _amount the amount of the given token that you'd like to calculate the exchange value for
     /// @param _token Token Manager Token for which you'd like to calculate
-    function calculate(uint256 _amount, TokenManager.Token memory _token) external only(OFFERING) returns (uint256) {
-        uint256 euros = calculateBaseRate(_token.chainlinkAddr, _token.chainlinkDec) * _amount / 10 ** _token.dec;
+    function calculate(uint256 _amount, TokenManager.Token memory _token) external onlyOffering returns (uint256) {
+        uint256 euros = calculateEuroRate(_token.chainlinkAddr, _token.chainlinkDec) * _amount / 10 ** _token.dec;
         return bondingCurve.calculatePrice(euros);
     }
 
@@ -62,7 +60,7 @@ contract SEuroCalculator is AccessControl {
     /// @param _amount the amount of the given token that you'd like to estimate the exchange value for
     /// @param _token Token Manager Token for which you'd like to estimate
     function readOnlyCalculate(uint256 _amount, TokenManager.Token memory _token) external view returns (uint256) {
-        uint256 euros = calculateBaseRate(_token.chainlinkAddr, _token.chainlinkDec) * _amount / 10 ** _token.dec;
+        uint256 euros = calculateEuroRate(_token.chainlinkAddr, _token.chainlinkDec) * _amount / 10 ** _token.dec;
         return bondingCurve.readOnlyCalculatePrice(euros);
     }
 }

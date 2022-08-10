@@ -77,7 +77,7 @@ describe('BondingCurve', async () => {
 
     it('only allows calculator role to calculate price', async () => {
       const euros = ethers.utils.parseEther('1');
-      await expect(BondingCurve.connect(calculator).calculatePrice(euros)).to.be.revertedWith('invalid-user');
+      await expect(BondingCurve.connect(calculator).calculatePrice(euros)).to.be.revertedWith('invalid-curve-calculator');
 
       await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), calculator.address);
       await expect(BondingCurve.connect(calculator).calculatePrice(euros)).not.to.be.reverted;
@@ -92,7 +92,7 @@ describe('BondingCurve', async () => {
       const bucket0Price = await getBucketPrice(0);
       const bucket1Price = await getBucketPrice(1);
 
-      await expect(BondingCurve.connect(customer).updateCurrentBucket(BUCKET_SIZE)).to.be.revertedWith('invalid-user');
+      await expect(BondingCurve.connect(customer).updateCurrentBucket(BUCKET_SIZE)).to.be.revertedWith('invalid-curve-updater');
       expect((await BondingCurve.currentBucket()).price).to.equal(bucket0Price);
 
       const update = BondingCurve.connect(updater).updateCurrentBucket(BUCKET_SIZE);

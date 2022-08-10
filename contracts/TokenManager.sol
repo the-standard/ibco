@@ -8,15 +8,9 @@ contract TokenManager is Ownable {
     bytes32 private constant WETH_NAME = bytes32("WETH");
     uint8 private constant WETH_DEC = 18;
 
-    Token[] private tokens;
+    Token[] public tokens;
 
-    struct Token {
-        bytes32 name;
-        address addr;
-        uint8 dec;
-        address chainlinkAddr;
-        uint8 chainlinkDec;
-    }
+    struct Token { bytes32 name; address addr; uint8 dec; address chainlinkAddr; uint8 chainlinkDec; }
 
     /// @param _wethAddress address of WETH token
     /// @param _ethUsdCL address of Chainlink data feed for ETH / USD
@@ -28,11 +22,7 @@ contract TokenManager is Ownable {
     // Gets the details for the given token, if it is accepted
     /// @param _name 32-byte array value representation of the token symbol e.g. "WETH", "USDT"
     function get(bytes32 _name) external view returns(Token memory token) {
-        for (uint256 i = 0; i < tokens.length; i++) {
-            if (tokens[i].name == _name) {
-                token = tokens[i];
-            }
-        }
+        for (uint256 i = 0; i < tokens.length; i++) if (tokens[i].name == _name) token = tokens[i];
         require(token.name != bytes32(0), "err-tok-not-found");
     }
 
@@ -56,19 +46,13 @@ contract TokenManager is Ownable {
     }
 
     function deleteToken(uint256 index) private {
-        for (uint256 i = index; i < tokens.length - 1; i++) {
-            tokens[i] = tokens[i+1];
-        }
+        for (uint256 i = index; i < tokens.length - 1; i++) tokens[i] = tokens[i+1];
         tokens.pop();
     }
 
     // Remove accepted token from accepted list of tokens
     /// @param _name 32-byte array value representation of the token symbol e.g. "WETH", "USDT"
     function removeAcceptedToken(bytes32 _name) public onlyOwner {
-        for (uint256 i = 0; i < tokens.length; i++) {
-            if (tokens[i].name == _name) {
-                deleteToken(i);
-            }
-        }
+        for (uint256 i = 0; i < tokens.length; i++) if (tokens[i].name == _name) deleteToken(i);
     }
 }
