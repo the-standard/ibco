@@ -2,7 +2,7 @@ const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const { POSITION_MANAGER_ADDRESS, DECIMALS_18, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE } = require('./common.js');
 
-let owner, customer, wallet, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, BondingEventContract, RatioCalculator, pricing, SwapManager;
+let owner, customer, wallet, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, BondingEventContract, BondStorageContract, RatioCalculatorContract, RatioCalculator, pricing, SwapManager;
 
 describe('BondingEvent', async () => {
 
@@ -11,9 +11,9 @@ describe('BondingEvent', async () => {
     BondingEventContract = await ethers.getContractFactory('BondingEvent');
     const SEuroContract = await ethers.getContractFactory('SEuro');
     const ERC20Contract = await ethers.getContractFactory('DUMMY');
-    const BondStorageContract = await ethers.getContractFactory('BondStorage');
+    BondStorageContract = await ethers.getContractFactory('BondStorage');
     const TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
-    const RatioCalculatorContract = await ethers.getContractFactory('RatioCalculator');
+    RatioCalculatorContract = await ethers.getContractFactory('RatioCalculator');
     SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
     TST = await ERC20Contract.deploy('TST', 'TST', 18);
     USDT = await ERC20Contract.deploy('USDT', 'USDT', 6);
@@ -25,7 +25,7 @@ describe('BondingEvent', async () => {
 
   const isSEuroToken0 = () => {
     return SEuro.address.toLowerCase() < USDT.address.toLowerCase();
-  }
+  };
 
   const deployBondingEvent = async (reserveSEuro, reserveOther) => {
     // note: ticks represent that sEURO is 18dec and USDT is 6dec
@@ -42,14 +42,14 @@ describe('BondingEvent', async () => {
         initial: encodePriceSqrt(reserveSEuro, reserveOther),
         lowerTick: 273300,
         upperTick: 276700
-      }
+      };
 
     BondingEvent = await BondingEventContract.deploy(
       SEuro.address, USDT.address, POSITION_MANAGER_ADDRESS, BondStorage.address,
       owner.address, RatioCalculator.address, pricing.initial, pricing.lowerTick,
       pricing.upperTick, MOST_STABLE_FEE
     );
-  }
+  };
 
   const deployBondingEventWithDefaultPrices = async () => {
     await deployBondingEvent(scaleUpForDecDiff(100, 12), 114);
@@ -60,13 +60,14 @@ describe('BondingEvent', async () => {
     await SEuro.connect(owner).mint(customer.address, etherBalances.HUNDRED_MILLION);
     await USDT.connect(owner).mint(owner.address, etherBalances.ONE_BILLION);
     await USDT.connect(owner).mint(customer.address, etherBalances.HUNDRED_MILLION);
-  }
+  };
 
-  const readyTokenGateway = async () => {
+  const readyDependencies = async () => {
     await TST.connect(owner).mint(TokenGateway.address, etherBalances.FIVE_HUNDRED_MILLION);
     await TokenGateway.connect(owner).updateRewardSupply();
     await TokenGateway.connect(owner).setStorageAddress(BondStorage.address);
-  }
+    await BondStorage.grantRole(await BondStorage.WHITELIST_BOND_STORAGE(), BondingEvent.address);
+  };
 
   const swap = async (tokenIn, tokenOut, amountIn) => {
     if (!SwapManager) {
@@ -74,7 +75,7 @@ describe('BondingEvent', async () => {
     }
     await tokenIn.approve(SwapManager.address, amountIn);
     await SwapManager.swap(tokenIn.address, tokenOut.address, amountIn, MOST_STABLE_FEE);
-  }
+  };
 
   describe('initialisation', async () => {
     it('initialises the pool with the given price', async () => {
@@ -89,24 +90,24 @@ describe('BondingEvent', async () => {
     beforeEach(async () => {
       await deployBondingEventWithDefaultPrices();
       await mintUsers();
-      await readyTokenGateway();
+      await readyDependencies();
     });
 
     const helperUpdateBondStatus = async () => {
-      await BondStorage.connect(customer).refreshBondStatus(customer.address);
-    }
+      await BondStorage.refreshBondStatus(customer.address);
+    };
 
     const helperGetActiveBonds = async () => {
       return await BondStorage.getActiveBonds(customer.address);
-    }
+    };
 
     const helperGetBondAt = async (index) => {
       return await BondStorage.getBondAt(customer.address, index);
-    }
+    };
 
     const helperGetProfit = async () => {
       return await BondStorage.getProfit(customer.address);
-    }
+    };
 
     describe('calculating ratio', async () => {
       it('calculates the required amount of USDT for given sEURO', async () => {
@@ -136,7 +137,7 @@ describe('BondingEvent', async () => {
         await BondingEvent.adjustTickDefaults(newLower, newUpper);
         expect(await BondingEvent.lowerTickDefault()).to.equal(newLower);
         expect(await BondingEvent.upperTickDefault()).to.equal(newUpper);
-      })
+      });
     });
 
     async function testStartBond(seuroAmount, durationInWeeks, rateFormat, otherContract) {
@@ -292,7 +293,7 @@ describe('BondingEvent', async () => {
       beforeEach(async () => {
         await deployBondingEventWithDefaultPrices();
         await mintUsers();
-        await readyTokenGateway();
+        await readyDependencies();
       });
 
       it('creates a new position if there is not one for the range', async () => {
@@ -386,7 +387,7 @@ describe('BondingEvent', async () => {
       // puts price tick at 274669, between 40th + 60th percentile between 273300 and 276700 ticks
       await deployBondingEvent(scaleUpForDecDiff(100, 12), 118);
       await mintUsers();
-      await readyTokenGateway();
+      await readyDependencies();
 
       // add some liquidity to pool, to allow some swapping;
       const amountSEuro = etherBalances.TWO_MILLION;
@@ -444,14 +445,14 @@ describe('BondingEvent', async () => {
       // is by setting upper and lower ticks to the limit
       expect(lowerTick).to.eq(MIN_TICK);
       expect(upperTick).to.eq(MAX_TICK);
-    })
+    });
   });
 
   describe('retracting liquidity', async () => {
     beforeEach(async () => {
       await deployBondingEventWithDefaultPrices();
       await mintUsers();
-      await readyTokenGateway();
+      await readyDependencies();
     });
 
     it('sends all liquidity - plus fees - to designated collateral wallet, given a token ID', async () => {
@@ -494,8 +495,8 @@ describe('BondingEvent', async () => {
       const collectedData = (await (await collect).wait()).events.filter(e => e.event == 'LiquidityCollected')[0].args;
       // should transfer to the given collateral wallet
       const transferred = isSEuroToken0() ?
-        {SEuro: collectedData.collectedTotal0, USDT: collectedData.collectedTotal1} :
-        {SEuro: collectedData.collectedTotal1, USDT: collectedData.collectedTotal0};
+        { SEuro: collectedData.collectedTotal0, USDT: collectedData.collectedTotal1 } :
+        { SEuro: collectedData.collectedTotal1, USDT: collectedData.collectedTotal0 };
       expect(await SEuro.balanceOf(wallet.address)).to.equal(transferred.SEuro);
       expect(await USDT.balanceOf(wallet.address)).to.equal(transferred.USDT);
       // fees should be generated
@@ -503,6 +504,35 @@ describe('BondingEvent', async () => {
       expect(collectedData.feesCollected1).to.be.gt(0);
       expect(collectedData.collectedTotal0).to.eq(collectedData.retractedAmount0.add(collectedData.feesCollected0));
       expect(collectedData.collectedTotal1).to.eq(collectedData.retractedAmount1.add(collectedData.feesCollected1));
+    });
+  });
+
+  describe('dependencies', async () => {
+    it('allows the owner to update the dependencies', async () => {
+      await deployBondingEventWithDefaultPrices();
+      const newStorage = await BondStorageContract.deploy(ethers.constants.AddressZero, ethers.constants.AddressZero, 0);
+      const newOperator = await (await ethers.getContractFactory('OperatorStage2')).deploy();
+      const newCalculator = await (await ethers.getContractFactory('RatioCalculator')).deploy();
+
+      let setStorage = BondingEvent.connect(customer).setStorageContract(newStorage.address);
+      let setOperator = BondingEvent.connect(customer).setOperator(newOperator.address);
+      let setCalculator = BondingEvent.connect(customer).setRatioCalculator(newCalculator.address);
+      await expect(setStorage).to.be.revertedWith('invalid-user');
+      await expect(setOperator).to.be.revertedWith('invalid-user');
+      await expect(setCalculator).to.be.revertedWith('invalid-user');
+      expect(await BondingEvent.bondStorageAddress()).to.equal(BondStorage.address);
+      expect(await BondingEvent.operatorAddress()).to.equal(owner.address);
+      expect(await BondingEvent.ratioCalculator()).to.equal(RatioCalculator.address);
+
+      setStorage = BondingEvent.connect(owner).setStorageContract(newStorage.address);
+      setOperator = BondingEvent.connect(owner).setOperator(newOperator.address);
+      setCalculator = BondingEvent.connect(owner).setRatioCalculator(newCalculator.address);
+      await expect(setStorage).not.to.be.reverted;
+      await expect(setOperator).not.to.be.reverted;
+      await expect(setCalculator).not.to.be.reverted;
+      expect(await BondingEvent.bondStorageAddress()).to.equal(newStorage.address);
+      expect(await BondingEvent.operatorAddress()).to.equal(newOperator.address);
+      expect(await BondingEvent.ratioCalculator()).to.equal(newCalculator.address);
     });
   });
 });

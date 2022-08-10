@@ -5,8 +5,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract TokenManager is Ownable {
 
-    bytes32 private WETH_NAME = bytes32("WETH");
-    uint8 private WETH_DEC = 18;
+    bytes32 private constant WETH_NAME = bytes32("WETH");
+    uint8 private constant WETH_DEC = 18;
 
     Token[] private tokens;
 

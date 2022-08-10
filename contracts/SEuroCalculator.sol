@@ -16,7 +16,7 @@ contract SEuroCalculator is AccessControl {
     uint8 public immutable EUR_USD_CL_DEC;
 	bytes32 public constant DEFAULT_ADMIN = keccak256("DEFAULT_ADMIN");
 
-    BondingCurve private bondingCurve;
+    BondingCurve public bondingCurve;
 
     /// @param _bondingCurve address of Bonding Curve contract
     /// @param _eurUsdCl address of Chainlink data feed for EUR / USD
@@ -31,9 +31,14 @@ contract SEuroCalculator is AccessControl {
         EUR_USD_CL_DEC = _eurUsdDec;
     }
 
-    modifier onlyOffering {
-		require(hasRole(OFFERING, msg.sender), "invalid-user");
+    modifier only(bytes32 _role) {
+        require(hasRole(_role, msg.sender), "invalid-user");
         _;
+    }
+
+    function setBondingCurve(address _newAddress) external only(DEFAULT_ADMIN) {
+        require(_newAddress != address(0), "err-invalid-err");
+        bondingCurve = BondingCurve(_newAddress);
     }
 
     function calculateBaseRate(address _tokUsdCl, uint8 _tokUsdDec) private view returns (uint256) {
@@ -47,7 +52,7 @@ contract SEuroCalculator is AccessControl {
     // It is therefore a state-changing function
     /// @param _amount the amount of the given token that you'd like to calculate the exchange value for
     /// @param _token Token Manager Token for which you'd like to calculate
-    function calculate(uint256 _amount, TokenManager.Token memory _token) external onlyOffering returns (uint256) {
+    function calculate(uint256 _amount, TokenManager.Token memory _token) external only(OFFERING) returns (uint256) {
         uint256 euros = calculateBaseRate(_token.chainlinkAddr, _token.chainlinkDec) * _amount / 10 ** _token.dec;
         return bondingCurve.calculatePrice(euros);
     }
