@@ -58,13 +58,9 @@ contract BondingCurve is AccessControl {
         updateCurrentBucket(ibcoTotalSupply);
     }
 
-    modifier onlyUpdater() {
-        require(hasRole(UPDATER, msg.sender), "invalid-user"); _;
-    }
+    modifier onlyUpdater() { require(hasRole(UPDATER, msg.sender), "invalid-curve-updater"); _; }
 
-    modifier onlyCalculator() {
-        require(hasRole(CALCULATOR, msg.sender), "invalid-user"); _;
-    }
+    modifier onlyCalculator() { require(hasRole(CALCULATOR, msg.sender), "invalid-curve-calculator"); _; }
 
     // Read only function to estimate the amount of sEURO for given euros
     // Based on the current price alone, so not necessarily accurate

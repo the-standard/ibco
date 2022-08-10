@@ -77,7 +77,7 @@ describe('SEuroCalculator', async () => {
 
   it('does not do state-changing calculation unless called by offering contract', async () => {
     const amount = etherBalances['10K'];
-    await expect(SEuroCalculator.connect(offering).calculate(amount, DAI_TOKEN)).to.be.revertedWith('invalid-user');
+    await expect(SEuroCalculator.connect(offering).calculate(amount, DAI_TOKEN)).to.be.revertedWith('invalid-calculator-offering');
 
     await SEuroCalculator.grantRole(await SEuroCalculator.OFFERING(), offering.address);
     await expect(SEuroCalculator.connect(offering).calculate(amount, DAI_TOKEN)).not.to.be.reverted;
