@@ -8,15 +8,16 @@ import "contracts/SEuro.sol";
 import "contracts/SEuroCalculator.sol";
 import "contracts/TokenManager.sol";
 import "contracts/BondingCurve.sol";
+import "contracts/Pausable.sol";
 
-contract SEuroOffering is Ownable {
+contract SEuroOffering is Ownable, Pausable {
     // address of the wallet which will receive the collateral provided in swap and swapETH
     address public collateralWallet;
     Status public status;
-    SEuro private immutable Seuro;
-    SEuroCalculator private sEuroRateCalculator;    
-    TokenManager private tokenManager;
-    BondingCurve private bondingCurve;
+    SEuro public immutable Seuro;
+    SEuroCalculator public sEuroRateCalculator;    
+    TokenManager public tokenManager;
+    BondingCurve public bondingCurve;
 
     event Swap(bytes32 _token, uint256 amountIn, uint256 amountOut);
     struct Status { bool active; uint256 start; uint256 stop; }
@@ -33,6 +34,23 @@ contract SEuroOffering is Ownable {
     }
 
     modifier ifActive() { require(activated() && notEnded(), "err-ibco-inactive"); _; }
+
+    modifier validAddress(address _newAddress) {
+        require(_newAddress != address(0), "err-addr-invalid");
+        _;
+    }
+
+    function setCalculator(address _newAddress) external onlyOwner validAddress(_newAddress) {
+        sEuroRateCalculator = SEuroCalculator(_newAddress);
+    }
+
+    function setTokenManager(address _newAddress) external onlyOwner validAddress(_newAddress) {
+        tokenManager = TokenManager(_newAddress);
+    }
+
+    function setBondingCurve(address _newAddress) external onlyOwner validAddress(_newAddress) {
+        bondingCurve = BondingCurve(_newAddress);
+    }
 
     function getSeuros(uint256 _amount, TokenManager.Token memory _token) private returns (uint256) {
         return sEuroRateCalculator.calculate(_amount, _token);
@@ -60,7 +78,7 @@ contract SEuroOffering is Ownable {
     // Accepted tokens and their byte array values are dictated by the TokenManager contract
     /// @param _token byte array value for the token that you'd like to exchange
     /// @param _amount the amount of the given token that you'd like to exchange for sEURO
-    function swap(bytes32 _token, uint256 _amount) external ifActive {
+    function swap(bytes32 _token, uint256 _amount) external ifActive ifNotPaused {
         TokenManager.Token memory token = tokenManager.get(_token);
         IERC20 erc20Token = IERC20(token.addr);
         require(erc20Token.balanceOf(msg.sender) >= _amount, "err-tok-bal");
@@ -74,7 +92,7 @@ contract SEuroOffering is Ownable {
     }
 
     // Payable function that exchanges the ETH value of the transaction for an equivalent amount of sEURO
-    function swapETH() external payable ifActive {
+    function swapETH() external payable ifActive ifNotPaused {
         TokenManager.Token memory token = tokenManager.get(bytes32("WETH"));
         WETH(token.addr).deposit{value: msg.value}();
         uint256 seuros = getSeuros(msg.value, token);

@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 const { expect } = require('chai');
-const { etherBalances, WETH_ADDRESS, DAI_ADDRESS, USDT_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD, CHAINLINK_USDT_USD, CHAINLINK_EUR_USD, parse6Dec, WETH_BYTES, DAI_BYTES } = require('./common')
+const { etherBalances, WETH_ADDRESS, DAI_ADDRESS, USDT_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD, CHAINLINK_USDT_USD, CHAINLINK_EUR_USD, parse6Dec, WETH_BYTES, DAI_BYTES } = require('./common');
 
 describe('SEuroCalculator', async () => {
   const CALCULATOR_FIXED_POINT = BigNumber.from(10).pow(BigNumber.from(18));
@@ -19,16 +19,16 @@ describe('SEuroCalculator', async () => {
     chainlinkAddr: CHAINLINK_DAI_USD,
     chainlinkDec: CHAINLINK_DEC
   };
-  let SEuroCalculator, BondingCurve;
+  let SEuroCalculator, BondingCurveContract, BondingCurve, owner, offering, customer;
+  const INITIAL_PRICE = ethers.utils.parseEther('0.8');
+  const MAX_SUPPLY = ethers.utils.parseEther('200000000');
+  const BUCKET_SIZE = ethers.utils.parseEther('100000');
 
   beforeEach(async () => {
-    [ owner, offering ] = await ethers.getSigners();
+    [owner, offering, customer] = await ethers.getSigners();
     const SEuroContract = await ethers.getContractFactory('SEuro');
     await SEuroContract.deploy('SEuro', 'SEUR', []);
-    const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
-    const INITIAL_PRICE = ethers.utils.parseEther('0.8');
-    const MAX_SUPPLY = ethers.utils.parseEther('200000000');
-    const BUCKET_SIZE = ethers.utils.parseEther('100000');
+    BondingCurveContract = await ethers.getContractFactory('BondingCurve');
     BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
     const SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');
     SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, CHAINLINK_EUR_USD, CHAINLINK_DEC);
@@ -87,5 +87,19 @@ describe('SEuroCalculator', async () => {
     const amount = etherBalances.TWO_MILLION;
     const seuros = await SEuroCalculator.readOnlyCalculate(amount, DAI_TOKEN);
     expect(seuros).to.equal(await expectedSEuros(DAI_TOKEN, amount));
+  });
+
+  describe('dependencies', async () => {
+    it('updates bonding curve', async () => {
+      const newCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
+
+      let update = SEuroCalculator.connect(customer).setBondingCurve(newCurve.address);
+      await expect(update).to.be.revertedWith('invalid-admin');
+      expect(await SEuroCalculator.bondingCurve()).to.equal(BondingCurve.address);
+
+      update = SEuroCalculator.connect(owner).setBondingCurve(newCurve.address);
+      await expect(update).not.to.be.reverted;
+      expect(await SEuroCalculator.bondingCurve()).to.equal(newCurve.address);
+    });
   });
 });

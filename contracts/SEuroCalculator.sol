@@ -15,7 +15,7 @@ contract SEuroCalculator is AccessControl {
     address public immutable EUR_USD_CL;
     uint8 public immutable EUR_USD_CL_DEC;
 
-    BondingCurve private bondingCurve;
+    BondingCurve public bondingCurve;
 
     /// @param _bondingCurve address of Bonding Curve contract
     /// @param _eurUsdCl address of Chainlink data feed for EUR / USD
@@ -30,7 +30,14 @@ contract SEuroCalculator is AccessControl {
         EUR_USD_CL_DEC = _eurUsdDec;
     }
 
-    modifier onlyOffering { require(hasRole(OFFERING, msg.sender), "invalid-calculator-offering"); _; }
+    modifier onlyAdmin() { require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "invalid-admin"); _; }
+
+    modifier onlyOffering() { require(hasRole(OFFERING, msg.sender), "invalid-calculator-offering"); _; }
+
+    function setBondingCurve(address _newAddress) external onlyAdmin {
+        require(_newAddress != address(0), "err-invalid-err");
+        bondingCurve = BondingCurve(_newAddress);
+    }
 
     function calculateEuroRate(address _tokUsdCl, uint8 _tokUsdDec) private view returns (uint256) {
         (,int256 tokUsd,,,) = IChainlink(_tokUsdCl).latestRoundData();
