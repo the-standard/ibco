@@ -9,7 +9,7 @@ describe('BondStorage', async () => {
       const BondStorage = await (await ethers.getContractFactory('BondStorage')).deploy(gateway1.address, chainlinkFeed.address, CHAINLINK_DEC);
 
       let update = BondStorage.connect(customer).setTokenGateway(gateway2.address);
-      await expect(update).to.be.revertedWith('invalid-user');
+      await expect(update).to.be.revertedWith('invalid-storage-operator');
       expect(await BondStorage.tokenGateway()).to.equal(gateway1.address);
 
       update = BondStorage.connect(owner).setTokenGateway(gateway2.address);

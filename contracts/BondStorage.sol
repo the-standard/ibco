@@ -28,7 +28,7 @@ contract BondStorage is AccessControl {
     }
 
     modifier onlyWhitelisted() {
-        require(hasRole(WHITELIST_BOND_STORAGE, msg.sender), "invalid-user");
+        require(hasRole(WHITELIST_BOND_STORAGE, msg.sender), "invalid-storage-operator");
         _;
     }
 
@@ -70,7 +70,7 @@ contract BondStorage is AccessControl {
     }
 
     function setTokenGateway(address _newAddress) external onlyWhitelisted {
-        require(_newAddress != address(0), "invalid-user");
+        require(_newAddress != address(0), "invalid-gateway-address");
         tokenGateway = StandardTokenGateway(_newAddress);
     }
 
@@ -273,7 +273,7 @@ contract BondStorage is AccessControl {
     // subtracted with the appropriate amount and the claim counter is increased with the
     // sum of the principals and the their respective accrued interest, all in TST.
     // If the user has no bonds active, the isActive will be switched to false.
-    function refreshBondStatus(address _user) external onlyWhitelisted {
+    function refreshBondStatus(address _user) external {
         Bond[] memory bonds = getUserBonds(_user);
 
         // check each bond to see if it has expired.
@@ -344,7 +344,7 @@ contract BondStorage is AccessControl {
     }
 
     // Claims the payout in TST tokens by sending it to the user's wallet and resetting the claim to zero.
-    function claimReward(address _user) external onlyWhitelisted {
+    function claimReward(address _user) external {
         uint256 rewardAmount = issuedBonds[_user].claimAmount;
         require(rewardAmount > 0, "err-no-reward");
         issuedBonds[_user].claimAmount = 0;

@@ -67,7 +67,7 @@ describe('Stage 2', async () => {
           const { amountOther } = await BondingEvent.getOtherAmount(amountSeuro);
           await OP2.connect(customer).newBond(amountSeuro, inputRate);
 
-          await OP2.connect(customer).refreshBond(customer.address);
+          await BStorage.connect(customer).refreshBondStatus(customer.address);
 
           let actualBalance = await customerBalance();
           expect(actualBalance).to.equal(0);
@@ -85,8 +85,8 @@ describe('Stage 2', async () => {
           }
 
           await helperFastForwardTime(inputDurationWeeks * ONE_WEEK_IN_SECONDS);
-          await OP2.connect(customer).refreshBond(customer.address);
-          await OP2.connect(customer).claim();
+          await BStorage.connect(customer).refreshBondStatus(customer.address);
+          await BStorage.connect(customer).claimReward(customer.address);
           return {seuroPrincipal, otherPrincipal};
         }
 
@@ -153,10 +153,6 @@ describe('Stage 2', async () => {
         
         let newBond = OP2.newBond(etherBalances.ONE_MILLION, 2000);
         await expect(newBond).to.be.revertedWith('err-paused');
-        let refreshBond = OP2.refreshBond(customer.address);
-        await expect(refreshBond).to.be.revertedWith('err-paused');
-        let claim = OP2.claim();
-        await expect(claim).to.be.revertedWith('err-paused');
         
         let unpause = OP2.connect(customer).unpause();
         await expect(unpause).to.be.revertedWith('Ownable: caller is not the owner');
@@ -167,10 +163,6 @@ describe('Stage 2', async () => {
         
         newBond = OP2.newBond(etherBalances.ONE_MILLION, 2000);
         await expect(newBond).not.to.be.revertedWith('err-paused');
-        refreshBond = OP2.refreshBond(customer.address);
-        await expect(refreshBond).not.to.be.revertedWith('err-paused');
-        claim = OP2.claim();
-        await expect(claim).not.to.be.revertedWith('err-paused');
       });
     });
   });

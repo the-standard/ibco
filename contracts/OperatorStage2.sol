@@ -98,12 +98,4 @@ contract OperatorStage2 is AccessControl, Pausable {
 		require(wks > 0, "err-missing-rate");
 		bondingEvent.bond(msg.sender, _amountSeuro, wks, _rate);
 	}
-
-	function refreshBond(address _user) public ifNotPaused {
-		bondStorage.refreshBondStatus(_user);
-	}
-
-	function claim() public ifNotPaused {
-		bondStorage.claimReward(msg.sender);
-	}
 }
