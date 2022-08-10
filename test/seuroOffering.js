@@ -211,29 +211,29 @@ describe('SEuroOffering', async () => {
 
   describe('activate', async () => {
     it('is inactive by default', async () => {
-      const status = await SEuroOffering.getStatus();
-      expect(status._active).to.equal(false);
-      expect(status._start).to.equal(0);
-      expect(status._stop).to.equal(0);
+      const status = await SEuroOffering.status();
+      expect(status.active).to.equal(false);
+      expect(status.start).to.equal(0);
+      expect(status.stop).to.equal(0);
     });
 
     it('can be activated by owner', async () => {
       await SEuroOffering.connect(owner).activate();
 
-      const status = await SEuroOffering.getStatus();
-      expect(status._active).to.equal(true);
-      expect(status._start).to.be.gt(0);
-      expect(status._stop).to.equal(0);
+      const status = await SEuroOffering.status();
+      expect(status.active).to.equal(true);
+      expect(status.start).to.be.gt(0);
+      expect(status.stop).to.equal(0);
     });
 
     it('cannot be activated by non-owner', async () => {
       const activate = SEuroOffering.connect(user).activate();
 
       await expect(activate).to.be.revertedWith('Ownable: caller is not the owner');
-      const status = await SEuroOffering.getStatus();
-      expect(status._active).to.equal(false);
-      expect(status._start).to.equal(0);
-      expect(status._stop).to.equal(0);
+      const status = await SEuroOffering.status();
+      expect(status.active).to.equal(false);
+      expect(status.start).to.equal(0);
+      expect(status.stop).to.equal(0);
     });
   });
 
@@ -242,11 +242,11 @@ describe('SEuroOffering', async () => {
       await SEuroOffering.connect(owner).activate();
       await SEuroOffering.connect(owner).complete();
 
-      const status = await SEuroOffering.getStatus();
-      expect(status._active).to.equal(false);
-      expect(status._start).to.be.gt(0);
-      expect(status._stop).to.be.gt(0);
-      expect(status._stop).to.be.gt(status._start);
+      const status = await SEuroOffering.status();
+      expect(status.active).to.equal(false);
+      expect(status.start).to.be.gt(0);
+      expect(status.stop).to.be.gt(0);
+      expect(status.stop).to.be.gt(status.start);
     });
 
     it('cannot be completed by non-owner', async () => {
@@ -254,10 +254,10 @@ describe('SEuroOffering', async () => {
       const complete = SEuroOffering.connect(user).complete();
 
       await expect(complete).to.be.revertedWith('Ownable: caller is not the owner');
-      const status = await SEuroOffering.getStatus();
-      expect(status._active).to.equal(true);
-      expect(status._start).to.be.gt(0);
-      expect(status._stop).to.equal(0);
+      const status = await SEuroOffering.status();
+      expect(status.active).to.equal(true);
+      expect(status.start).to.be.gt(0);
+      expect(status.stop).to.equal(0);
     });
   });
 
