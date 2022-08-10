@@ -110,14 +110,11 @@ describe('Staking', async () => {
   });
 
   describe('Minting, burning, rate cals!', async () => {
-    it('mints a token and creates a position', async () => {
+    it.only('mints a token and creates a position', async () => {
       const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
       const weiValue = etherBalances["8K"];
       await expect(Staking.mint(weiValue)).to.be.revertedWith('err-not-active');
-
-      let blockNum = await ethers.provider.getBlock();
-      blockNum.timestamp + 600;
 
       // activate the pool
       await Staking.activate();
