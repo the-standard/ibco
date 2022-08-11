@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { WETH_ADDRESS, DAI_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD, WETH_BYTES, DAI_BYTES } = require('./common');
+const { WETH_ADDRESS, DAI_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD, WETH_BYTES, DAI_BYTES } = require('../common.js');
 
 describe('TokenManager', async () => {
   const WETH_DEC = 18;
