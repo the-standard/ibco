@@ -4,8 +4,9 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "contracts/Pausable.sol";
 
-contract Staking is ERC721, Ownable {
+contract Staking is ERC721, Ownable, Pausable {
     uint256 private _tokenId;
 
     bool public active;             // active or not, needs to be set manually
@@ -85,7 +86,7 @@ contract Staking is ERC721, Ownable {
         return balance(_address) - SEURO_ALLOCATED;
     }
 
-    function mint(uint256 _stake) external {
+    function mint(uint256 _stake) external ifNotPaused {
         require(active == true, "err-not-active");
         require(_stake >= minTST, "err-not-min");
         require(block.timestamp >= windowStart, "err-not-started");
@@ -127,7 +128,7 @@ contract Staking is ERC721, Ownable {
         SEURO_ALLOCATED += reward;
     }
 
-    function burn() public {
+    function burn() public ifNotPaused {
         require(block.timestamp >= maturity, "err-maturity");
 
         Position memory pos = _positions[msg.sender];

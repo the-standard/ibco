@@ -477,4 +477,37 @@ describe('Staking', async () => {
       await expect(cat).to.be.revertedWith('err-no-position');
     });
   });
+
+  describe('pausing', async () => {
+    it.only('restricts minting and burning when paused', async () => {
+      const blockNum = await ethers.provider.getBlock();
+      const then = blockNum.timestamp;
+
+      const Staking = await StakingContract.deploy("Staking", "STS", 0, then + 600, then + 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
+
+      let pause = Staking.connect(user1).pause();
+      await expect(pause).to.be.revertedWith('Ownable: caller is not the owner');
+      expect(await Staking.paused()).to.equal(false);
+      pause = Staking.connect(owner).pause();
+      await expect(pause).not.to.be.reverted;
+      expect(await Staking.paused()).to.equal(true);
+
+      let mint = Staking.mint(etherBalances['8K']);
+      await expect(mint).to.be.revertedWith('err-paused');
+      let burn = Staking.burn();
+      await expect(burn).to.be.revertedWith('err-paused');
+
+      let unpause = Staking.connect(user1).unpause();
+      await expect(unpause).to.be.revertedWith('Ownable: caller is not the owner');
+      expect(await Staking.paused()).to.equal(true);
+      unpause = Staking.connect(owner).unpause();
+      await expect(unpause).not.to.be.reverted;
+      expect(await Staking.paused()).to.equal(false);
+
+      mint = Staking.mint(etherBalances['8K']);
+      await expect(mint).not.to.be.revertedWith('err-paused');
+      burn = Staking.burn();
+      await expect(burn).not.to.be.revertedWith('err-paused');
+    });
+  });
 });
