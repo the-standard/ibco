@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "contracts/BondStorage.sol";
-import "contracts/BondingEvent.sol";
+import "contracts/Stage2/BondStorage.sol";
+import "contracts/Stage2/BondingEvent.sol";
 import "contracts/Pausable.sol";
 
 contract OperatorStage2 is AccessControl, Pausable {
