@@ -140,9 +140,13 @@ contract Staking is ERC721, Ownable {
         // burn the token
         _burn(pos.tokenId);
 
-        // withdraw funds
-        IERC20 TOKEN = IERC20(SEURO_ADDRESS);
-        TOKEN.transfer(msg.sender, pos.reward);
+        // transfer stake
+        IERC20 TST = IERC20(TST_ADDRESS);
+        TST.transfer(msg.sender, pos.stake);
+
+        // transfer reward
+        IERC20 SEURO = IERC20(SEURO_ADDRESS);
+        SEURO.transfer(msg.sender, pos.reward);
 
         _positions[msg.sender] = pos;
     }

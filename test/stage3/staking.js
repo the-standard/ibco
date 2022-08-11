@@ -287,7 +287,7 @@ describe('Staking', async () => {
 
     });
 
-    it.only('burns and withdraws seuro', async () => {
+    it('burns and withdraws seuro', async () => {
       let blockNum = await ethers.provider.getBlock();
       const then = blockNum.timestamp;
 
