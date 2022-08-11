@@ -8,17 +8,17 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract Staking is ERC721, Ownable {
     uint256 private _tokenId;
 
-    bool public active;                // active or not, needs to be set manually
-    bool public catastrophic;          // in the event of a catastrophy, let users withdraw
+    bool public active;             // active or not, needs to be set manually
+    bool public catastrophic;       // in the event of a catastrophy, let users withdraw
 
-    uint256 public SEUROTST;           // SEURO:TST pair rate
-    uint256 public INTEREST;           // Interest for the bond
-    uint256 public windowStart;        // the start time for the 'stake'
-    uint256 public windowEnd;          // the end time for the 'stake'
-    uint256 public maturity;           // the maturity date
-    uint256 public initialised;        // the time we initialised the contract
-    uint256 public SEURO_ALLOCATED;    // the amount of seuro allocated, inc rewards
-    uint256 public minTST;             // the min amount of tst we want to allow to bond
+    uint256 public SEUROTST;        // SEURO:TST pair rate
+    uint256 public INTEREST;        // Interest for the bond
+    uint256 public windowStart;     // the start time for the 'stake'
+    uint256 public windowEnd;       // the end time for the 'stake'
+    uint256 public maturity;        // the maturity date
+    uint256 public initialised;     // the time we initialised the contract
+    uint256 public SEURO_ALLOCATED; // the amount of seuro allocated, inc rewards
+    uint256 public minTST;          // the min amount of tst we want to allow to bond
 
     address TST_ADDRESS;
     address SEURO_ADDRESS;
