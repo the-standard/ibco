@@ -479,7 +479,7 @@ describe('Staking', async () => {
   });
 
   describe('pausing', async () => {
-    it.only('restricts minting and burning when paused', async () => {
+    it('restricts minting and burning when paused', async () => {
       const blockNum = await ethers.provider.getBlock();
       const then = blockNum.timestamp;
 
