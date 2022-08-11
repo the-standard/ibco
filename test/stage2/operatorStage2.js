@@ -125,7 +125,9 @@ describe('Stage 2', async () => {
           expectedRates = 4;
           actualRates = (await OP2.showRates()).length;
           expect(actualRates).to.equal(expectedRates);
-
+          
+          const invalidRemoval = OP2.removeRate(4);
+          await expect(invalidRemoval).to.be.revertedWith('err-rate-not-found')
           await OP2.removeRate(rates.TWENTY_PC);
           await OP2.removeRate(rates.TEN_PC);
           expectedRates = 2;
