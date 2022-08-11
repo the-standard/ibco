@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "./StandardTokenGateway.sol";
+import "contracts/Stage2/StandardTokenGateway.sol";
 
 contract BondStorage is AccessControl {
     bytes32 public constant WHITELIST_ADMIN = keccak256("WHITELIST_ADMIN");

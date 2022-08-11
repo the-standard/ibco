@@ -4,10 +4,10 @@ pragma solidity ^0.8.15;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "contracts/interfaces/WETH.sol";
-import "contracts/SEuro.sol";
-import "contracts/SEuroCalculator.sol";
-import "contracts/TokenManager.sol";
-import "contracts/BondingCurve.sol";
+import "contracts/Stage1/SEuro.sol";
+import "contracts/Stage1/SEuroCalculator.sol";
+import "contracts/Stage1/TokenManager.sol";
+import "contracts/Stage1/BondingCurve.sol";
 import "contracts/Pausable.sol";
 
 contract SEuroOffering is Ownable, Pausable {

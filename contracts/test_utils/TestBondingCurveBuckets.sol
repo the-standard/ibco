@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.15;
 
-import "contracts/BondingCurve.sol";
+import "contracts/Stage1/BondingCurve.sol";
 
 contract TestBondingCurve is BondingCurve {
     constructor(
