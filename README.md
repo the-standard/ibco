@@ -1,6 +1,4 @@
-# Getting Started
-
-⚠️**This project is a work in progress.**⚠️
+# The Standard: Initial Bond Curve Offering
 
 ![Main CI](https://github.com/the-standard/ibco/actions/workflows/.github/workflows/main.yml/badge.svg?branch=master)
 

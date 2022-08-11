@@ -1,13 +1,14 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS, WETH_BYTES, DAI_BYTES } = require('./common');
+const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS, WETH_BYTES, DAI_BYTES, etherBalances } = require('../common.js');
 
 describe('SEuroOffering', async () => {
   const DAI_DEC = 18;
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
-  let SEuroOffering, SEuro, BondingCurve, SEuroCalculator, TokenManager, WETH, owner, user, collateralWallet;
+  let SEuroOffering, SEuro, BondingCurve, SEuroCalculator, TokenManager, WETH,
+    owner, user, collateralWallet, BondingCurveContract, SEuroCalculatorContract, TokenManagerContract;
 
   async function buyWETH(signer, amount) {
     await WETH.connect(signer).deposit({ value: amount });
@@ -16,7 +17,7 @@ describe('SEuroOffering', async () => {
   async function buyToken(signer, token, amount) {
     const SwapManagerContract = await ethers.getContractFactory('SwapManager');
     const SwapManager = await SwapManagerContract.deploy();
-    await SwapManager.connect(signer).swapEthForToken(token, {value: amount});
+    await SwapManager.connect(signer).swapEthForToken(token, { value: amount });
   }
 
   async function getEthToSEuro(amount) {
@@ -53,9 +54,9 @@ describe('SEuroOffering', async () => {
 
     const SEuroContract = await ethers.getContractFactory('SEuro');
     const SEuroOfferingContract = await ethers.getContractFactory('SEuroOffering');
-    const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
-    const SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');
-    const TokenManagerContract = await ethers.getContractFactory('TokenManager');
+    BondingCurveContract = await ethers.getContractFactory('BondingCurve');
+    SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');
+    TokenManagerContract = await ethers.getContractFactory('TokenManager');
 
     WETH = await ethers.getContractAt('WETH', WETH_ADDRESS);
     SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
@@ -64,7 +65,7 @@ describe('SEuroOffering', async () => {
     TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC);
     SEuroOffering = await SEuroOfferingContract.deploy(SEuro.address, SEuroCalculator.address, TokenManager.address, BondingCurve.address);
 
-    await SEuro.connect(owner).grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), SEuroOffering.address)
+    await SEuro.connect(owner).grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE')), SEuroOffering.address);
     await SEuroCalculator.grantRole(await SEuroCalculator.OFFERING(), SEuroOffering.address);
     await BondingCurve.grantRole(await BondingCurve.UPDATER(), SEuroOffering.address);
     await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), SEuroCalculator.address);
@@ -82,7 +83,7 @@ describe('SEuroOffering', async () => {
 
       const swap = SEuroOffering.connect(user).swapETH({ value: toSwap });
 
-      await expect(swap).to.be.revertedWith('err-ibco-inactive')
+      await expect(swap).to.be.revertedWith('err-ibco-inactive');
       const userSEuroBalance = await SEuro.balanceOf(user.address);
       expect(userSEuroBalance).to.eq(0);
     });
@@ -94,7 +95,7 @@ describe('SEuroOffering', async () => {
 
       const swap = SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
 
-      await expect(swap).to.be.revertedWith('err-ibco-inactive')
+      await expect(swap).to.be.revertedWith('err-ibco-inactive');
       const userSEuroBalance = await SEuro.balanceOf(user.address);
       expect(userSEuroBalance).to.eq(0);
     });
@@ -123,7 +124,7 @@ describe('SEuroOffering', async () => {
 
         const swap = SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
 
-        await expect(swap).to.be.revertedWith('err-tok-allow')
+        await expect(swap).to.be.revertedWith('err-tok-allow');
         const userSEuroBalance = await SEuro.balanceOf(user.address);
         expect(userSEuroBalance.toString()).to.equal('0');
       });
@@ -135,7 +136,7 @@ describe('SEuroOffering', async () => {
 
         const swap = SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
 
-        await expect(swap).to.be.revertedWith('err-tok-bal')
+        await expect(swap).to.be.revertedWith('err-tok-bal');
         const userSEuroBalance = await SEuro.balanceOf(user.address);
         expect(userSEuroBalance.toString()).to.equal('0');
       });
@@ -190,6 +191,34 @@ describe('SEuroOffering', async () => {
           expect(bucket.price).to.equal(await getBucketPrice(1));
         });
       });
+
+      describe('pausing', async () => {
+        it('will not allow state-changing functions when paused', async () => {
+          let pause = SEuroOffering.connect(user).pause();
+          await expect(pause).to.be.revertedWith('Ownable: caller is not the owner');
+          expect(await SEuroOffering.paused()).to.equal(false);
+          pause = SEuroOffering.connect(owner).pause();
+          await expect(pause).not.to.be.reverted;
+          expect(await SEuroOffering.paused()).to.equal(true);
+    
+          let swap = SEuroOffering.swap(WETH_BYTES, etherBalances['8K']);
+          await expect(swap).to.be.revertedWith('err-paused');
+          let swapETH = SEuroOffering.swapETH({value: etherBalances['8K']});
+          await expect(swapETH).to.be.revertedWith('err-paused');
+
+          let unpause = SEuroOffering.connect(user).unpause();
+          await expect(unpause).to.be.revertedWith('Ownable: caller is not the owner');
+          expect(await SEuroOffering.paused()).to.equal(true);
+          unpause = SEuroOffering.connect(owner).unpause();
+          await expect(unpause).not.to.be.reverted;
+          expect(await SEuroOffering.paused()).to.equal(false);
+    
+          swap = SEuroOffering.swap(WETH_BYTES, etherBalances['8K']);
+          await expect(swap).not.to.be.revertedWith('err-paused');
+          swapETH = SEuroOffering.swapETH({value: etherBalances['8K']});
+          await expect(swapETH).not.to.be.revertedWith('err-paused');
+        });
+      });
     });
   });
 
@@ -211,29 +240,29 @@ describe('SEuroOffering', async () => {
 
   describe('activate', async () => {
     it('is inactive by default', async () => {
-      const status = await SEuroOffering.getStatus();
-      expect(status._active).to.equal(false);
-      expect(status._start).to.equal(0);
-      expect(status._stop).to.equal(0);
+      const status = await SEuroOffering.status();
+      expect(status.active).to.equal(false);
+      expect(status.start).to.equal(0);
+      expect(status.stop).to.equal(0);
     });
 
     it('can be activated by owner', async () => {
       await SEuroOffering.connect(owner).activate();
 
-      const status = await SEuroOffering.getStatus();
-      expect(status._active).to.equal(true);
-      expect(status._start).to.be.gt(0);
-      expect(status._stop).to.equal(0);
+      const status = await SEuroOffering.status();
+      expect(status.active).to.equal(true);
+      expect(status.start).to.be.gt(0);
+      expect(status.stop).to.equal(0);
     });
 
     it('cannot be activated by non-owner', async () => {
       const activate = SEuroOffering.connect(user).activate();
 
       await expect(activate).to.be.revertedWith('Ownable: caller is not the owner');
-      const status = await SEuroOffering.getStatus();
-      expect(status._active).to.equal(false);
-      expect(status._start).to.equal(0);
-      expect(status._stop).to.equal(0);
+      const status = await SEuroOffering.status();
+      expect(status.active).to.equal(false);
+      expect(status.start).to.equal(0);
+      expect(status.stop).to.equal(0);
     });
   });
 
@@ -242,11 +271,11 @@ describe('SEuroOffering', async () => {
       await SEuroOffering.connect(owner).activate();
       await SEuroOffering.connect(owner).complete();
 
-      const status = await SEuroOffering.getStatus();
-      expect(status._active).to.equal(false);
-      expect(status._start).to.be.gt(0);
-      expect(status._stop).to.be.gt(0);
-      expect(status._stop).to.be.gt(status._start);
+      const status = await SEuroOffering.status();
+      expect(status.active).to.equal(false);
+      expect(status.start).to.be.gt(0);
+      expect(status.stop).to.be.gt(0);
+      expect(status.stop).to.be.gt(status.start);
     });
 
     it('cannot be completed by non-owner', async () => {
@@ -254,10 +283,10 @@ describe('SEuroOffering', async () => {
       const complete = SEuroOffering.connect(user).complete();
 
       await expect(complete).to.be.revertedWith('Ownable: caller is not the owner');
-      const status = await SEuroOffering.getStatus();
-      expect(status._active).to.equal(true);
-      expect(status._start).to.be.gt(0);
-      expect(status._stop).to.equal(0);
+      const status = await SEuroOffering.status();
+      expect(status.active).to.equal(true);
+      expect(status.start).to.be.gt(0);
+      expect(status.stop).to.equal(0);
     });
   });
 
@@ -269,6 +298,34 @@ describe('SEuroOffering', async () => {
       const seuros = await SEuroOffering.readOnlyCalculateSwap(wethBytes, toSwap);
 
       expect(seuros).to.equal(expectedSeuros);
+    });
+  });
+
+  describe('dependencies', async () => {
+    it('updates the dependencies if contract owner', async () => {
+      const newTokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC);
+      const newBondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
+      const newCalculator = await SEuroCalculatorContract.deploy(newBondingCurve.address, CHAINLINK_EUR_USD, CHAINLINK_DEC);
+
+      let updateTokenManager = SEuroOffering.connect(user).setTokenManager(newTokenManager.address);
+      let updateBondingCurve = SEuroOffering.connect(user).setBondingCurve(newBondingCurve.address);
+      let updateCalculator = SEuroOffering.connect(user).setCalculator(newCalculator.address);
+      await expect(updateTokenManager).to.be.revertedWith('Ownable: caller is not the owner');
+      await expect(updateBondingCurve).to.be.revertedWith('Ownable: caller is not the owner');
+      await expect(updateCalculator).to.be.revertedWith('Ownable: caller is not the owner');
+      expect(await SEuroOffering.tokenManager()).to.equal(TokenManager.address);
+      expect(await SEuroOffering.sEuroRateCalculator()).to.equal(SEuroCalculator.address);
+      expect(await SEuroOffering.bondingCurve()).to.equal(BondingCurve.address);
+
+      updateTokenManager = SEuroOffering.connect(owner).setTokenManager(newTokenManager.address);
+      updateBondingCurve = SEuroOffering.connect(owner).setBondingCurve(newBondingCurve.address);
+      updateCalculator = SEuroOffering.connect(owner).setCalculator(newCalculator.address);
+      await expect(updateTokenManager).not.to.be.reverted;
+      await expect(updateBondingCurve).not.to.be.reverted;
+      await expect(updateCalculator).not.to.be.reverted;
+      expect(await SEuroOffering.tokenManager()).to.equal(newTokenManager.address);
+      expect(await SEuroOffering.sEuroRateCalculator()).to.equal(newCalculator.address);
+      expect(await SEuroOffering.bondingCurve()).to.equal(newBondingCurve.address);
     });
   });
 });

@@ -2,7 +2,7 @@ const { ethers } = require('hardhat');
 const { expect } = require('chai');
 
 let owner, user1, user2, SEuro, TST, SEUROTST, INTEREST, StakingContract;
-const { etherBalances } = require('./common.js');
+const { etherBalances } = require('../common.js');
 
 beforeEach(async () => {
   [owner, user1, user2] = await ethers.getSigners();

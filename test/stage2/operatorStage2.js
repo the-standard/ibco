@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, etherBalances, rates, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, DEFAULT_CHAINLINK_EUR_USD_PRICE, CHAINLINK_DEC, defaultConvertUsdToEur } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, etherBalances, rates, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, DEFAULT_CHAINLINK_EUR_USD_PRICE, CHAINLINK_DEC, defaultConvertUsdToEur } = require('../common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 
 let owner, customer, SEuro, TST, USDT;
@@ -37,6 +37,8 @@ describe('Stage 2', async () => {
         RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
       );
       OP2 = await OperatorStage2.deploy();
+      await BStorage.grantRole(await BStorage.WHITELIST_BOND_STORAGE(), BondingEvent.address);
+      await BStorage.grantRole(await BStorage.WHITELIST_BOND_STORAGE(), OP2.address);
     });
 
     describe('bonding and rewards happy case, various pool prices', async () => {
@@ -55,7 +57,6 @@ describe('Stage 2', async () => {
           await BondingEvent.connect(owner).setOperator(OP2.address);
           await OP2.connect(owner).setStorage(BStorage.address);
           await OP2.connect(owner).setBonding(BondingEvent.address);
-          await OP2.connect(owner).setGateway(TGateway.address);
         });
 
         async function customerBalance() {
@@ -84,8 +85,8 @@ describe('Stage 2', async () => {
           }
 
           await helperFastForwardTime(inputDurationWeeks * ONE_WEEK_IN_SECONDS);
-          await OP2.connect(customer).refreshBond(customer.address);
-          await OP2.connect(customer).claim();
+          await BStorage.connect(customer).refreshBondStatus(customer.address);
+          await BStorage.connect(customer).claimReward(customer.address);
           return {seuroPrincipal, otherPrincipal};
         }
 
@@ -115,7 +116,7 @@ describe('Stage 2', async () => {
           await expect(testingSuite(etherBalances['125K'], threePercent, arbitraryWeeks)).to.be.revertedWith('err-missing-rate');
         });
 
-        it('adds and subtracts multiple new rates to grow and shrink the set of accepted rates', async() => {
+        it('adds and subtracts multiple new rates to grow and shrink the set of accepted rates', async () => {
           let expectedRates, actualRates;
           await OP2.connect(owner).addRate(rates.FIVE_PC, 10);
           await OP2.connect(owner).addRate(rates.TEN_PC, 20);
@@ -132,12 +133,36 @@ describe('Stage 2', async () => {
           expect(actualRates).to.equal(expectedRates);
         });
 
-        it('adds a rate and bonds successfully, then removes it such that following bonding fails', async() => {
+        it('adds a rate and bonds successfully, then removes it such that following bonding fails', async () => {
           await OP2.connect(owner).addRate(rates.FIVE_PC, 10);
           await testingSuite(etherBalances['125K'], rates.FIVE_PC, 10);
           await OP2.connect(owner).removeRate(rates.FIVE_PC);
           await expect(testingSuite(etherBalances['125K'], rates.FIVE_PC, 10)).to.be.revertedWith('err-missing-rate');
         });
+      });
+    });
+
+    describe('pausing', async () => {
+      it('will not run state-changing functions when paused', async () => {
+        let pause = OP2.connect(customer).pause();
+        await expect(pause).to.be.revertedWith('Ownable: caller is not the owner');
+        expect(await OP2.paused()).to.equal(false);
+        pause = OP2.connect(owner).pause();
+        await expect(pause).not.to.be.reverted;
+        expect(await OP2.paused()).to.equal(true);
+        
+        let newBond = OP2.newBond(etherBalances.ONE_MILLION, 2000);
+        await expect(newBond).to.be.revertedWith('err-paused');
+        
+        let unpause = OP2.connect(customer).unpause();
+        await expect(unpause).to.be.revertedWith('Ownable: caller is not the owner');
+        expect(await OP2.paused()).to.equal(true);
+        unpause = OP2.connect(owner).unpause();
+        await expect(unpause).not.to.be.reverted;
+        expect(await OP2.paused()).to.equal(false);
+        
+        newBond = OP2.newBond(etherBalances.ONE_MILLION, 2000);
+        await expect(newBond).not.to.be.revertedWith('err-paused');
       });
     });
   });

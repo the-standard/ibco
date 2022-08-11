@@ -2,7 +2,7 @@ const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE, defaultConvertUsdToEur, encodePriceSqrt, scaleUpForDecDiff, parse6Dec } = require('./common.js');
+const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE, defaultConvertUsdToEur, encodePriceSqrt, scaleUpForDecDiff, parse6Dec } = require('../common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 const eurUsdPrice = DEFAULT_CHAINLINK_EUR_USD_PRICE;
 
@@ -47,6 +47,7 @@ describe('BondingReward', async () => {
           SEuro.address, USDC.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
           RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
         );
+        await BStorage.grantRole(await BStorage.WHITELIST_BOND_STORAGE(), BondingEvent.address);
 
         // approve the bonding contract to move customer sEUR and USDC funds
         await SEuro.connect(customer).approve(BondingEvent.address, etherBalances.HUNDRED_MILLION);
@@ -71,7 +72,7 @@ describe('BondingReward', async () => {
 
         actualClaim = await BStorage.getClaimAmount(customer.address);
         expect(actualClaim).to.equal(0);
-        await BStorage.connect(customer).refreshBondStatus(customer.address);
+        await BStorage.refreshBondStatus(customer.address);
 
         const payoutSeuro = amountSEuro.add(amountSEuro.div(10)); // ten percent rate
         const payoutOther = amountOther.add(amountOther.div(10)); // ten percent rate
@@ -84,7 +85,7 @@ describe('BondingReward', async () => {
         let actualStandardBal = await balanceTST();
         expect(actualStandardBal).to.equal(0);
         // claim the reward!
-        await BStorage.connect(customer).claimReward(customer.address);
+        await BStorage.claimReward(customer.address);
         // verify that reward is at user now
         expect(await balanceTST()).to.equal(payoutStandard);
         // verify that there is no claim anymore
@@ -114,7 +115,8 @@ describe('BondingReward', async () => {
           SEuro.address, USDT.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
           RatioCalculator.address, sixDecPrice, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
         );
-
+        await BStorage.grantRole(await BStorage.WHITELIST_BOND_STORAGE(), BondingEvent.address);
+        
         // approve the bonding contract to move customer sEUR and USDT funds
         await SEuro.connect(customer).approve(BondingEvent.address, etherBalances.HUNDRED_MILLION);
         await USDT.connect(customer).approve(BondingEvent.address, etherBalances.HUNDRED_MILLION);
@@ -143,7 +145,7 @@ describe('BondingReward', async () => {
 
         actualClaim = await BStorage.getClaimAmount(customer.address);
         expect(actualClaim).to.equal(0);
-        await BStorage.connect(customer).refreshBondStatus(customer.address);
+        await BStorage.refreshBondStatus(customer.address);
 
         const payoutSeuro = amountSEuro.add(amountSEuro.div(10)); // ten percent rate
         const payoutOther = amountOther.add(amountOther.div(10)); // ten percent rate
@@ -157,7 +159,7 @@ describe('BondingReward', async () => {
         let actualStandardBal = await balanceTST();
         expect(actualStandardBal).to.equal(0);
         // claim the reward!
-        await BStorage.connect(customer).claimReward(customer.address);
+        await BStorage.claimReward(customer.address);
         // verify that reward is at user now
         expect(await balanceTST()).to.equal(payoutStandard);
         // verify that there is no claim anymore

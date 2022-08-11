@@ -2,24 +2,18 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "contracts/BondStorage.sol";
-import "contracts/BondingEvent.sol";
-import "contracts/StandardTokenGateway.sol";
+import "contracts/Stage2/BondStorage.sol";
+import "contracts/Stage2/BondingEvent.sol";
+import "contracts/Pausable.sol";
 
-contract OperatorStage2 is AccessControl {
+contract OperatorStage2 is AccessControl, Pausable {
 	bytes32 public constant OPERATOR_STAGE_2 = keccak256("OPERATOR_STAGE_2");
 
-	// BondStorage contract address
-	address public storageAddress;
-	BondStorage bondStorage;
+	// BondStorage dependency
+	BondStorage public bondStorage;
 
-	// BondingEvent contract
-	address public eventAddress;
-	BondingEvent bondingEvent;
-
-	// StandardTokenGateway contract
-	address public gatewayAddress;
-	StandardTokenGateway tokenGateway;
+	// BondingEvent dependency
+	BondingEvent public bondingEvent;
 
 	struct BondRate {
 		uint256 rate;
@@ -48,21 +42,13 @@ contract OperatorStage2 is AccessControl {
 	}
 
 	function setStorage(address _newAddress) public onlyOperatorStage2 {
-		require(_newAddress != storageAddress, "err-same-address");
-		storageAddress = _newAddress;
-		bondStorage = BondStorage(storageAddress);
+		require(_newAddress != address(bondStorage), "err-same-address");
+		bondStorage = BondStorage(_newAddress);
 	}
 
 	function setBonding(address _newAddress) public onlyOperatorStage2 {
-		require(_newAddress != eventAddress, "err-same-address");
-		eventAddress = _newAddress;
-		bondingEvent = BondingEvent(eventAddress);
-	}
-
-	function setGateway(address _newAddress) public onlyOperatorStage2 {
-		require(_newAddress != gatewayAddress, "err-same-address");
-		gatewayAddress = _newAddress;
-		tokenGateway = StandardTokenGateway(gatewayAddress);
+		require(_newAddress != address(bondingEvent), "err-same-address");
+		bondingEvent = BondingEvent(_newAddress);
 	}
 
 	// Adds a new rate that allows a user to bond with
@@ -107,17 +93,9 @@ contract OperatorStage2 is AccessControl {
 	function newBond(
 		uint256 _amountSeuro,
 		uint256 _rate
-	) public {
+	) public ifNotPaused {
 		uint256 wks = allowedYieldToWeeks[_rate];
 		require(wks > 0, "err-missing-rate");
 		bondingEvent.bond(msg.sender, _amountSeuro, wks, _rate);
-	}
-
-	function refreshBond(address _user) public {
-		bondStorage.refreshBondStatus(_user);
-	}
-
-	function claim() public {
-		bondStorage.claimReward(msg.sender);
 	}
 }
