@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.15;
 
-import "contracts/BondingCurve.sol";
-import "contracts/TokenManager.sol";
+import "contracts/Stage1/BondingCurve.sol";
+import "contracts/Stage1/TokenManager.sol";
 import "contracts/interfaces/IChainlink.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 

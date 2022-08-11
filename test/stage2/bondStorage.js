@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { CHAINLINK_DEC } = require('./common');
+const { CHAINLINK_DEC } = require('../common.js');
 
 describe('BondStorage', async () => {
   describe('dependencies', async () => {

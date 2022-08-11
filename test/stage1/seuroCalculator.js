@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 const { expect } = require('chai');
-const { etherBalances, WETH_ADDRESS, DAI_ADDRESS, USDT_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD, CHAINLINK_USDT_USD, CHAINLINK_EUR_USD, parse6Dec, WETH_BYTES, DAI_BYTES } = require('./common');
+const { etherBalances, WETH_ADDRESS, DAI_ADDRESS, USDT_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD, CHAINLINK_USDT_USD, CHAINLINK_EUR_USD, parse6Dec, WETH_BYTES, DAI_BYTES } = require('../common.js');
 
 describe('SEuroCalculator', async () => {
   const CALCULATOR_FIXED_POINT = BigNumber.from(10).pow(BigNumber.from(18));
