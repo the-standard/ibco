@@ -8,17 +8,17 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract Staking is ERC721, Ownable {
     uint256 private _tokenId;
 
-    bool public active;             // active or not, needs to be set manually
-    bool public catastrophic;       // in the event of a catastrophy, let users withdraw
+    bool public active; // active or not, needs to be set manually
+    bool public catastrophic; // in the event of a catastrophy, let users withdraw
 
-    uint public SEUROTST;           // SEURO:TST pair rate
-    uint public INTEREST;           // Interest for the bond
-    uint256 public windowStart;     // the start time for the 'stake'
-    uint256 public windowEnd;       // the end time for the 'stake'
-    uint256 public maturity;        // the maturity date
-    uint256 public initialised;     // the time we initialised the contract
+    uint256 public SEUROTST; // SEURO:TST pair rate
+    uint256 public INTEREST; // Interest for the bond
+    uint256 public windowStart; // the start time for the 'stake'
+    uint256 public windowEnd; // the end time for the 'stake'
+    uint256 public maturity; // the maturity date
+    uint256 public initialised; // the time we initialised the contract
     uint256 public SEURO_ALLOCATED; // the amount of seuro allocated, inc rewards
-    uint256 public minTST;         // the min amount of tst we want to allow to bond
+    uint256 public minTST; // the min amount of tst we want to allow to bond
 
     address TST_ADDRESS;
     address SEURO_ADDRESS;
@@ -41,8 +41,8 @@ contract Staking is ERC721, Ownable {
         uint256 _maturity,
         address _TST_ADDRESS,
         address _SEURO_ADDRESS,
-        uint _SEUROTST,
-        uint _INTEREST
+        uint256 _SEUROTST,
+        uint256 _INTEREST
     ) ERC721(_name, _symbol) {
         SEUROTST = _SEUROTST;
         INTEREST = _INTEREST;
@@ -58,42 +58,42 @@ contract Staking is ERC721, Ownable {
     }
 
     function activate() external onlyOwner {
-        require(active == false, 'err-already-active');
+        require(active == false, "err-already-active");
         active = true;
     }
 
     function disable() external onlyOwner {
-        require(active, 'err-not-active');
+        require(active, "err-not-active");
         active = false;
     }
 
     // reward works out the amount of seuro given to the user based on the
     // amount of TST they first put in.
     function calculateReward(uint256 _amount) public view returns (uint256 reward) {
-        uint256 rewardTST = _amount * INTEREST / 100_000;
-        reward = rewardTST * SEUROTST / 100_000;
+        uint256 rewardTST = (_amount * INTEREST) / 100_000;
+        reward = (rewardTST * SEUROTST) / 100_000;
     }
 
     // fetches the balance of the contract for the give erc20 token
-    function balance(address _address) public view returns(uint256) {
+    function balance(address _address) public view returns (uint256) {
         IERC20 TOKEN = IERC20(_address);
         return TOKEN.balanceOf(address(this));
     }
 
     // fetches the remaining about of tokens in the contract
-    function remaining(address _address) public view returns(uint256) {
+    function remaining(address _address) public view returns (uint256) {
         return balance(_address) - SEURO_ALLOCATED;
     }
 
     function mint(uint256 _stake) external {
-        require(active == true, 'err-not-active');
-        require(_stake >= minTST, 'err-not-min');
-        require(block.timestamp >= windowStart, 'err-not-started');
-        require(block.timestamp < windowEnd, 'err-finished');
+        require(active == true, "err-not-active");
+        require(_stake >= minTST, "err-not-min");
+        require(block.timestamp >= windowStart, "err-not-started");
+        require(block.timestamp < windowEnd, "err-finished");
 
         // calculate the reward so we can also update the remaining SEURO
         uint256 reward = calculateReward(_stake);
-        require(remaining(SEURO_ADDRESS) >= reward, 'err-overlimit');
+        require(remaining(SEURO_ADDRESS) >= reward, "err-overlimit");
 
         // Transfer funds from sender to this contract
         // TODO send to some other guy not this contract!
@@ -128,11 +128,11 @@ contract Staking is ERC721, Ownable {
     }
 
     function burn() public {
-        require(block.timestamp >= maturity, 'err-maturity');
+        require(block.timestamp >= maturity, "err-maturity");
 
         Position memory pos = _positions[msg.sender];
-        require(pos.nonce > 0, 'err-not-valid');
-        require(pos.open == true, 'err-closed');
+        require(pos.nonce > 0, "err-not-valid");
+        require(pos.open == true, "err-closed");
 
         // update position
         pos.open = false;
@@ -152,7 +152,7 @@ contract Staking is ERC721, Ownable {
         IERC20 TOKEN = IERC20(_address);
         uint256 bal = TOKEN.balanceOf(address(this));
 
-        require(bal > 0, 'err-no-funds');
+        require(bal > 0, "err-no-funds");
         TOKEN.transfer(owner(), bal);
     }
 
@@ -161,18 +161,18 @@ contract Staking is ERC721, Ownable {
     }
 
     function catastrophy() external onlyOwner {
-        require(active == true, 'err-already-active');
-        require(catastrophic == false, 'err-already-catastrophic');
+        require(active == true, "err-already-active");
+        require(catastrophic == false, "err-already-catastrophic");
         catastrophic = true;
         active = false;
     }
 
     function catastrophicClose() external {
-        require(catastrophic == true, 'err-not-allowed');
+        require(catastrophic == true, "err-not-allowed");
 
         Position memory pos = _positions[msg.sender];
-        require(pos.nonce > 0, 'err-no-position');
-        require(pos.open == true, 'err-postition-closed');
+        require(pos.nonce > 0, "err-no-position");
+        require(pos.open == true, "err-postition-closed");
 
         IERC20 TOKEN = IERC20(TST_ADDRESS);
         TOKEN.transfer(msg.sender, pos.stake);
@@ -186,4 +186,3 @@ contract Staking is ERC721, Ownable {
         _positions[msg.sender] = pos;
     }
 }
-

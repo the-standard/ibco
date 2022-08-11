@@ -110,7 +110,7 @@ describe('Staking', async () => {
   });
 
   describe('Minting, burning, rate cals!', async () => {
-    it.only('mints a token and creates a position', async () => {
+    it('mints a token and creates a position', async () => {
       const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
 
       const weiValue = etherBalances["8K"];
@@ -261,12 +261,12 @@ describe('Staking', async () => {
       await Staking.activate();
 
       let weiValue = etherBalances["8K"];
-      let reward = await Staking.reward(weiValue);
+      let reward = await Staking.calculateReward(weiValue);
 
-      // 8,000 TST == 400 SEURO at a rate of 0.05 SEURO:TST
-      // 1 TST == 0.05 SEURO
-      // Assume interest is 7%, the total would be 400 * 1.07 == 428 SEURO
-      let fte = ethers.utils.parseEther('428');
+      // 7% of 8,000 == 560 TST
+      // 1 TST == 0.05 sEURO
+      // 560 TST == 28 sEURO
+      let fte = ethers.utils.parseEther('28');
       expect(reward).to.eq(fte);
 
       // new amounts
@@ -278,16 +278,16 @@ describe('Staking', async () => {
       Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, then + 5000, TST_ADDRESS, SEUR_ADDRESS, SEUROTST, INTEREST);
       await Staking.activate();
 
-      // 2,000,000 TST == 65,000 SEURO at a rate of 0.0325 SEURO:TST
+      // 1.5% of 2,000,000 == 30,000 TST
       // 1 TST == 0.0325 SEURO
-      // Assume interest is 1.5%, the total would be 65000 * 1.015 == 65975 SEURO
-      fte = ethers.utils.parseEther('65975');
-      reward = await Staking.reward(weiValue);
+      // 30,000 TST == 975 sEURO
+      fte = ethers.utils.parseEther('975');
+      reward = await Staking.calculateReward(weiValue);
       expect(reward).to.eq(fte);
 
     });
 
-    it('burns and withdraws seuro', async () => {
+    it.only('burns and withdraws seuro', async () => {
       let blockNum = await ethers.provider.getBlock();
       const then = blockNum.timestamp;
 
@@ -305,12 +305,12 @@ describe('Staking', async () => {
 
       await TST.connect(owner).mint(user1.address, weiValue);
       await TST.connect(user1).approve(Staking.address, weiValue);
-      let balance = await TST.balanceOf(user1.address);
-      expect(balance).to.eq(weiValue);
+      let TSTBalance = await TST.balanceOf(user1.address);
+      expect(TSTBalance).to.eq(weiValue);
 
       await Staking.connect(user1).mint(weiValue);
-      balance = await TST.balanceOf(user1.address);
-      expect(balance).to.eq(0);
+      TSTBalance = await TST.balanceOf(user1.address);
+      expect(TSTBalance).to.eq(0);
 
       let burn = Staking.connect(user1).burn();
       await expect(burn).to.be.revertedWith('err-maturity');
@@ -327,9 +327,12 @@ describe('Staking', async () => {
       let p = await Staking.position(user1.address);
       expect(p[2]).to.eq(false);  // closed for business
 
-      balance = await SEuro.balanceOf(user1.address);
-      value = ethers.utils.parseEther('428');
-      expect(balance).to.eq(value);
+      const SeuroBalance = await SEuro.balanceOf(user1.address);
+      value = ethers.utils.parseEther('28');
+      expect(SeuroBalance).to.eq(value);
+
+      TSTBalance = await TST.balanceOf(user1.address);
+      expect(TSTBalance).to.eq(weiValue);
 
       expect(await Staking.balanceOf(user1.address)).to.eq(0);
 
