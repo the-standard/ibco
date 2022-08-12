@@ -22,8 +22,6 @@ contract StandardTokenGateway is AccessControl {
     // Address to the sEURO contract with a varying supply
     address public immutable SEUR_ADDRESS;
 
-    uint256 immutable one_billion = 10 ** 9;
-    uint256 immutable decimals = 10 ** 18;
     uint256 public immutable TST_MAX_AMOUNT; // 1B tokens
 
     // Make the math simpler whilst TST < 1.00 EUR, store the inverted token price:
@@ -54,7 +52,7 @@ contract StandardTokenGateway is AccessControl {
         SEUR_ADDRESS = _seuroToken;
         inversed = true;
         tokenPrice = 20; // 0.05 EUR
-        TST_MAX_AMOUNT = one_billion * decimals;
+        TST_MAX_AMOUNT = (10 ** 9) * 1 ether;
         bondRewardPoolSupply = 0;
         isActive = true;
     }

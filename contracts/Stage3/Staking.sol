@@ -4,20 +4,24 @@ pragma solidity ^0.8.15;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "contracts/Stage2/StandardTokenGateway.sol";
 import "contracts/Pausable.sol";
+import "contracts/SimpleInterest.sol";
 
 contract Staking is ERC721, Ownable, Pausable {
     uint256 private _tokenId;
 
+    // Standard Token data feed
+    StandardTokenGateway public tokenGateway;
+
     bool public active;             // active or not, needs to be set manually
     bool public catastrophic;       // in the event of a catastrophy, let users withdraw
 
-    uint256 public exchangeRate;        // SEURO:TST pair rate
     uint256 public windowStart;         // the start time for the 'stake'
     uint256 public windowEnd;           // the end time for the 'stake'
     uint256 public maturity;            // the maturity date
-    uint256 public initialised;         // the time we initialised the contract
-    uint256 public allocatedSeuro;     // the amount of seuro allocated, inc rewards
+    uint256 public initialisedAt;       // the time of contract initialisation (epoch time)
+    uint256 public allocatedSeuro;      // the amount of seuro allocated, inc rewards
 
     address public immutable TST_ADDRESS;
     address public immutable SEURO_ADDRESS;
@@ -37,22 +41,25 @@ contract Staking is ERC721, Ownable, Pausable {
     constructor(
         string memory _name,
         string memory _symbol,
+        address _gatewayAddress,
         uint256 _start,
         uint256 _end,
         uint256 _maturity,
-        address _TST_ADDRESS,
-        address _SEURO_ADDRESS,
-        uint256 _exchangeRate,
+        address _standardAddress,
+        address _seuroAddress,
         uint256 _si
     ) ERC721(_name, _symbol) {
-        exchangeRate = _exchangeRate;
+        tokenGateway = StandardTokenGateway(_gatewayAddress);
+        (uint256 tokenPrice,) = tokenGateway.getSeuroStandardTokenPrice();
+        require(tokenPrice > 0, "err-zero-tst-price");
+
         SI_RATE = _si;
-        TST_ADDRESS = _TST_ADDRESS;
-        SEURO_ADDRESS = _SEURO_ADDRESS;
+        TST_ADDRESS = _standardAddress;
+        SEURO_ADDRESS = _seuroAddress;
         windowStart = _start;
         windowEnd = _end;
         maturity = _maturity;
-        initialised = block.timestamp;
+        initialisedAt = block.timestamp;
         minTST = 1 ether;
     }
 
@@ -66,15 +73,10 @@ contract Staking is ERC721, Ownable, Pausable {
         active = false;
     }
 
-    function setExchangeRate(uint256 _newRate) external onlyOwner {
-        exchangeRate = _newRate;
-    }
-
-    // reward works out the amount of seuro given to the user based on the
-    // amount of TST they first put in.
-    function calculateReward(uint256 _amount) public view returns (uint256 reward) {
-        uint256 rewardTST = (_amount * SI_RATE) / 100_000;
-        reward = (rewardTST * exchangeRate) / 100_000;
+    // calculates the reward in SEURO based in the input of amount of TSTs
+    function calculateReward(uint256 _amountStandard) public view returns (uint256 reward) {
+        (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
+        return (SimpleInterest.FromStandardToSeuro(_amountStandard, tokenPrice, inverted) * SI_RATE) / 10000;
     }
 
     // fetches the balance of the contract for the give erc20 token
@@ -88,7 +90,8 @@ contract Staking is ERC721, Ownable, Pausable {
         return balance(_address) - allocatedSeuro;
     }
 
-    function mint(uint256 _stake) external ifNotPaused {
+    // Main API to begin staking
+    function startStake(uint256 _stake) external ifNotPaused {
         require(active == true, "err-not-active");
         require(_stake >= minTST, "err-not-min");
         require(block.timestamp >= windowStart, "err-not-started");
@@ -130,7 +133,7 @@ contract Staking is ERC721, Ownable, Pausable {
         allocatedSeuro += reward;
     }
 
-    function burn() public ifNotPaused {
+    function claimReward() public ifNotPaused {
         require(block.timestamp >= maturity, "err-maturity");
 
         Position memory pos = _positions[msg.sender];
