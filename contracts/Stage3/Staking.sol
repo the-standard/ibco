@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.15;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -45,7 +45,7 @@ contract Staking is ERC721, Ownable, Pausable {
         uint256 _exchangeRate,
         uint256 _si
     ) ERC721(_name, _symbol) {
-        exchangeRate = _rate;
+        exchangeRate = _exchangeRate;
         SI_RATE = _si;
         TST_ADDRESS = _TST_ADDRESS;
         SEURO_ADDRESS = _SEURO_ADDRESS;
@@ -73,8 +73,8 @@ contract Staking is ERC721, Ownable, Pausable {
     // reward works out the amount of seuro given to the user based on the
     // amount of TST they first put in.
     function calculateReward(uint256 _amount) public view returns (uint256 reward) {
-        uint256 rewardTST = (_amount * INTEREST) / 100_000;
-        reward = (rewardTST * SEUROTST) / 100_000;
+        uint256 rewardTST = (_amount * SI_RATE) / 100_000;
+        reward = (rewardTST * exchangeRate) / 100_000;
     }
 
     // fetches the balance of the contract for the give erc20 token

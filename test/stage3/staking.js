@@ -33,8 +33,8 @@ describe('Staking', async () => {
     expect(await Staking.windowStart()).to.eq(1000);
     expect(await Staking.windowEnd()).to.eq(then);
     expect(await Staking.maturity()).to.eq(then + 5000);
-    expect(await Staking.SEUROTST()).to.eq(SEUROTST);
-    expect(await Staking.INTEREST()).to.eq(INTEREST);
+    expect(await Staking.exchangeRate()).to.eq(SEUROTST);
+    expect(await Staking.SI_RATE()).to.eq(INTEREST);
     expect(await Staking.owner()).to.eq(owner.address);
 
     blockNum = await ethers.provider.getBlock();
