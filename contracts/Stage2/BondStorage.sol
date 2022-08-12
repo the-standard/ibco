@@ -178,7 +178,7 @@ contract BondStorage is AccessControl {
         (, int256 eurOtherRate, , , ) = IChainlink(chainlinkEurOther).latestRoundData();
         uint256 seuros = (_amount * 10**otherUsdDec) / uint256(eurOtherRate);
         (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
-        return SimpleInterest.FromSeuroToStandard(seuros, tokenPrice, inverted);
+        return SimpleInterest.convert(seuros, tokenPrice, inverted);
     }
 
     function isBondingPossible(
@@ -197,7 +197,7 @@ contract BondStorage is AccessControl {
         );
         (uint256 seuroPayout, , uint256 otherPayout, ) = calculateBond(dummyBond);
         (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
-        uint256 tokenPayout = SimpleInterest.FromSeuroToStandard(seuroPayout, tokenPrice, inverted) +
+        uint256 tokenPayout = SimpleInterest.convert(seuroPayout, tokenPrice, inverted) +
             otherTokenToStandardToken(otherPayout);
         uint256 actualSupply = tokenGateway.getRewardSupply();
         // if we are able to payout this bond in TST
@@ -276,9 +276,9 @@ contract BondStorage is AccessControl {
                     uint256 totalPayoutOther,
                     uint256 profitOther
                 ) = calculateBond(bonds[i]);
-                uint256 payoutTok = SimpleInterest.FromSeuroToStandard(totalPayoutSeuro, tokenPrice, inversed) +
+                uint256 payoutTok = SimpleInterest.convert(totalPayoutSeuro, tokenPrice, inversed) +
                     otherTokenToStandardToken(totalPayoutOther);
-                uint256 profitTok = SimpleInterest.FromSeuroToStandard(profitSeuro, tokenPrice, inversed) +
+                uint256 profitTok = SimpleInterest.convert(profitSeuro, tokenPrice, inversed) +
                     otherTokenToStandardToken(profitOther);
 
                 // increase the user's accumulated profit. only for show or as "fun to know"

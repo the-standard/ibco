@@ -2,12 +2,8 @@
 pragma solidity ^0.8.15;
 
 library SimpleInterest {
-    function FromSeuroToStandard(uint256 _amountSeuro, uint256 _exchangeRate, bool _inverted) public pure returns (uint256) {
-        return _inverted ? _amountSeuro * _exchangeRate : _amountSeuro / _exchangeRate;
-    }
-
-    function FromStandardToSeuro(uint256 _amountStandard, uint256 _exchangeRate, bool _inverted) public pure returns (uint256) {
-        return _inverted? _amountStandard / _exchangeRate : _amountStandard * _exchangeRate;
+    function convert(uint256 _amount, uint256 _exchangeRate, bool _inverted) public pure returns (uint256) {
+        return _inverted ? _amount * _exchangeRate : _amount / _exchangeRate;
     }
 }
 

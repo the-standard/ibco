@@ -58,7 +58,7 @@ contract StandardTokenGateway is AccessControl {
     }
 
     modifier onlyGatewayOwner {
-        require(hasRole(TST_TOKEN_GATEWAY, msg.sender), "invalid-user");
+        require(hasRole(TST_TOKEN_GATEWAY, msg.sender), "invalid-gateway-owner");
         _;
     }
 

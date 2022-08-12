@@ -25,7 +25,8 @@ contract Staking is ERC721, Ownable, Pausable {
 
     address public immutable TST_ADDRESS;
     address public immutable SEURO_ADDRESS;
-    uint256 public immutable SI_RATE; // simple interest rate for the bond
+    uint256 private immutable RATE_FACTOR = 10 ** 5;
+    uint256 public immutable SI_RATE; // simple interest rate for the bond (factor of 10 ** 5)
     uint256 public immutable minTST;  // the allowed minimum amount of TST to bond
 
     mapping(address => Position) private _positions;
@@ -76,7 +77,7 @@ contract Staking is ERC721, Ownable, Pausable {
     // calculates the reward in SEURO based in the input of amount of TSTs
     function calculateReward(uint256 _amountStandard) public view returns (uint256 reward) {
         (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
-        return (SimpleInterest.FromStandardToSeuro(_amountStandard, tokenPrice, inverted) * SI_RATE) / 10000;
+        return (SimpleInterest.convert(_amountStandard, tokenPrice, inverted) * SI_RATE) / RATE_FACTOR;
     }
 
     // fetches the balance of the contract for the give erc20 token
@@ -91,21 +92,21 @@ contract Staking is ERC721, Ownable, Pausable {
     }
 
     // Main API to begin staking
-    function startStake(uint256 _stake) external ifNotPaused {
+    function startStake(uint256 _amountStandard) external ifNotPaused {
         require(active == true, "err-not-active");
-        require(_stake >= minTST, "err-not-min");
+        require(_amountStandard >= minTST, "err-not-min");
         require(block.timestamp >= windowStart, "err-not-started");
         require(block.timestamp < windowEnd, "err-finished");
 
         // calculate the reward so we can also update the remaining SEURO
-        uint256 reward = calculateReward(_stake);
+        uint256 reward = calculateReward(_amountStandard);
         require(remaining(SEURO_ADDRESS) >= reward, "err-overlimit");
 
         // Transfer funds from sender to this contract
         // TODO send to some other guy not this contract!
 
         IERC20 TOKEN = IERC20(TST_ADDRESS);
-        TOKEN.transferFrom(msg.sender, address(this), _stake);
+        TOKEN.transferFrom(msg.sender, address(this), _amountStandard);
 
         // fetch current tokenID
         uint256 newItemId = _tokenId;
@@ -122,14 +123,14 @@ contract Staking is ERC721, Ownable, Pausable {
         }
 
         // update the position
-        pos.stake += _stake;
+        pos.stake += _amountStandard;
         pos.nonce += 1;
         pos.reward += reward;
 
         // update the position
         _positions[msg.sender] = pos;
 
-        // update the remaining SEURO
+        // update the rewards in SEUR to be paid out
         allocatedSeuro += reward;
     }
 
