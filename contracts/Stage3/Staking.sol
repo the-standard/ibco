@@ -179,7 +179,14 @@ contract Staking is ERC721, Ownable, Pausable {
     }
 
     function disableCatastrophy() external onlyOwner {
-        require(isCatastrophy == true, "err-not-allowed");
+        require(active == false, "err-already-active");
+        require(isCatastrophy == true, "err-already-isCatastrophy-false");
+        isCatastrophy = false;
+        active = true;
+    }
+
+    function emergencyWithdraw() external {
+        require(isCatastrophy == true, "err-not-catastrophy");
 
         Position memory pos = _positions[msg.sender];
         require(pos.nonce > 0, "err-no-position");
