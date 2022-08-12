@@ -122,17 +122,12 @@ contract BondingEvent is AccessControl {
 
     // Gets data for the given position token ID
     /// @param _tokenId the ID of the position token
-    function getPositionByTokenId(uint256 _tokenId) public view returns (Position memory position) {
-        for (uint256 i = 0; i < positions.length; i++) if (positions[i].tokenId == _tokenId) return positions[i];
-        revert('err-pos-not-found');
+    function getPositionByTokenId(uint256 _tokenId) public view returns (Position memory position, uint256 index) {
+        for (index = 0; index < positions.length; index++) if (positions[index].tokenId == _tokenId) return (positions[index], index);
     }
 
     function getPositionIdByTicks(int24 _lowerTick, int24 _upperTick) private view returns (uint256 positionId) {
         for (uint256 i = 0; i < positions.length; i++) if (positions[i].lowerTick == _lowerTick && positions[i].upperTick == _upperTick) return positions[i].tokenId;
-    }
-
-    function getIndexOfPosition(uint256 _tokenId) private view returns (uint256 index) {
-        for (uint256 i = 0; i < positions.length; i++) if (positions[i].tokenId == _tokenId) index = i;
     }
 
     function mintLiquidityPosition(AddLiquidityParams memory params) private returns (AddedLiquidityResponse memory) {
@@ -146,9 +141,8 @@ contract BondingEvent is AccessControl {
     }
 
     function increasePositionLiquidity(uint256 _tokenId, uint128 _liquidity) private {
-        uint256 i = getIndexOfPosition(_tokenId);
-        Position memory position = positions[i];
-        if (position.tokenId == _tokenId) positions[i].liquidity = position.liquidity + _liquidity;
+        (Position memory position, uint256 index) = getPositionByTokenId(_tokenId);
+        if (position.tokenId == _tokenId) positions[index].liquidity = position.liquidity + _liquidity;
     }
 
     function increaseExistingLiquidity(AddLiquidityParams memory params, uint256 tokenId) private returns (AddedLiquidityResponse memory) {
