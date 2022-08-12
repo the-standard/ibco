@@ -27,224 +27,105 @@ contract BondStorage is AccessControl {
         otherUsdDec = _otherUsdDec;
     }
 
-    modifier onlyWhitelisted() {
-        require(hasRole(WHITELIST_BOND_STORAGE, msg.sender), "invalid-storage-operator");
-        _;
-    }
+    modifier onlyWhitelisted() { require(hasRole(WHITELIST_BOND_STORAGE, msg.sender), "invalid-storage-operator"); _; }
 
     // PositionMetaData holds meta data received from Uniswap when adding a liquidity position
-    struct PositionMetaData {
-        // NFT handle
-        uint256 tokenId;
-        // New liquidity (geometric average) at moment of transaction
-        uint128 liquidity;
-        // Units of tokens
-        uint256 amountSeuro;
-        uint256 amountOther;
-    }
+    // tokenId = NFT handle
+    // liquidity = New liquidity (geometric average) at moment of transaction
+    struct PositionMetaData { uint256 tokenId; uint128 liquidity; uint256 amountSeuro; uint256 amountOther; }
 
     // Bond is a traditional bond: exchanged for a principal with a fixed rate and maturity
-    struct Bond {
-        uint256 principalSeuro; // amount in sEURO
-        uint256 principalOther; // amount in sEURO
-        uint256 rate; // example: 500 is 0.5 pc per annum (= 0.005)
-        uint256 maturity; // in amount of weeks
-        bool tapped; // if we squeezed the profit from this bond
-        PositionMetaData data; // liquidity position data
-    }
+    // principalSeuro = amount bonding in sEURO
+    // principalOther = amount bonding in other asset
+    // rate = interest rate for bond - example: 500 is 0.5 pc per annum (= 0.005)
+    // maturity = length of bond in weeks
+    // tapped = if profit has been squeezed from bond
+    // PositionMetaData = liquidity position data
+    struct Bond { uint256 principalSeuro; uint256 principalOther; uint256 rate; uint256 maturity; bool tapped; PositionMetaData data; }
 
     // BondRecord holds the main data
-    struct BondRecord {
-        bool isInitialised; // if the user has bonded before
-        bool isActive; // if the user has an active bond
-        uint256 amountBondsActive; // amount of bonds in play
-        Bond[] bonds; // all the bonds in play
-        uint256 profitAmount; // total profit: all payout less the principals
-        uint256 claimAmount; // total claim from expired bonds (valued in sEURO)
-    }
+    // isInitialised = if the user has bonded before
+    // isActive = if the user has an active bond
+    // amountBondsActive = amount of bonds in play
+    // bonds = all the bonds in play
+    // profitAmount = profit amount from bond (in TST)
+    // claimAmount = total claim from expired bonds (in TST)
+    struct BondRecord { bool isInitialised; bool isActive; uint256 amountBondsActive; Bond[] bonds; uint256 profitAmount; uint256 claimAmount; }
 
     mapping(address => BondRecord) issuedBonds;
 
-    function setBondingEvent(address _address) external onlyWhitelisted {
-        grantRole(WHITELIST_BOND_STORAGE, _address);
-    }
+    function setBondingEvent(address _address) external onlyWhitelisted { grantRole(WHITELIST_BOND_STORAGE, _address); }
 
     function setTokenGateway(address _newAddress) external onlyWhitelisted {
         require(_newAddress != address(0), "invalid-gateway-address");
         tokenGateway = StandardTokenGateway(_newAddress);
     }
 
-    function isInitialised(address _user) private view returns (bool) {
-        return issuedBonds[_user].isInitialised;
+    function setInitialised(address _user) private { issuedBonds[_user].isInitialised = true; }
+
+    function setActive(address _user) private { issuedBonds[_user].isActive = true; }
+
+    function addBond(address _user, uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 maturityDate, PositionMetaData memory _data) private {
+        issuedBonds[_user].bonds.push(Bond(_principalSeuro, _principalOther, _rate, maturityDate, false, _data));
     }
 
-    function setInitialised(address _user) private {
-        issuedBonds[_user].isInitialised = true;
-    }
+    function tapBond(address _user, uint256 index) private { issuedBonds[_user].bonds[index].tapped = true; }
 
-    function isActive(address _user) private view returns (bool) {
-        return issuedBonds[_user].isActive;
-    }
-
-    function setActive(address _user) private {
-        issuedBonds[_user].isActive = true;
-    }
-
-    function addBond(
-        address _user,
-        uint256 _principalSeuro,
-        uint256 _principalOther,
-        uint256 _rate,
-        uint256 maturityDate,
-        PositionMetaData memory _data
-    ) private {
-        issuedBonds[_user].bonds.push(
-            Bond(
-                _principalSeuro,
-                _principalOther,
-                _rate,
-                maturityDate,
-                false,
-                _data
-            )
-        );
-    }
-
-    function tapBond(address _user, uint256 index) private {
-        issuedBonds[_user].bonds[index].tapped = true;
-    }
-
-    function increaseProfitAmount(address _user, uint256 latestAddition)
-        private
-    {
-        uint256 currAmount = issuedBonds[_user].profitAmount;
-        uint256 newProfit = latestAddition + currAmount;
+    function increaseProfitAmount(address _user, uint256 latestAddition) private {
+        uint256 newProfit = latestAddition + issuedBonds[_user].profitAmount;
         issuedBonds[_user].profitAmount = newProfit;
     }
 
-    function increaseClaimAmount(address _user, uint256 latestAddition)
-        private
-    {
-        uint256 newClaim = issuedBonds[_user].claimAmount + latestAddition;
-        issuedBonds[_user].claimAmount = newClaim;
+    function increaseClaimAmount(address _user, uint256 latestAddition) private {
+        issuedBonds[_user].claimAmount = issuedBonds[_user].claimAmount + latestAddition;
     }
 
     // Returns the total payout and the accrued interest ("profit") component separately.
     // Both the payout and the profit is in sEURO.
-    function calculateBond(Bond memory bond)
-        private
-        pure
-        returns (
-            uint256 seuroPayout,
-            uint256 seuroProfit,
-            uint256 otherPayout,
-            uint256 otherProfit
-        )
-    {
+    function calculateBond(Bond memory bond) private pure returns (uint256 seuroPayout, uint256 seuroProfit, uint256 otherPayout, uint256 otherProfit) {
         // basic (rate * principal) calculations
-        uint256 rateFactor = 100000; // due to the way we store interest rates
-        uint256 seuroRatePrincipal = bond.rate * bond.principalSeuro;
-        seuroProfit = seuroRatePrincipal / rateFactor;
+        seuroProfit = bond.rate * bond.principalSeuro / 100000;
         seuroPayout = bond.principalSeuro + seuroProfit;
-        uint256 otherRatePrincipal = bond.rate * bond.principalOther;
-        otherProfit = otherRatePrincipal / rateFactor;
+        otherProfit = bond.rate * bond.principalOther / 100000;
         otherPayout = bond.principalOther + otherProfit;
     }
 
-    function incrementActiveBonds(address _user) private {
-        issuedBonds[_user].amountBondsActive += 1;
+    function incrementActiveBonds(address _user) private { issuedBonds[_user].amountBondsActive += 1; }
+
+    function decrementActiveBonds(address _user) private { issuedBonds[_user].amountBondsActive -= 1; }
+
+    function hasExpired(Bond memory bond) private view returns (bool) { return block.timestamp >= bond.maturity; }
+
+    function maturityDateAfterWeeks(uint256 _maturityInWeeks) private view returns (uint256) { return block.timestamp + _maturityInWeeks * 1 weeks; }
+
+    function seuroToStandardToken(uint256 _amount) private view returns (uint256) {
+        return tokenGateway.inversed() ? _amount * tokenGateway.tokenPrice() : _amount / tokenGateway.tokenPrice();
     }
 
-    function decrementActiveBonds(address _user) private {
-        issuedBonds[_user].amountBondsActive -= 1;
+    function otherTokenToStandardToken(uint256 _amount) private view returns (uint256) {
+        (, int256 eurOtherRate, , , ) = IChainlink(chainlinkEurOther).latestRoundData();
+        return seuroToStandardToken((_amount * 10 ** otherUsdDec) / uint256(eurOtherRate));
     }
 
-    function hasExpired(Bond memory bond) private view returns (bool) {
-        return block.timestamp >= bond.maturity;
-    }
-
-    function maturityDateAfterWeeks(uint256 _maturityInWeeks)
-        private
-        view
-        returns (uint256)
-    {
-        uint256 current = block.timestamp;
-        uint256 secondsPerWeek = 1 weeks; // 7 * 24 * 60 * 60
-        return current + _maturityInWeeks * secondsPerWeek;
-    }
-
-    function seuroToStandardToken(uint256 _amount)
-        private
-        view
-        returns (uint256)
-    {
-        (uint256 price, bool inversed) = tokenGateway
-            .getSeuroStandardTokenPrice();
-        return inversed ? _amount * price : _amount / price;
-    }
-
-    function otherTokenToStandardToken(uint256 _amount)
-        private
-        view
-        returns (uint256)
-    {
-        (, int256 eurOtherRate, , , ) = IChainlink(chainlinkEurOther)
-            .latestRoundData();
-        uint256 seuros = (_amount * 10**otherUsdDec) / uint256(eurOtherRate);
-        return seuroToStandardToken(seuros);
-    }
-
-    function isBondingPossible(
-        uint256 _principalSeuro,
-        uint256 _principalOther,
-        uint256 _rate,
-        uint256 _maturityInWeeks
-    ) private view returns (bool, uint256) {
-        Bond memory dummyBond = Bond(
-            _principalSeuro,
-            _principalOther,
-            _rate,
-            _maturityInWeeks,
-            false,
-            PositionMetaData(0, 0, 0, 0)
-        );
-        (uint256 seuroPayout, , uint256 otherPayout, ) = calculateBond(
-            dummyBond
-        );
-        uint256 tokenPayout = seuroToStandardToken(seuroPayout) +
-            otherTokenToStandardToken(otherPayout);
-        uint256 actualSupply = tokenGateway.bondRewardPoolSupply();
+    function potentialPayout(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturityInWeeks) private view returns (uint256 tokenPayout) {
+        Bond memory dummyBond = Bond(_principalSeuro, _principalOther, _rate, _maturityInWeeks, false, PositionMetaData(0, 0, 0, 0));
+        (uint256 seuroPayout, , uint256 otherPayout, ) = calculateBond(dummyBond);
+        tokenPayout = seuroToStandardToken(seuroPayout) + otherTokenToStandardToken(otherPayout);
         // if we are able to payout this bond in TST
-        return (tokenPayout < actualSupply, tokenPayout);
+        require(tokenPayout < tokenGateway.bondRewardPoolSupply() == true, "err-insuff-tst-supply");
     }
 
     /// ================ BondStorage public APIs ==============
 
-    function startBond(
-        address _user,
-        uint256 _principalSeuro,
-        uint256 _principalOther,
-        uint256 _rate,
-        uint256 _maturityInWeeks,
-        uint256 _tokenId,
-        uint128 _liquidity
-    ) external onlyWhitelisted {
-        (bool ok, uint256 futurePayout) = isBondingPossible(
-            _principalSeuro,
-            _principalOther,
-            _rate,
-            _maturityInWeeks
-        );
-        require(ok == true, "err-insuff-tst-supply");
-
-        uint256 maturityDate = maturityDateAfterWeeks(_maturityInWeeks);
-        if (!isInitialised(_user)) {
+    function startBond(address _user, uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturityInWeeks, uint256 _tokenId, uint128 _liquidity) external onlyWhitelisted {
+        // reduce the amount of available bonding reward TSTs
+        tokenGateway.decreaseRewardSupply(potentialPayout(_principalSeuro, _principalOther, _rate, _maturityInWeeks));
+        
+        if (!issuedBonds[_user].isInitialised) {
             setActive(_user);
             setInitialised(_user);
         }
 
-        // reduce the amount of available bonding reward TSTs
-        tokenGateway.decreaseRewardSupply(futurePayout);
 
         // finalise record of bond
         PositionMetaData memory data = PositionMetaData(
@@ -258,7 +139,7 @@ contract BondStorage is AccessControl {
             _principalSeuro,
             _principalOther,
             _rate,
-            maturityDate,
+            maturityDateAfterWeeks(_maturityInWeeks),
             data
         );
         incrementActiveBonds(_user);

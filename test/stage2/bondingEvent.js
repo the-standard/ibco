@@ -18,7 +18,7 @@ describe('BondingEvent', async () => {
     TST = await ERC20Contract.deploy('TST', 'TST', 18);
     USDT = await ERC20Contract.deploy('USDT', 'USDT', 6);
     const ChainlinkEurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
-    TokenGateway = await TokenGatewayContract.deploy(TST.address, SEuro.address);
+    TokenGateway = await TokenGatewayContract.deploy(TST.address);
     BondStorage = await BondStorageContract.deploy(TokenGateway.address, ChainlinkEurUsd.address, CHAINLINK_DEC);
     RatioCalculator = await RatioCalculatorContract.deploy();
   });
