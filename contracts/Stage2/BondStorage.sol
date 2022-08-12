@@ -213,7 +213,7 @@ contract BondStorage is AccessControl {
         );
         uint256 tokenPayout = seuroToStandardToken(seuroPayout) +
             otherTokenToStandardToken(otherPayout);
-        uint256 actualSupply = tokenGateway.getRewardSupply();
+        uint256 actualSupply = tokenGateway.bondRewardPoolSupply();
         // if we are able to payout this bond in TST
         return (tokenPayout < actualSupply, tokenPayout);
     }

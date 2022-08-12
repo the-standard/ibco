@@ -55,55 +55,31 @@ contract StandardTokenGateway is AccessControl {
 		inversed = true;
 		tokenPrice = 20; // 0.05 EUR
 		TST_MAX_AMOUNT = one_billion * decimals;
-		bondRewardPoolSupply = 0;
 		isActive = true;
 	}
 
-	modifier onlyGatewayOwner {
-		require(hasRole(TST_TOKEN_GATEWAY, msg.sender), "invalid-user");
-		_;
-	}
+	modifier onlyGatewayOwner { require(hasRole(TST_TOKEN_GATEWAY, msg.sender), "invalid-user"); _; }
 
-	modifier onlyStorageOwner {
-		require(msg.sender == storageAddress, "err-not-storage-caller");
-		_;
-	}
+	modifier onlyStorageOwner { require(msg.sender == storageAddress, "err-not-storage-caller"); _; }
 
-	modifier isActivated {
-		require(isActive == true, "err-in-maintenance");
-		_;
-	}
+	modifier isActivated { require(isActive == true, "err-in-maintenance"); _; }
 
-	function deactivateSystem() public onlyGatewayOwner {
-		isActive = false;
-	}
+	function deactivateSystem() public onlyGatewayOwner { isActive = false; }
 
-	function activateSystem() public onlyGatewayOwner {
-		isActive = true;
-	}
+	function activateSystem() public onlyGatewayOwner { isActive = true; }
 
 	function setUnitPrice(uint256 _newPrice, bool _inversed) public onlyGatewayOwner {
 		tokenPrice = _newPrice;
 		inversed = _inversed;
 	}
 
-	function updateRewardSupply() public {
-		bondRewardPoolSupply = TOKEN.balanceOf(address(this));
-	}
+	function updateRewardSupply() public { bondRewardPoolSupply = TOKEN.balanceOf(address(this)); }
 
 	modifier enoughBalance(uint256 _toSend) {
-		uint256 currBalance = TOKEN.balanceOf(address(this));
-		require(currBalance > _toSend, "err-insufficient-tokens");
-		_;
+		require(TOKEN.balanceOf(address(this)) > _toSend, "err-insufficient-tokens"); _;
 	}
 
-	function getSeuroStandardTokenPrice() public view returns (uint256, bool) {
-		return (tokenPrice, inversed);
-	}
-
-	function getRewardSupply() public view returns (uint256) {
-		return bondRewardPoolSupply;
-	}
+	function getSeuroStandardTokenPrice() public view returns (uint256, bool) { return (tokenPrice, inversed); }
 
 	function setStorageAddress(address _newAddress) public onlyGatewayOwner {
 		require(_newAddress != address(0), "err-zero-address");
