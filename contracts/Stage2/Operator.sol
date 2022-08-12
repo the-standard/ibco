@@ -53,8 +53,9 @@ contract OperatorStage2 is AccessControl, Pausable {
         emit Yield(_rate, _maturityInWeeks);
     }
 
-    function findIndexOfItem(uint256 _item) private view returns (bool ok, uint256 index) {
-        for (uint256 i = 0; i < ratesAvailable.length; i++) if (ratesAvailable[i].rate == _item) return (true, i);
+    function findIndexOfItem(uint256 _item) private view returns (uint256 index) {
+        for (uint256 i = 0; i < ratesAvailable.length; i++) if (ratesAvailable[i].rate == _item) return i;
+        revert("err-rate-not-found");
     }
 
     // Sets a rate to zero, not removing it but making it obsolete
@@ -65,10 +66,8 @@ contract OperatorStage2 is AccessControl, Pausable {
 
         // delete rate from available rates without caring for order
         // so sorting may be required on the frontend
-        (bool ok, uint256 ind) = findIndexOfItem(_rate);
-        require(ok == true, "err-rate-not-found");
         // copy last rate to deleted item's such that there is a duplicate of it
-        ratesAvailable[ind] = ratesAvailable[ratesAvailable.length - 1];
+        ratesAvailable[findIndexOfItem(_rate)] = ratesAvailable[ratesAvailable.length - 1];
         ratesAvailable.pop();
 
         emit Yield(_rate, 0);
