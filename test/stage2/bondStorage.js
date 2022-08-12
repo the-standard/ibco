@@ -5,7 +5,7 @@ const { CHAINLINK_DEC, getLibraryFactory } = require('../common.js');
 describe('BondStorage', async () => {
   let contractFactory;
   beforeEach(async () => {
-    contractFactory = await getLibraryFactory('BondStorage');
+    contractFactory = await getLibraryFactory(owner, 'BondStorage');
   });
 
   describe('dependencies', async () => {

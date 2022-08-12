@@ -21,7 +21,7 @@ describe('Stage 2', async () => {
   beforeEach(async () => {
     RatioCalculatorContract = await ethers.getContractFactory('RatioCalculator');
     BondingEventContract = await ethers.getContractFactory('BondingEvent');
-    StorageContract = await getLibraryFactory('BondStorage');
+    StorageContract = await getLibraryFactory(owner, 'BondStorage');
     TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
     OperatorStage2 = await ethers.getContractFactory('OperatorStage2');
   });

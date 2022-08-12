@@ -19,7 +19,7 @@ describe('BondingReward', async () => {
     TST = await ERC20Contract.deploy('TST', 'TST', 18);
 
     BondingEventContract = await ethers.getContractFactory('BondingEvent');
-    StorageContract = await getLibraryFactory('BondStorage');
+    StorageContract = await getLibraryFactory(owner, 'BondStorage');
     const TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
     const RatioCalculatorContract = await ethers.getContractFactory('RatioCalculator');
 

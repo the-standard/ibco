@@ -111,13 +111,12 @@ const defaultConvertUsdToEur = amount => {
   return amount.mul(chainlinkDecScale).div(DEFAULT_CHAINLINK_EUR_USD_PRICE);
 }
 
-const getLibraryFactory = async (linkedContract) => {
-  let signers = await ethers.getSigners();
+const getLibraryFactory = async (signerAccount, linkedContract) => {
   const LibContract = await ethers.getContractFactory('SimpleInterest');
   const lib = await LibContract.deploy();
   await lib.deployed();
   let libFactory = await ethers.getContractFactory(linkedContract, {
-    signer: signers[0],
+    signer: signerAccount,
     libraries: {
       SimpleInterest: lib.address,
     },
