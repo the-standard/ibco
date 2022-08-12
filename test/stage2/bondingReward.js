@@ -50,9 +50,6 @@ describe('BondingReward', async () => {
       await USDC.connect(customer).approve(BondingEvent.address, etherBalances.HUNDRED_MILLION);
       await TGateway.connect(owner).setStorageAddress(BStorage.address);
 
-      const amountSEuro = etherBalances.TWO_MILLION;
-      const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
-
       const bond = BondingEvent.connect(owner).bond(
         customer.address, etherBalances.TWO_MILLION, durations.ONE_WEEK, rates.TEN_PC
       );
