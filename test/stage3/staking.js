@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 
-let owner, user1, user2, SEuro, TST, seuroPerStandardToken, simpleInterestRate, TGateway, StakingContract;
+let owner, user1, user2, SEuro, TST, simpleInterestRate, TGateway, StakingContract;
 const { etherBalances, getLibraryFactory } = require('../common.js');
 
 beforeEach(async () => {
