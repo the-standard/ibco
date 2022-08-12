@@ -30,7 +30,7 @@ describe('Stage 2', async () => {
     beforeEach(async () => {
       RatioCalculator = await RatioCalculatorContract.deploy();
       const ChainlinkEurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
-      TGateway = await TokenGatewayContract.deploy(TST.address, SEuro.address);
+      TGateway = await TokenGatewayContract.deploy(TST.address);
       BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, CHAINLINK_DEC);
       BondingEvent = await BondingEventContract.deploy(
         SEuro.address, USDT.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
@@ -113,7 +113,7 @@ describe('Stage 2', async () => {
         it('reverts when trying to bond with a non-added rate', async () => {
           let threePercent = 3000;
           let arbitraryWeeks = 36;
-          await expect(testingSuite(etherBalances['125K'], threePercent, arbitraryWeeks)).to.be.revertedWith('err-missing-rate');
+          await expect(testingSuite(etherBalances['125K'], threePercent, arbitraryWeeks)).to.be.revertedWith('err-rate-not-found');
         });
 
         it('adds and subtracts multiple new rates to grow and shrink the set of accepted rates', async () => {
@@ -125,7 +125,9 @@ describe('Stage 2', async () => {
           expectedRates = 4;
           actualRates = (await OP2.showRates()).length;
           expect(actualRates).to.equal(expectedRates);
-
+          
+          const invalidRemoval = OP2.removeRate(4);
+          await expect(invalidRemoval).to.be.revertedWith('err-rate-not-found')
           await OP2.removeRate(rates.TWENTY_PC);
           await OP2.removeRate(rates.TEN_PC);
           expectedRates = 2;
@@ -137,7 +139,7 @@ describe('Stage 2', async () => {
           await OP2.connect(owner).addRate(rates.FIVE_PC, 10);
           await testingSuite(etherBalances['125K'], rates.FIVE_PC, 10);
           await OP2.connect(owner).removeRate(rates.FIVE_PC);
-          await expect(testingSuite(etherBalances['125K'], rates.FIVE_PC, 10)).to.be.revertedWith('err-missing-rate');
+          await expect(testingSuite(etherBalances['125K'], rates.FIVE_PC, 10)).to.be.revertedWith('err-rate-not-found');
         });
       });
     });
