@@ -15,7 +15,7 @@ contract Staking is ERC721, Ownable, Pausable {
     StandardTokenGateway public tokenGateway;
 
     bool public active;             // active or not, needs to be set manually
-    bool public catastrophic;       // in the event of a catastrophy, let users withdraw
+    bool public isCatastrophy;       // in the event of a catastrophy, let users withdraw
 
     uint256 public windowStart;         // the start time for the 'stake'
     uint256 public windowEnd;           // the end time for the 'stake'
@@ -171,15 +171,15 @@ contract Staking is ERC721, Ownable, Pausable {
         return _positions[owner];
     }
 
-    function catastrophy() external onlyOwner {
+    function enableCatastrophy() external onlyOwner {
         require(active == true, "err-already-active");
-        require(catastrophic == false, "err-already-catastrophic");
-        catastrophic = true;
+        require(isCatastrophy == false, "err-already-isCatastrophy");
+        isCatastrophy = true;
         active = false;
     }
 
-    function catastrophicClose() external {
-        require(catastrophic == true, "err-not-allowed");
+    function disableCatastrophy() external onlyOwner {
+        require(isCatastrophy == true, "err-not-allowed");
 
         Position memory pos = _positions[msg.sender];
         require(pos.nonce > 0, "err-no-position");
