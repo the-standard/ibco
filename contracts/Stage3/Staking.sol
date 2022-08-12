@@ -12,17 +12,17 @@ contract Staking is ERC721, Ownable, Pausable {
     bool public active;             // active or not, needs to be set manually
     bool public catastrophic;       // in the event of a catastrophy, let users withdraw
 
-    uint256 public SEUROTST;        // SEURO:TST pair rate
-    uint256 public INTEREST;        // Interest for the bond
-    uint256 public windowStart;     // the start time for the 'stake'
-    uint256 public windowEnd;       // the end time for the 'stake'
-    uint256 public maturity;        // the maturity date
-    uint256 public initialised;     // the time we initialised the contract
-    uint256 public SEURO_ALLOCATED; // the amount of seuro allocated, inc rewards
-    uint256 public minTST;          // the min amount of tst we want to allow to bond
+    uint256 public exchangeRate;        // SEURO:TST pair rate
+    uint256 public windowStart;         // the start time for the 'stake'
+    uint256 public windowEnd;           // the end time for the 'stake'
+    uint256 public maturity;            // the maturity date
+    uint256 public initialised;         // the time we initialised the contract
+    uint256 public allocatedSeuro;     // the amount of seuro allocated, inc rewards
 
-    address TST_ADDRESS;
-    address SEURO_ADDRESS;
+    address public immutable TST_ADDRESS;
+    address public immutable SEURO_ADDRESS;
+    uint256 public immutable SI_RATE; // simple interest rate for the bond
+    uint256 public immutable minTST;  // the allowed minimum amount of TST to bond
 
     mapping(address => Position) private _positions;
 
@@ -42,19 +42,17 @@ contract Staking is ERC721, Ownable, Pausable {
         uint256 _maturity,
         address _TST_ADDRESS,
         address _SEURO_ADDRESS,
-        uint256 _SEUROTST,
-        uint256 _INTEREST
+        uint256 _exchangeRate,
+        uint256 _si
     ) ERC721(_name, _symbol) {
-        SEUROTST = _SEUROTST;
-        INTEREST = _INTEREST;
+        exchangeRate = _rate;
+        SI_RATE = _si;
         TST_ADDRESS = _TST_ADDRESS;
         SEURO_ADDRESS = _SEURO_ADDRESS;
         windowStart = _start;
         windowEnd = _end;
         maturity = _maturity;
         initialised = block.timestamp;
-
-        // TODO variable
         minTST = 1 ether;
     }
 
@@ -66,6 +64,10 @@ contract Staking is ERC721, Ownable, Pausable {
     function disable() external onlyOwner {
         require(active, "err-not-active");
         active = false;
+    }
+
+    function setExchangeRate(uint256 _newRate) external onlyOwner {
+        exchangeRate = _newRate;
     }
 
     // reward works out the amount of seuro given to the user based on the
@@ -83,7 +85,7 @@ contract Staking is ERC721, Ownable, Pausable {
 
     // fetches the remaining about of tokens in the contract
     function remaining(address _address) public view returns (uint256) {
-        return balance(_address) - SEURO_ALLOCATED;
+        return balance(_address) - allocatedSeuro;
     }
 
     function mint(uint256 _stake) external ifNotPaused {
@@ -125,7 +127,7 @@ contract Staking is ERC721, Ownable, Pausable {
         _positions[msg.sender] = pos;
 
         // update the remaining SEURO
-        SEURO_ALLOCATED += reward;
+        allocatedSeuro += reward;
     }
 
     function burn() public ifNotPaused {
