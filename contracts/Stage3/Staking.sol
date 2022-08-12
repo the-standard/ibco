@@ -7,44 +7,28 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "contracts/Pausable.sol";
 
 contract Staking is ERC721, Ownable, Pausable {
+
+
+    address public immutable TST_ADDRESS;
+    address public immutable SEURO_ADDRESS;
+    uint256 public immutable SEUROTST;        // SEURO:TST pair rate
+    uint256 public immutable INTEREST;        // Interest for the bond
+    uint256 public immutable windowStart;     // the start time for the 'stake'
+    uint256 public immutable windowEnd;       // the end time for the 'stake'
+    uint256 public immutable maturity;        // the maturity date
+    uint256 public immutable initialised;     // the time we initialised the contract
+    uint256 public immutable minTST;          // the min amount of tst we want to allow to bond
+
     uint256 private _tokenId;
-
-    bool public active;             // active or not, needs to be set manually
-    bool public catastrophic;       // in the event of a catastrophy, let users withdraw
-
-    uint256 public SEUROTST;        // SEURO:TST pair rate
-    uint256 public INTEREST;        // Interest for the bond
-    uint256 public windowStart;     // the start time for the 'stake'
-    uint256 public windowEnd;       // the end time for the 'stake'
-    uint256 public maturity;        // the maturity date
-    uint256 public initialised;     // the time we initialised the contract
-    uint256 public SEURO_ALLOCATED; // the amount of seuro allocated, inc rewards
-    uint256 public minTST;          // the min amount of tst we want to allow to bond
-
-    address TST_ADDRESS;
-    address SEURO_ADDRESS;
+    uint256 public SEURO_ALLOCATED;           // the amount of seuro allocated, inc rewards
+    bool public active;                       // active or not, needs to be set manually
+    bool public catastrophic;                 // in the event of a catastrophy, let users withdraw
 
     mapping(address => Position) private _positions;
 
-    struct Position {
-        uint96 nonce;
-        uint256 tokenId;
-        bool open;
-        uint256 stake;
-        uint256 reward;
-    }
+    struct Position { uint96 nonce; uint256 tokenId; bool open; uint256 stake; uint256 reward; }
 
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        uint256 _start,
-        uint256 _end,
-        uint256 _maturity,
-        address _TST_ADDRESS,
-        address _SEURO_ADDRESS,
-        uint256 _SEUROTST,
-        uint256 _INTEREST
-    ) ERC721(_name, _symbol) {
+    constructor(string memory _name, string memory _symbol, uint256 _start, uint256 _end, uint256 _maturity, address _TST_ADDRESS, address _SEURO_ADDRESS, uint256 _SEUROTST, uint256 _INTEREST) ERC721(_name, _symbol) {
         SEUROTST = _SEUROTST;
         INTEREST = _INTEREST;
         TST_ADDRESS = _TST_ADDRESS;
@@ -58,15 +42,9 @@ contract Staking is ERC721, Ownable, Pausable {
         minTST = 1 ether;
     }
 
-    function activate() external onlyOwner {
-        require(active == false, "err-already-active");
-        active = true;
-    }
+    function activate() external onlyOwner { require(active == false, "err-already-active"); active = true; }
 
-    function disable() external onlyOwner {
-        require(active, "err-not-active");
-        active = false;
-    }
+    function disable() external onlyOwner { require(active, "err-not-active"); active = false; }
 
     // reward works out the amount of seuro given to the user based on the
     // amount of TST they first put in.
@@ -76,15 +54,10 @@ contract Staking is ERC721, Ownable, Pausable {
     }
 
     // fetches the balance of the contract for the give erc20 token
-    function balance(address _address) public view returns (uint256) {
-        IERC20 TOKEN = IERC20(_address);
-        return TOKEN.balanceOf(address(this));
-    }
+    function balance(address _address) public view returns (uint256) { return IERC20(_address).balanceOf(address(this)); }
 
     // fetches the remaining about of tokens in the contract
-    function remaining(address _address) public view returns (uint256) {
-        return balance(_address) - SEURO_ALLOCATED;
-    }
+    function remaining(address _address) public view returns (uint256) { return balance(_address) - SEURO_ALLOCATED; }
 
     function mint(uint256 _stake) external ifNotPaused {
         require(active == true, "err-not-active");
@@ -99,19 +72,15 @@ contract Staking is ERC721, Ownable, Pausable {
         // Transfer funds from sender to this contract
         // TODO send to some other guy not this contract!
 
-        IERC20 TOKEN = IERC20(TST_ADDRESS);
-        TOKEN.transferFrom(msg.sender, address(this), _stake);
-
-        // fetch current tokenID
-        uint256 newItemId = _tokenId;
+        IERC20(TST_ADDRESS).transferFrom(msg.sender, address(this), _stake);
 
         Position memory pos = _positions[msg.sender];
 
         if (pos.nonce == 0) {
-            _mint(msg.sender, newItemId);
+            _mint(msg.sender, _tokenId);
 
             pos.open = true;
-            pos.tokenId = newItemId;
+            pos.tokenId = _tokenId;
 
             _tokenId++;
         }
@@ -142,34 +111,27 @@ contract Staking is ERC721, Ownable, Pausable {
         _burn(pos.tokenId);
 
         // transfer stake
-        IERC20 TST = IERC20(TST_ADDRESS);
-        TST.transfer(msg.sender, pos.stake);
-
+        IERC20(TST_ADDRESS).transfer(msg.sender, pos.stake);
         // transfer reward
-        IERC20 SEURO = IERC20(SEURO_ADDRESS);
-        SEURO.transfer(msg.sender, pos.reward);
+        IERC20(SEURO_ADDRESS).transfer(msg.sender, pos.reward);
 
         _positions[msg.sender] = pos;
     }
 
     // withdraw to the owner's address
     function withdraw(address _address) external onlyOwner {
-        IERC20 TOKEN = IERC20(_address);
-        uint256 bal = TOKEN.balanceOf(address(this));
+        uint256 bal = IERC20(_address).balanceOf(address(this));
 
         require(bal > 0, "err-no-funds");
-        TOKEN.transfer(owner(), bal);
+        IERC20(_address).transfer(owner(), bal);
     }
 
-    function position(address owner) external view returns (Position memory) {
-        return _positions[owner];
-    }
+    function position(address owner) external view returns (Position memory) { return _positions[owner]; }
 
     function catastrophy() external onlyOwner {
         require(active == true, "err-already-active");
         require(catastrophic == false, "err-already-catastrophic");
-        catastrophic = true;
-        active = false;
+        catastrophic = true; active = false;
     }
 
     function catastrophicClose() external {
@@ -179,8 +141,7 @@ contract Staking is ERC721, Ownable, Pausable {
         require(pos.nonce > 0, "err-no-position");
         require(pos.open == true, "err-postition-closed");
 
-        IERC20 TOKEN = IERC20(TST_ADDRESS);
-        TOKEN.transfer(msg.sender, pos.stake);
+        IERC20(TST_ADDRESS).transfer(msg.sender, pos.stake);
 
         // closed for business
         pos.open = false;
