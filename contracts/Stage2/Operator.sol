@@ -15,10 +15,7 @@ contract OperatorStage2 is AccessControl, Pausable {
     // BondingEvent dependency
     BondingEvent public bondingEvent;
 
-    struct BondRate {
-        uint256 rate;
-        uint256 durationInWeeks;
-    }
+    struct BondRate { uint256 rate; uint256 durationInWeeks; }
 
     // Specifies which (rates -> maturities) a user are allowed to bond
     mapping(uint256 => uint256) allowedYieldToWeeks;

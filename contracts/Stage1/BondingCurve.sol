@@ -5,7 +5,7 @@ import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract BondingCurve is AccessControl {
-    struct Bucket {uint32 index; uint256 price;}
+    struct Bucket { uint32 index; uint256 price; }
 
     uint8 private constant J_NUMERATOR = 1;
     uint8 private constant J_DENOMINATOR = 5;

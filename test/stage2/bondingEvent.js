@@ -124,7 +124,7 @@ describe('BondingEvent', async () => {
       it('updates lower and upper default ticks', async () => {
         const { lowerTick, upperTick } = pricing;
 
-        await expect(BondingEvent.connect(customer).adjustTickDefaults(-10, 10)).to.be.revertedWith('invalid-user');
+        await expect(BondingEvent.connect(customer).adjustTickDefaults(-10, 10)).to.be.revertedWith('invalid-pool-owner');
         await expect(BondingEvent.adjustTickDefaults(-15, 10)).to.be.revertedWith('tick-mod-spacing-nonzero');
         await expect(BondingEvent.adjustTickDefaults(-10, MAX_TICK + 10)).to.be.revertedWith('tick-max-exceeded');
         await expect(BondingEvent.adjustTickDefaults(MIN_TICK - 10, 10)).to.be.revertedWith('tick-min-exceeded');
@@ -517,9 +517,9 @@ describe('BondingEvent', async () => {
       let setStorage = BondingEvent.connect(customer).setStorageContract(newStorage.address);
       let setOperator = BondingEvent.connect(customer).setOperator(newOperator.address);
       let setCalculator = BondingEvent.connect(customer).setRatioCalculator(newCalculator.address);
-      await expect(setStorage).to.be.revertedWith('invalid-user');
-      await expect(setOperator).to.be.revertedWith('invalid-user');
-      await expect(setCalculator).to.be.revertedWith('invalid-user');
+      await expect(setStorage).to.be.revertedWith('invalid-pool-owner');
+      await expect(setOperator).to.be.revertedWith('invalid-pool-owner');
+      await expect(setCalculator).to.be.revertedWith('invalid-pool-owner');
       expect(await BondingEvent.bondStorageAddress()).to.equal(BondStorage.address);
       expect(await BondingEvent.operatorAddress()).to.equal(owner.address);
       expect(await BondingEvent.ratioCalculator()).to.equal(RatioCalculator.address);
