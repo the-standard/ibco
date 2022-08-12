@@ -307,7 +307,7 @@ describe('BondingEvent', async () => {
 
         const positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(1);
-        const position = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
+        const { position } = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
         expect(position.lowerTick).to.equal(pricing.lowerTick);
         expect(position.upperTick).to.equal(pricing.upperTick);
         expect(position.liquidity).to.be.gt(0);
@@ -324,14 +324,14 @@ describe('BondingEvent', async () => {
           customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
         );
         let initialPositions = await BondingEvent.getPositions();
-        const initialLiquidityTotal = (await BondingEvent.getPositionByTokenId(initialPositions[0].tokenId)).liquidity;
+        const initialLiquidityTotal = (await BondingEvent.getPositionByTokenId(initialPositions[0].tokenId)).position.liquidity;
         await BondingEvent.connect(owner).bond(
           customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
         );
 
         positions = await BondingEvent.getPositions();
         expect(positions.length).to.equal(1);
-        const position = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
+        const { position } = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
         expect(position.tokenId).to.equal(initialPositions[0].tokenId);
         expect(position.lowerTick).to.equal(pricing.lowerTick);
         expect(position.upperTick).to.equal(pricing.upperTick);
@@ -351,7 +351,7 @@ describe('BondingEvent', async () => {
 
         let positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(1);
-        let position = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
+        let { position } = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
         expect(position.lowerTick).to.equal(pricing.lowerTick);
         expect(position.upperTick).to.equal(pricing.upperTick);
         expect(position.liquidity).to.be.gt(0);
@@ -371,12 +371,12 @@ describe('BondingEvent', async () => {
 
         positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(2);
-        let secondPosition = await BondingEvent.getPositionByTokenId(positions[1].tokenId);
+        ({ position } = await BondingEvent.getPositionByTokenId(positions[1].tokenId));
         // since swap, new tick is at 275420 - shifting lower tick to 272900 and upper to 277100 puts at in middle 20%
         const expectedDiff = 400;
-        expect(secondPosition.lowerTick).to.equal(pricing.lowerTick - expectedDiff);
-        expect(secondPosition.upperTick).to.equal(pricing.upperTick + expectedDiff);
-        expect(secondPosition.liquidity).to.be.gt(0);
+        expect(position.lowerTick).to.equal(pricing.lowerTick - expectedDiff);
+        expect(position.upperTick).to.equal(pricing.upperTick + expectedDiff);
+        expect(position.liquidity).to.be.gt(0);
       });
     });
   });
