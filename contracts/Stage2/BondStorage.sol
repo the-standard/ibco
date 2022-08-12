@@ -71,14 +71,9 @@ contract BondStorage is AccessControl {
 
     function tapBond(address _user, uint256 index) private { issuedBonds[_user].bonds[index].tapped = true; }
 
-    function increaseProfitAmount(address _user, uint256 latestAddition) private {
-        uint256 newProfit = latestAddition + issuedBonds[_user].profitAmount;
-        issuedBonds[_user].profitAmount = newProfit;
-    }
+    function increaseProfitAmount(address _user, uint256 latestAddition) private { issuedBonds[_user].profitAmount += latestAddition; }
 
-    function increaseClaimAmount(address _user, uint256 latestAddition) private {
-        issuedBonds[_user].claimAmount = issuedBonds[_user].claimAmount + latestAddition;
-    }
+    function increaseClaimAmount(address _user, uint256 latestAddition) private { issuedBonds[_user].claimAmount += latestAddition; }
 
     // Returns the total payout and the accrued interest ("profit") component separately.
     // Both the payout and the profit is in sEURO.
@@ -90,9 +85,9 @@ contract BondStorage is AccessControl {
         otherPayout = bond.principalOther + otherProfit;
     }
 
-    function incrementActiveBonds(address _user) private { issuedBonds[_user].amountBondsActive += 1; }
+    function incrementActiveBonds(address _user) private { issuedBonds[_user].amountBondsActive++ ; }
 
-    function decrementActiveBonds(address _user) private { issuedBonds[_user].amountBondsActive -= 1; }
+    function decrementActiveBonds(address _user) private { issuedBonds[_user].amountBondsActive-- ; }
 
     function hasExpired(Bond memory bond) private view returns (bool) { return block.timestamp >= bond.maturity; }
 
@@ -126,22 +121,8 @@ contract BondStorage is AccessControl {
             setInitialised(_user);
         }
 
-
         // finalise record of bond
-        PositionMetaData memory data = PositionMetaData(
-            _tokenId,
-            _liquidity,
-            _principalSeuro,
-            _principalOther
-        );
-        addBond(
-            _user,
-            _principalSeuro,
-            _principalOther,
-            _rate,
-            maturityDateAfterWeeks(_maturityInWeeks),
-            data
-        );
+        addBond(_user, _principalSeuro, _principalOther, _rate, maturityDateAfterWeeks(_maturityInWeeks), PositionMetaData(_tokenId, _liquidity, _principalSeuro, _principalOther));
         incrementActiveBonds(_user);
     }
 
@@ -165,16 +146,9 @@ contract BondStorage is AccessControl {
 
                 // here we calculate how much we are paying out in sEUR in total and the
                 // profit component, also in sEUR.
-                (
-                    uint256 totalPayoutSeuro,
-                    uint256 profitSeuro,
-                    uint256 totalPayoutOther,
-                    uint256 profitOther
-                ) = calculateBond(bonds[i]);
-                uint256 payoutTok = seuroToStandardToken(totalPayoutSeuro) +
-                    otherTokenToStandardToken(totalPayoutOther);
-                uint256 profitTok = seuroToStandardToken(profitSeuro) +
-                    otherTokenToStandardToken(profitOther);
+                (uint256 totalPayoutSeuro, uint256 profitSeuro, uint256 totalPayoutOther, uint256 profitOther) = calculateBond(bonds[i]);
+                uint256 payoutTok = seuroToStandardToken(totalPayoutSeuro) + otherTokenToStandardToken(totalPayoutOther);
+                uint256 profitTok = seuroToStandardToken(profitSeuro) + otherTokenToStandardToken(profitOther);
 
                 // increase the user's accumulated profit. only for show or as "fun to know"
                 increaseProfitAmount(_user, profitTok);
@@ -189,40 +163,15 @@ contract BondStorage is AccessControl {
         }
     }
 
-    function getActiveBonds(address _user) public view returns (uint256) {
-        return issuedBonds[_user].amountBondsActive;
-    }
+    function getActiveBonds(address _user) public view returns (uint256) { return issuedBonds[_user].amountBondsActive; }
 
-    function getUserBonds(address _user)
-        public
-        view
-        virtual
-        returns (Bond[] memory)
-    {
-        return issuedBonds[_user].bonds;
-    }
+    function getUserBonds(address _user) public view virtual returns (Bond[] memory) { return issuedBonds[_user].bonds; }
 
-    function getBondAt(address _user, uint256 index)
-        public
-        view
-        virtual
-        returns (Bond memory)
-    {
-        return getUserBonds(_user)[index];
-    }
+    function getBondAt(address _user, uint256 index) public view virtual returns (Bond memory) { return getUserBonds(_user)[index]; }
 
-    function getProfit(address _user) public view virtual returns (uint256) {
-        return issuedBonds[_user].profitAmount;
-    }
+    function getProfit(address _user) public view virtual returns (uint256) { return issuedBonds[_user].profitAmount; }
 
-    function getClaimAmount(address _user)
-        public
-        view
-        virtual
-        returns (uint256)
-    {
-        return issuedBonds[_user].claimAmount;
-    }
+    function getClaimAmount(address _user) public view virtual returns (uint256) { return issuedBonds[_user].claimAmount; }
 
     // Claims the payout in TST tokens by sending it to the user's wallet and resetting the claim to zero.
     function claimReward(address _user) external {
