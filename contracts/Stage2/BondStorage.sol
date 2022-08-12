@@ -4,6 +4,7 @@ pragma solidity ^0.8.15;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "contracts/Stage2/StandardTokenGateway.sol";
+import "contracts/SimpleInterest.sol";
 
 contract BondStorage is AccessControl {
     bytes32 public constant WHITELIST_ADMIN = keccak256("WHITELIST_ADMIN");
@@ -173,25 +174,11 @@ contract BondStorage is AccessControl {
         return current + _maturityInWeeks * secondsPerWeek;
     }
 
-    function seuroToStandardToken(uint256 _amount)
-        private
-        view
-        returns (uint256)
-    {
-        (uint256 price, bool inversed) = tokenGateway
-            .getSeuroStandardTokenPrice();
-        return inversed ? _amount * price : _amount / price;
-    }
-
-    function otherTokenToStandardToken(uint256 _amount)
-        private
-        view
-        returns (uint256)
-    {
-        (, int256 eurOtherRate, , , ) = IChainlink(chainlinkEurOther)
-            .latestRoundData();
+    function otherTokenToStandardToken(uint256 _amount) private view returns (uint256) {
+        (, int256 eurOtherRate, , , ) = IChainlink(chainlinkEurOther).latestRoundData();
         uint256 seuros = (_amount * 10**otherUsdDec) / uint256(eurOtherRate);
-        return seuroToStandardToken(seuros);
+        (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
+        return SimpleInterest.FromSeuroToStandard(seuros, tokenPrice, inverted);
     }
 
     function isBondingPossible(
@@ -208,10 +195,9 @@ contract BondStorage is AccessControl {
             false,
             PositionMetaData(0, 0, 0, 0)
         );
-        (uint256 seuroPayout, , uint256 otherPayout, ) = calculateBond(
-            dummyBond
-        );
-        uint256 tokenPayout = seuroToStandardToken(seuroPayout) +
+        (uint256 seuroPayout, , uint256 otherPayout, ) = calculateBond(dummyBond);
+        (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
+        uint256 tokenPayout = SimpleInterest.FromSeuroToStandard(seuroPayout, tokenPrice, inverted) +
             otherTokenToStandardToken(otherPayout);
         uint256 actualSupply = tokenGateway.getRewardSupply();
         // if we are able to payout this bond in TST
@@ -282,17 +268,17 @@ contract BondStorage is AccessControl {
             if (hasExpired(bonds[i]) && !bonds[i].tapped) {
                 tapBond(_user, i); // prevents the abuse of squeezing profit from same bond more than once
 
+                (uint256 tokenPrice, bool inversed) = tokenGateway.getSeuroStandardTokenPrice();
                 // here we calculate how much we are paying out in sEUR in total and the
                 // profit component, also in sEUR.
-                (
-                    uint256 totalPayoutSeuro,
+                (uint256 totalPayoutSeuro,
                     uint256 profitSeuro,
                     uint256 totalPayoutOther,
                     uint256 profitOther
                 ) = calculateBond(bonds[i]);
-                uint256 payoutTok = seuroToStandardToken(totalPayoutSeuro) +
+                uint256 payoutTok = SimpleInterest.FromSeuroToStandard(totalPayoutSeuro, tokenPrice, inversed) +
                     otherTokenToStandardToken(totalPayoutOther);
-                uint256 profitTok = seuroToStandardToken(profitSeuro) +
+                uint256 profitTok = SimpleInterest.FromSeuroToStandard(profitSeuro, tokenPrice, inversed) +
                     otherTokenToStandardToken(profitOther);
 
                 // increase the user's accumulated profit. only for show or as "fun to know"
