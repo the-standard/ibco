@@ -6,6 +6,8 @@ import "contracts/Stage2/BondStorage.sol";
 import "contracts/Stage2/BondingEvent.sol";
 import "contracts/Pausable.sol";
 
+import "hardhat/console.sol";
+
 contract OperatorStage2 is AccessControl, Pausable {
     bytes32 public constant OPERATOR_STAGE_2 = keccak256("OPERATOR_STAGE_2");
 
@@ -17,8 +19,6 @@ contract OperatorStage2 is AccessControl, Pausable {
 
     struct BondRate { uint256 rate; uint256 durationInWeeks; }
 
-    // Specifies which (rates -> maturities) a user are allowed to bond
-    mapping(uint256 => uint256) allowedYieldToWeeks;
     // Save the rates added
     BondRate[] ratesAvailable;
     // Emit an event when a new yield is added
@@ -26,7 +26,6 @@ contract OperatorStage2 is AccessControl, Pausable {
 
     constructor() {
         _setupRole(OPERATOR_STAGE_2, msg.sender);
-
         // default rate 2% over a year
         addRate(2000, 52);
     }
@@ -45,26 +44,21 @@ contract OperatorStage2 is AccessControl, Pausable {
 
     // Adds a new rate that allows a user to bond with
     function addRate(uint256 _rate, uint256 _maturityInWeeks) public onlyOperatorStage2 {
-        allowedYieldToWeeks[_rate] = _maturityInWeeks;
         ratesAvailable.push(BondRate(_rate, _maturityInWeeks));
         emit Yield(_rate, _maturityInWeeks);
     }
 
-    function findIndexOfItem(uint256 _item) private view returns (uint256 index) {
-        for (uint256 i = 0; i < ratesAvailable.length; i++) if (ratesAvailable[i].rate == _item) return i;
+    function getBondRate(uint256 _rate) private view returns (BondRate memory rate, uint256 index) {
+        for (; index < ratesAvailable.length; index++) if (ratesAvailable[index].rate == _rate) return (ratesAvailable[index], index);
         revert("err-rate-not-found");
     }
 
-    // Sets a rate to zero, not removing it but making it obsolete
     function removeRate(uint256 _rate) public onlyOperatorStage2 {
-        // invalidate duration for this yield in lookup, rendering it
-        // impossible to bond for this rate
-        allowedYieldToWeeks[_rate] = 0;
-
         // delete rate from available rates without caring for order
         // so sorting may be required on the frontend
         // copy last rate to deleted item's such that there is a duplicate of it
-        ratesAvailable[findIndexOfItem(_rate)] = ratesAvailable[ratesAvailable.length - 1];
+        (,uint256 rateIndex) = getBondRate(_rate);
+        ratesAvailable[rateIndex] = ratesAvailable[ratesAvailable.length - 1];
         ratesAvailable.pop();
 
         emit Yield(_rate, 0);
@@ -74,7 +68,7 @@ contract OperatorStage2 is AccessControl, Pausable {
     function showRates() public view returns (BondRate[] memory) { return ratesAvailable; }
 
     function newBond(uint256 _amountSeuro, uint256 _rate) public ifNotPaused {
-        require(allowedYieldToWeeks[_rate] > 0, "err-missing-rate");
-        bondingEvent.bond(msg.sender, _amountSeuro, allowedYieldToWeeks[_rate], _rate);
+        (BondRate memory bondRate,) = getBondRate(_rate);
+        bondingEvent.bond(msg.sender, _amountSeuro, bondRate.durationInWeeks, _rate);
     }
 }

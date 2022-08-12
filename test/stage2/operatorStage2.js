@@ -113,7 +113,7 @@ describe('Stage 2', async () => {
         it('reverts when trying to bond with a non-added rate', async () => {
           let threePercent = 3000;
           let arbitraryWeeks = 36;
-          await expect(testingSuite(etherBalances['125K'], threePercent, arbitraryWeeks)).to.be.revertedWith('err-missing-rate');
+          await expect(testingSuite(etherBalances['125K'], threePercent, arbitraryWeeks)).to.be.revertedWith('err-rate-not-found');
         });
 
         it('adds and subtracts multiple new rates to grow and shrink the set of accepted rates', async () => {
@@ -139,7 +139,7 @@ describe('Stage 2', async () => {
           await OP2.connect(owner).addRate(rates.FIVE_PC, 10);
           await testingSuite(etherBalances['125K'], rates.FIVE_PC, 10);
           await OP2.connect(owner).removeRate(rates.FIVE_PC);
-          await expect(testingSuite(etherBalances['125K'], rates.FIVE_PC, 10)).to.be.revertedWith('err-missing-rate');
+          await expect(testingSuite(etherBalances['125K'], rates.FIVE_PC, 10)).to.be.revertedWith('err-rate-not-found');
         });
       });
     });

@@ -238,7 +238,7 @@ contract BondingEvent is AccessControl {
         if (upper > MAX_TICK) upper = MAX_TICK;
     }
 
-    function increaseMagnitude(int24 _magnitude) private pure returns (int24 magnitude, uint8) { magnitude = _magnitude * 10; }
+    function increaseMagnitude(int24 _magnitude) private pure returns (int24 magnitude, uint8 i) { magnitude = _magnitude * 10; i=0; }
 
     function getViableTickRange(uint160 _price) private view returns (int24 lowerTick, int24 upperTick) {
         lowerTick = lowerTickDefault;
