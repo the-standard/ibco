@@ -115,13 +115,12 @@ const getLibraryFactory = async (signerAccount, linkedContract) => {
   const LibContract = await ethers.getContractFactory('SimpleInterest');
   const lib = await LibContract.deploy();
   await lib.deployed();
-  let libFactory = await ethers.getContractFactory(linkedContract, {
+  return await ethers.getContractFactory(linkedContract, {
     signer: signerAccount,
     libraries: {
       SimpleInterest: lib.address,
     },
   });
-  return libFactory;
 }
 
 

@@ -15,10 +15,7 @@ beforeEach(async () => {
   TGateway = await GatewayContract.connect(owner).deploy(TST.address);
   TST_ADDRESS = TST.address;
   SEUR_ADDRESS = SEuro.address;
-  maxRewardSupply = etherBalances["ONE_MILLION"];
-  seuroPerStandardToken = 2;
   simpleInterestRate = 5000; // 5%
-  RATE_FACTOR = 10000;
 });
 
 describe('Staking', async () => {
