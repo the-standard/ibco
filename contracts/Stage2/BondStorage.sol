@@ -143,12 +143,12 @@ contract BondStorage is AccessControl {
             if (hasExpired(bonds[i]) && !bonds[i].tapped) {
                 tapBond(_user, i); // prevents the abuse of squeezing profit from same bond more than once
 
-                (uint256 tokenPrice, bool inversed) = tokenGateway.getSeuroStandardTokenPrice();
+                (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
                 // here we calculate how much we are paying out in sEUR in total and the
                 // profit component, also in sEUR.
                 (uint256 totalPayoutSeuro, uint256 profitSeuro, uint256 totalPayoutOther, uint256 profitOther) = calculateBond(bonds[i]);
-                uint256 payoutTok = SimpleInverest.convert(totalPayoutSeuro, tokenPrice, inverted) + otherTokenToStandardToken(totalPayoutOther, tokenPrice, inverted);
-                uint256 profitTok = seuroToStandardToken(profitSeuro) + otherTokenToStandardToken(profitOther);
+                uint256 payoutTok = SimpleInterest.convert(totalPayoutSeuro, tokenPrice, inverted) + otherTokenToStandardToken(totalPayoutOther);
+                uint256 profitTok = SimpleInterest.convert(profitSeuro, tokenPrice, inverted) + otherTokenToStandardToken(profitOther);
 
                 // increase the user's accumulated profit. only for show or as "fun to know"
                 increaseProfitAmount(_user, profitTok);

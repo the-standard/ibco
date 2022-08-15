@@ -19,9 +19,6 @@ contract StandardTokenGateway is AccessControl {
     // Reward token
     IERC20 private immutable TOKEN;
 
-    // Address to the sEURO contract with a varying supply
-    address public immutable SEUR_ADDRESS;
-
     uint256 public immutable TST_MAX_AMOUNT; // 1B tokens
 
     // Make the math simpler whilst TST < 1.00 EUR, store the inverted token price:
@@ -45,11 +42,10 @@ contract StandardTokenGateway is AccessControl {
 
     bytes32 public constant TST_TOKEN_GATEWAY = keccak256("TST_TOKEN_GATEWAY");
 
-    constructor(address _tokenAddress, address _seuroToken) {
+    constructor(address _tokenAddress) {
         _setupRole(TST_TOKEN_GATEWAY, msg.sender);
         TOKEN_ADDRESS = _tokenAddress;
         TOKEN = IERC20(TOKEN_ADDRESS);
-        SEUR_ADDRESS = _seuroToken;
         inversed = true;
         tokenPrice = 20; // 0.05 EUR
         TST_MAX_AMOUNT = (10 ** 9) * 1 ether;

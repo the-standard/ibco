@@ -9,12 +9,14 @@ import "contracts/Pausable.sol";
 import "contracts/SimpleInterest.sol";
 
 contract Staking is ERC721, Ownable, Pausable {
+    uint256 private _tokenId;
+    uint256 private immutable RATE_FACTOR = 10 ** 5;
 
     // Standard Token data feed
     StandardTokenGateway public tokenGateway;
 
-    bool public active;             // active or not, needs to be set manually
-    bool public isCatastrophy;       // in the event of a catastrophy, let users withdraw
+    bool public active;                 // active or not, needs to be set manually
+    bool public isCatastrophy;          // in the event of a catastrophy, let users withdraw
 
     uint256 public windowStart;         // the start time for the 'stake'
     uint256 public windowEnd;           // the end time for the 'stake'
@@ -24,9 +26,8 @@ contract Staking is ERC721, Ownable, Pausable {
 
     address public immutable TST_ADDRESS;
     address public immutable SEURO_ADDRESS;
-    uint256 private immutable RATE_FACTOR = 10 ** 5;
-    uint256 public immutable SI_RATE; // simple interest rate for the bond (factor of 10 ** 5)
-    uint256 public immutable minTST;  // the allowed minimum amount of TST to bond
+    uint256 public immutable SI_RATE;   // simple interest rate for the bond (factor of 10 ** 5)
+    uint256 public immutable minTST;    // the allowed minimum amount of TST to bond
 
     mapping(address => Position) private _positions;
 
@@ -34,9 +35,9 @@ contract Staking is ERC721, Ownable, Pausable {
 
     constructor(string memory _name, string memory _symbol, uint256 _start, uint256 _end, uint256 _maturity, address _gatewayAddress, address _standardAddress, address _seuroAddress, uint256 _si) ERC721(_name, _symbol) {
         tokenGateway = StandardTokenGateway(_gatewayAddress);
-        SI_RATE = _si
-        TST_ADDRESS = _standardAddress
-        SEURO_ADDRESS = _seuroAddress
+        SI_RATE = _si;
+        TST_ADDRESS = _standardAddress;
+        SEURO_ADDRESS = _seuroAddress;
         windowStart = _start;
         windowEnd = _end;
         maturity = _maturity;
