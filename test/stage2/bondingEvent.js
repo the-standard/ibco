@@ -18,7 +18,7 @@ describe('BondingEvent', async () => {
     TST = await ERC20Contract.deploy('TST', 'TST', 18);
     USDT = await ERC20Contract.deploy('USDT', 'USDT', 6);
     const ChainlinkEurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
-    TokenGateway = await TokenGatewayContract.deploy(TST.address, SEuro.address);
+    TokenGateway = await TokenGatewayContract.deploy(TST.address);
     BondStorage = await BondStorageContract.deploy(TokenGateway.address, ChainlinkEurUsd.address, CHAINLINK_DEC);
     RatioCalculator = await RatioCalculatorContract.deploy();
   });
@@ -124,7 +124,7 @@ describe('BondingEvent', async () => {
       it('updates lower and upper default ticks', async () => {
         const { lowerTick, upperTick } = pricing;
 
-        await expect(BondingEvent.connect(customer).adjustTickDefaults(-10, 10)).to.be.revertedWith('invalid-user');
+        await expect(BondingEvent.connect(customer).adjustTickDefaults(-10, 10)).to.be.revertedWith('invalid-pool-owner');
         await expect(BondingEvent.adjustTickDefaults(-15, 10)).to.be.revertedWith('tick-mod-spacing-nonzero');
         await expect(BondingEvent.adjustTickDefaults(-10, MAX_TICK + 10)).to.be.revertedWith('tick-max-exceeded');
         await expect(BondingEvent.adjustTickDefaults(MIN_TICK - 10, 10)).to.be.revertedWith('tick-min-exceeded');
@@ -307,7 +307,7 @@ describe('BondingEvent', async () => {
 
         const positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(1);
-        const position = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
+        const { position } = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
         expect(position.lowerTick).to.equal(pricing.lowerTick);
         expect(position.upperTick).to.equal(pricing.upperTick);
         expect(position.liquidity).to.be.gt(0);
@@ -324,14 +324,14 @@ describe('BondingEvent', async () => {
           customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
         );
         let initialPositions = await BondingEvent.getPositions();
-        const initialLiquidityTotal = (await BondingEvent.getPositionByTokenId(initialPositions[0].tokenId)).liquidity;
+        const initialLiquidityTotal = (await BondingEvent.getPositionByTokenId(initialPositions[0].tokenId)).position.liquidity;
         await BondingEvent.connect(owner).bond(
           customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
         );
 
         positions = await BondingEvent.getPositions();
         expect(positions.length).to.equal(1);
-        const position = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
+        const { position } = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
         expect(position.tokenId).to.equal(initialPositions[0].tokenId);
         expect(position.lowerTick).to.equal(pricing.lowerTick);
         expect(position.upperTick).to.equal(pricing.upperTick);
@@ -351,7 +351,7 @@ describe('BondingEvent', async () => {
 
         let positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(1);
-        let position = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
+        let { position } = await BondingEvent.getPositionByTokenId(positions[0].tokenId);
         expect(position.lowerTick).to.equal(pricing.lowerTick);
         expect(position.upperTick).to.equal(pricing.upperTick);
         expect(position.liquidity).to.be.gt(0);
@@ -371,12 +371,12 @@ describe('BondingEvent', async () => {
 
         positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(2);
-        let secondPosition = await BondingEvent.getPositionByTokenId(positions[1].tokenId);
+        ({ position } = await BondingEvent.getPositionByTokenId(positions[1].tokenId));
         // since swap, new tick is at 275420 - shifting lower tick to 272900 and upper to 277100 puts at in middle 20%
         const expectedDiff = 400;
-        expect(secondPosition.lowerTick).to.equal(pricing.lowerTick - expectedDiff);
-        expect(secondPosition.upperTick).to.equal(pricing.upperTick + expectedDiff);
-        expect(secondPosition.liquidity).to.be.gt(0);
+        expect(position.lowerTick).to.equal(pricing.lowerTick - expectedDiff);
+        expect(position.upperTick).to.equal(pricing.upperTick + expectedDiff);
+        expect(position.liquidity).to.be.gt(0);
       });
     });
   });
@@ -517,9 +517,9 @@ describe('BondingEvent', async () => {
       let setStorage = BondingEvent.connect(customer).setStorageContract(newStorage.address);
       let setOperator = BondingEvent.connect(customer).setOperator(newOperator.address);
       let setCalculator = BondingEvent.connect(customer).setRatioCalculator(newCalculator.address);
-      await expect(setStorage).to.be.revertedWith('invalid-user');
-      await expect(setOperator).to.be.revertedWith('invalid-user');
-      await expect(setCalculator).to.be.revertedWith('invalid-user');
+      await expect(setStorage).to.be.revertedWith('invalid-pool-owner');
+      await expect(setOperator).to.be.revertedWith('invalid-pool-owner');
+      await expect(setCalculator).to.be.revertedWith('invalid-pool-owner');
       expect(await BondingEvent.bondStorageAddress()).to.equal(BondStorage.address);
       expect(await BondingEvent.operatorAddress()).to.equal(owner.address);
       expect(await BondingEvent.ratioCalculator()).to.equal(RatioCalculator.address);
