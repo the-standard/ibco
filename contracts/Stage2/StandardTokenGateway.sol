@@ -13,29 +13,24 @@ contract StandardTokenGateway is AccessControl {
     // Deployed TST contract on mainnet with a maximum supply of 1 billion tokens
     address public constant TST_ADDRESS = 0xa0b93B9e90aB887E53F9FB8728c009746e989B53;
 
-    // Address to the contract with a maximum supply of 1 billion tokens
-    address public immutable TOKEN_ADDRESS;
-
-    // Reward token
+    // Reward token (TST)
     IERC20 private immutable TOKEN;
-
-    uint256 public immutable TST_MAX_AMOUNT; // 1B tokens
 
     // Make the math simpler whilst TST < 1.00 EUR, store the inverted token price:
     // (price of one TST in EUR)^-1
-    uint256 public tokenPrice;
+    uint256 public tokenPrice = 20;
     // Enabled when the price is less than 1
-    bool public inversed;
+    bool public inverted = true;
 
     // The amount of TST tokens that are to be paid out in the future.
-    uint256 public pendingPayout;
+    uint256 public pendingPayout = 0;
 
     // The amount of TST available to get as bond reward
-    uint256 public bondRewardPoolSupply;
+    uint256 public bondRewardPoolSupply = 0;
 
     // By default enabled.
     // False when token transfers are disabled.
-    bool private isActive;
+    bool private isActive = true;
 
     // The storage address
     address public storageAddress;
@@ -44,13 +39,7 @@ contract StandardTokenGateway is AccessControl {
 
     constructor(address _tokenAddress) {
         _setupRole(TST_TOKEN_GATEWAY, msg.sender);
-        TOKEN_ADDRESS = _tokenAddress;
-        TOKEN = IERC20(TOKEN_ADDRESS);
-        inversed = true;
-        tokenPrice = 20; // 0.05 EUR
-        TST_MAX_AMOUNT = (10 ** 9) * 1 ether;
-        bondRewardPoolSupply = 0;
-        isActive = true;
+        TOKEN = IERC20(_tokenAddress);
     }
 
     modifier onlyGatewayOwner {
@@ -76,9 +65,9 @@ contract StandardTokenGateway is AccessControl {
         isActive = true;
     }
 
-    function setUnitPrice(uint256 _newPrice, bool _inversed) public onlyGatewayOwner {
+    function setUnitPrice(uint256 _newPrice, bool _inverted) public onlyGatewayOwner {
         tokenPrice = _newPrice;
-        inversed = _inversed;
+        inverted = _inverted;
     }
 
     function updateRewardSupply() public {
@@ -92,7 +81,7 @@ contract StandardTokenGateway is AccessControl {
     }
 
     function getSeuroStandardTokenPrice() public view returns (uint256, bool) {
-        return (tokenPrice, inversed);
+        return (tokenPrice, inverted);
     }
 
     function getRewardSupply() public view returns (uint256) {
