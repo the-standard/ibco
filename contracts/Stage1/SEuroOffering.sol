@@ -4,7 +4,7 @@ pragma solidity ^0.8.15;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "contracts/interfaces/WETH.sol";
-import "contracts/Stage1/SEuro.sol";
+import "contracts/interfaces/ISeuro.sol";
 import "contracts/Stage1/SEuroCalculator.sol";
 import "contracts/Stage1/TokenManager.sol";
 import "contracts/Stage1/BondingCurve.sol";
@@ -14,7 +14,7 @@ contract SEuroOffering is Ownable, Pausable {
     // address of the wallet which will receive the collateral provided in swap and swapETH
     address public collateralWallet;
     Status public status;
-    SEuro public immutable Seuro;
+    ISeuro public immutable Seuro;
     SEuroCalculator public sEuroRateCalculator;    
     TokenManager public tokenManager;
     BondingCurve public bondingCurve;
@@ -27,7 +27,7 @@ contract SEuroOffering is Ownable, Pausable {
     /// @param _tokenManager address of TokenManager contract
     /// @param _bondingCurve address of BondingCurve contract
     constructor(address _seuroAddr, address _sEuroRateCalculator, address _tokenManager, address _bondingCurve) {
-        Seuro = SEuro(_seuroAddr);
+        Seuro = ISeuro(_seuroAddr);
         sEuroRateCalculator = SEuroCalculator(_sEuroRateCalculator);
         tokenManager = TokenManager(_tokenManager);
         bondingCurve = BondingCurve(_bondingCurve);
