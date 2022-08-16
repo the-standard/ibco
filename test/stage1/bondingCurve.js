@@ -65,7 +65,6 @@ describe('BondingCurve', async () => {
     });
 
     it('will not exceed full price when max supply is met', async () => {
-      await SEuro.mint(owner.address, MAX_SUPPLY);
       await BondingCurve.updateCurrentBucket(MAX_SUPPLY);
       const euros = ethers.utils.parseEther('1');
 
