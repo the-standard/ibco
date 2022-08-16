@@ -97,13 +97,15 @@ contract BondStorage is AccessControl {
     function otherTokenToStandardToken(uint256 _amount) private view returns (uint256) {
         (, int256 eurOtherRate, , , ) = IChainlink(chainlinkEurOther).latestRoundData();
         uint256 eur = Rates.convertInverse(_amount, uint256(eurOtherRate), otherUsdDec);
-        return Rates.convertInverse(eur, tokenGateway.priceTstEur(), tokenGateway.priceDec());
+        return seuroToStandardToken(eur);
     }
+
+    function seuroToStandardToken(uint256 _amount) private view returns (uint256) { return Rates.convertInverse(_amount, tokenGateway.priceTstEur(), tokenGateway.priceDec()); }
 
     function potentialPayout(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturityInWeeks) private view returns (uint256 tokenPayout) {
         Bond memory dummyBond = Bond(_principalSeuro, _principalOther, _rate, _maturityInWeeks, false, PositionMetaData(0, 0, 0, 0));
         (uint256 seuroPayout, , uint256 otherPayout, ) = calculateBond(dummyBond);
-        tokenPayout = Rates.convertInverse(seuroPayout, tokenGateway.priceTstEur(), tokenGateway.priceDec()) + otherTokenToStandardToken(otherPayout);
+        tokenPayout = seuroToStandardToken(seuroPayout) + otherTokenToStandardToken(otherPayout);
         // if we are able to payout this bond in TST
         require(tokenPayout < tokenGateway.bondRewardPoolSupply() == true, "err-insuff-tst-supply");
     }
@@ -145,8 +147,8 @@ contract BondStorage is AccessControl {
                 // here we calculate how much we are paying out in sEUR in total and the
                 // profit component, also in sEUR.
                 (uint256 totalPayoutSeuro, uint256 profitSeuro, uint256 totalPayoutOther, uint256 profitOther) = calculateBond(bonds[i]);
-                uint256 payoutTok = Rates.convertInverse(totalPayoutSeuro, tokenGateway.priceTstEur(), tokenGateway.priceDec()) + otherTokenToStandardToken(totalPayoutOther);
-                uint256 profitTok = Rates.convertInverse(profitSeuro, tokenGateway.priceTstEur(), tokenGateway.priceDec()) + otherTokenToStandardToken(profitOther);
+                uint256 payoutTok = seuroToStandardToken(totalPayoutSeuro) + otherTokenToStandardToken(totalPayoutOther);
+                uint256 profitTok = seuroToStandardToken(profitSeuro) + otherTokenToStandardToken(profitOther);
 
                 // increase the user's accumulated profit. only for show or as "fun to know"
                 increaseProfitAmount(_user, profitTok);
