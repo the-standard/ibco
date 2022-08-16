@@ -125,6 +125,11 @@ const getLibraryFactory = async (signerAccount, linkedContract) => {
   });
 }
 
+const eurToTST = amount => {
+  // 0.055
+  return amount.mul(1000).div(55);
+}
+
 
 module.exports = {
   POSITION_MANAGER_ADDRESS,
@@ -159,6 +164,7 @@ module.exports = {
   parse6Dec,
   scaleUpForDecDiff,
   defaultConvertUsdToEur,
-  getLibraryFactory
+  getLibraryFactory,
+  eurToTST
 }
 

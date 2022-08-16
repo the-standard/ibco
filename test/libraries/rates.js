@@ -2,7 +2,7 @@ const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 const { expect } = require('chai');
 
-const { getLibraryFactory, etherBalances, CHAINLINK_DEC } = require('./common');
+const { getLibraryFactory, etherBalances, CHAINLINK_DEC } = require('../common');
 
 describe('rates', async () => {
   it('does the conversions', async () => {
@@ -29,13 +29,11 @@ describe('rates', async () => {
     // 1 in 10 dec = 0.000000001;
     // 1m eth * 0.0000000001 = 10^24 * 10^-10 = 10^14
     conversion = await tester.testConvertDefault(amount, 1, 10);
-    console.log(conversion);
     expectedConversion = BigNumber.from(10).pow(14);
     expect(conversion).to.eq(expectedConversion);
 
     // 1m eth / 0.0000000001 = 10^24 / 10^-10 = 10^34
     conversion = await tester.testConvertInverse(amount, 1, 10);
-    console.log(conversion);
     expectedConversion = BigNumber.from(10).pow(34);
     expect(conversion).to.eq(expectedConversion);
   });
