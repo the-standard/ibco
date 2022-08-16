@@ -79,10 +79,10 @@ contract BondStorage is AccessControl {
     // Returns the total payout and the accrued interest ("profit") component separately.
     // Both the payout and the profit is in sEURO.
     function calculateBond(Bond memory bond) private pure returns (uint256 seuroPayout, uint256 seuroProfit, uint256 otherPayout, uint256 otherProfit) {
-        // basic (rate * principal) calculations
-        seuroProfit = bond.rate * bond.principalSeuro / 100000;
+        // rates are stored as 5 dec in operator
+        seuroProfit = Rates.convertDefault(bond.principalSeuro, bond.rate, 5);
         seuroPayout = bond.principalSeuro + seuroProfit;
-        otherProfit = bond.rate * bond.principalOther / 100000;
+        otherProfit = Rates.convertDefault(bond.principalOther, bond.rate, 5);
         otherPayout = bond.principalOther + otherProfit;
     }
 
