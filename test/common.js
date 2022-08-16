@@ -52,7 +52,6 @@ const MIN_TICK = -887270;
 const MAX_TICK = 887270;
 const DEFAULT_SQRT_PRICE = BigNumber.from(2).pow(96);
 const ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
-const STANDARD_TOKENS_PER_EUR = 20; // 1 TST = 0.05 EUR
 const DECIMALS_18 = BigNumber.from(10).pow(18);
 const DECIMALS_6 = BigNumber.from(10).pow(6);
 
@@ -153,7 +152,6 @@ module.exports = {
   MAX_TICK,
   DEFAULT_SQRT_PRICE,
   ONE_WEEK_IN_SECONDS,
-  STANDARD_TOKENS_PER_EUR,
   DECIMALS_18,
   DECIMALS_6,
   rates,
