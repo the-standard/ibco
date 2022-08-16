@@ -1,10 +1,8 @@
 const { ethers } = require('hardhat');
-const { BigNumber } = ethers;
 const { expect } = require('chai');
-const { etherBalances, WETH_ADDRESS, DAI_ADDRESS, USDT_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD, CHAINLINK_USDT_USD, CHAINLINK_EUR_USD, parse6Dec, WETH_BYTES, DAI_BYTES } = require('../common.js');
+const { etherBalances, WETH_ADDRESS, DAI_ADDRESS, USDT_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD, CHAINLINK_USDT_USD, CHAINLINK_EUR_USD, parse6Dec, WETH_BYTES, DAI_BYTES, getLibraryFactory, CHAINLINK_SCALE, DECIMALS_18 } = require('../common.js');
 
 describe('SEuroCalculator', async () => {
-  const CALCULATOR_FIXED_POINT = BigNumber.from(10).pow(BigNumber.from(18));
   const WETH_TOKEN = {
     name: WETH_BYTES,
     addr: WETH_ADDRESS,
@@ -28,24 +26,26 @@ describe('SEuroCalculator', async () => {
     [owner, offering, customer] = await ethers.getSigners();
     BondingCurveContract = await ethers.getContractFactory('BondingCurve');
     BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
-    const SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');
+    const SEuroCalculatorContract = await getLibraryFactory(owner, 'SEuroCalculator');
     SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, CHAINLINK_EUR_USD, CHAINLINK_DEC);
     await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), SEuroCalculator.address);
   });
 
-  async function getBaseEurRate(ClTokUsd) {
+  const tokenToUsd = async (token, amount) => {
+    const tokUsdRate = (await (await ethers.getContractAt('IChainlink', token.chainlinkAddr)).latestRoundData()).answer;
+    return tokUsdRate.mul(amount).div(CHAINLINK_SCALE);
+  }
+
+  const usdToEur = async (amount) => {
     const eurUsdCl = await SEuroCalculator.EUR_USD_CL();
-    const tokUsdRate = (await (await ethers.getContractAt('IChainlink', ClTokUsd)).latestRoundData()).answer;
     const eurUsdRate = (await (await ethers.getContractAt('IChainlink', eurUsdCl)).latestRoundData()).answer;
-    return CALCULATOR_FIXED_POINT.mul(tokUsdRate).div(eurUsdRate);
+    return CHAINLINK_SCALE.mul(amount).div(eurUsdRate);
   }
 
   async function expectedSEuros(token, amount) {
-    return (await getBaseEurRate(token.chainlinkAddr))
-      .mul(amount)
-      .mul(CALCULATOR_FIXED_POINT)
-      .div((await BondingCurve.currentBucket()).price)
-      .div(BigNumber.from(10).pow(token.dec));
+    const usd = await tokenToUsd(token, amount);
+    const euros = await usdToEur(usd);
+    return DECIMALS_18.mul(euros).div((await BondingCurve.currentBucket()).price);
   }
 
   it('calculates the seuros for weth', async () => {

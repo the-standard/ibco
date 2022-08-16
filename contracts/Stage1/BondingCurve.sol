@@ -115,14 +115,14 @@ contract BondingCurve is AccessControl {
         return (_amount * 1 ether) / _rate;
     }
 
+    function convertSeuroToEuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
+        return (_amount * _rate) / 1 ether;
+    }
+
     function getRemainingCapacityInBucket(uint32 _bucketIndex) private view returns (uint256) {
         uint256 bucketCapacity = (_bucketIndex + 1) * bucketSize;
         uint256 diff = bucketCapacity - ibcoTotalSupply;
         return diff > bucketSize ? bucketSize : diff;
-    }
-
-    function convertSeuroToEuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
-        return (_amount * _rate) / 1 ether;
     }
 
     function getBucketMidpoint(uint32 _bucketIndex) private view returns (uint256) {
