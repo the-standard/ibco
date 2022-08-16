@@ -3,6 +3,7 @@ pragma solidity ^0.8.15;
 
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "contracts/Rates.sol";
 
 contract BondingCurve is AccessControl {
     struct Bucket { uint32 index; uint256 price; }
@@ -112,11 +113,13 @@ contract BondingCurve is AccessControl {
     }
 
     function convertEuroToSeuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
-        return (_amount * 1 ether) / _rate;
+        // price is stored as 18 decimal
+        return Rates.convertInverse(_amount, _rate, 18);
     }
 
     function convertSeuroToEuro(uint256 _amount, uint256 _rate) private pure returns (uint256) {
-        return (_amount * _rate) / 1 ether;
+        // price is stored as 18 decimal
+        return Rates.convertDefault(_amount, _rate, 18);
     }
 
     function getRemainingCapacityInBucket(uint32 _bucketIndex) private view returns (uint256) {

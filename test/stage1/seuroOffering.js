@@ -43,7 +43,7 @@ describe('SEuroOffering', async () => {
   }
 
   async function getBucketPrice(index) {
-    const TestBondingCurve = await (await ethers.getContractFactory('TestBondingCurve')).deploy(
+    const TestBondingCurve = await (await getLibraryFactory(owner, 'TestBondingCurve')).deploy(
       INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE
     );
     return await TestBondingCurve.callStatic.getPriceOfBucket(index);
@@ -54,7 +54,7 @@ describe('SEuroOffering', async () => {
 
     const ERC20Contract = await ethers.getContractFactory('DUMMY');
     const SEuroOfferingContract = await ethers.getContractFactory('SEuroOffering');
-    BondingCurveContract = await ethers.getContractFactory('BondingCurve');
+    BondingCurveContract = await getLibraryFactory(owner, 'BondingCurve');
     SEuroCalculatorContract = await getLibraryFactory(owner, 'SEuroCalculator');
     TokenManagerContract = await ethers.getContractFactory('TokenManager');
 
