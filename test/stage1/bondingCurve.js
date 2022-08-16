@@ -3,7 +3,7 @@ const { expect } = require('chai');
 const { DECIMALS_18, etherBalances, SEURO_ADDRESS } = require('../common.js');
 
 describe('BondingCurve', async () => {
-  let BondingCurve, SEuro, TestBondingCurve;
+  let BondingCurve, TestBondingCurve;
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
@@ -12,7 +12,6 @@ describe('BondingCurve', async () => {
     [owner, customer, updater, calculator] = await ethers.getSigners();
 
     const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
-    SEuro = await ethers.getContractAt('ISeuro', SEURO_ADDRESS);
     BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
     TestBondingCurve = await (await ethers.getContractFactory('TestBondingCurve')).deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   });
