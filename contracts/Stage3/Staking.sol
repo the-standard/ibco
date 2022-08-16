@@ -1,44 +1,47 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.15;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "contracts/Stage2/StandardTokenGateway.sol";
 import "contracts/Pausable.sol";
+import "contracts/SimpleRate.sol";
 
 contract Staking is ERC721, Ownable, Pausable {
+    uint256 private _tokenId;
+    uint256 private immutable RATE_FACTOR = 10 ** 5;
 
+    // Standard Token data feed
+    StandardTokenGateway public tokenGateway;
+
+    bool public active;                 // active or not, needs to be set manually
+    bool public isCatastrophy;          // in the event of a catastrophy, let users withdraw
+
+    uint256 public windowStart;         // the start time for the 'stake'
+    uint256 public windowEnd;           // the end time for the 'stake'
+    uint256 public maturity;            // the maturity date
+    uint256 public initialisedAt;       // the time of contract initialisation (epoch time)
+    uint256 public allocatedSeuro;      // the amount of seuro allocated, inc rewards
 
     address public immutable TST_ADDRESS;
     address public immutable SEURO_ADDRESS;
-    uint256 public immutable SEUROTST;        // SEURO:TST pair rate
-    uint256 public immutable INTEREST;        // Interest for the bond
-    uint256 public immutable windowStart;     // the start time for the 'stake'
-    uint256 public immutable windowEnd;       // the end time for the 'stake'
-    uint256 public immutable maturity;        // the maturity date
-    uint256 public immutable initialised;     // the time we initialised the contract
-    uint256 public immutable minTST;          // the min amount of tst we want to allow to bond
-
-    uint256 private _tokenId;
-    uint256 public SEURO_ALLOCATED;           // the amount of seuro allocated, inc rewards
-    bool public active;                       // active or not, needs to be set manually
-    bool public catastrophic;                 // in the event of a catastrophy, let users withdraw
+    uint256 public immutable SI_RATE;   // simple interest rate for the bond (factor of 10 ** 5)
+    uint256 public immutable minTST;    // the allowed minimum amount of TST to bond
 
     mapping(address => Position) private _positions;
 
     struct Position { uint96 nonce; uint256 tokenId; bool open; uint256 stake; uint256 reward; }
 
-    constructor(string memory _name, string memory _symbol, uint256 _start, uint256 _end, uint256 _maturity, address _TST_ADDRESS, address _SEURO_ADDRESS, uint256 _SEUROTST, uint256 _INTEREST) ERC721(_name, _symbol) {
-        SEUROTST = _SEUROTST;
-        INTEREST = _INTEREST;
-        TST_ADDRESS = _TST_ADDRESS;
-        SEURO_ADDRESS = _SEURO_ADDRESS;
+    constructor(string memory _name, string memory _symbol, uint256 _start, uint256 _end, uint256 _maturity, address _gatewayAddress, address _standardAddress, address _seuroAddress, uint256 _si) ERC721(_name, _symbol) {
+        tokenGateway = StandardTokenGateway(_gatewayAddress);
+        SI_RATE = _si;
+        TST_ADDRESS = _standardAddress;
+        SEURO_ADDRESS = _seuroAddress;
         windowStart = _start;
         windowEnd = _end;
         maturity = _maturity;
-        initialised = block.timestamp;
-
-        // TODO variable
+        initialisedAt = block.timestamp;
         minTST = 1 ether;
     }
 
@@ -46,33 +49,33 @@ contract Staking is ERC721, Ownable, Pausable {
 
     function disable() external onlyOwner { require(active, "err-not-active"); active = false; }
 
-    // reward works out the amount of seuro given to the user based on the
-    // amount of TST they first put in.
-    function calculateReward(uint256 _amount) public view returns (uint256 reward) {
-        uint256 rewardTST = (_amount * INTEREST) / 100_000;
-        reward = (rewardTST * SEUROTST) / 100_000;
+    // calculates the reward in SEURO based in the input of amount of TSTs
+    function calculateReward(uint256 _amountStandard) public view returns (uint256 reward) {
+        (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
+        return (SimpleRate.convert(_amountStandard, tokenPrice, !inverted) * SI_RATE) / RATE_FACTOR;
     }
 
     // fetches the balance of the contract for the give erc20 token
     function balance(address _address) public view returns (uint256) { return IERC20(_address).balanceOf(address(this)); }
 
     // fetches the remaining about of tokens in the contract
-    function remaining(address _address) public view returns (uint256) { return balance(_address) - SEURO_ALLOCATED; }
+    function remaining(address _address) public view returns (uint256) { return balance(_address) - allocatedSeuro; }
 
-    function mint(uint256 _stake) external ifNotPaused {
+    // Main API to begin staking
+    function startStake(uint256 _amountStandard) external ifNotPaused {
         require(active == true, "err-not-active");
-        require(_stake >= minTST, "err-not-min");
+        require(_amountStandard >= minTST, "err-not-min");
         require(block.timestamp >= windowStart, "err-not-started");
         require(block.timestamp < windowEnd, "err-finished");
 
         // calculate the reward so we can also update the remaining SEURO
-        uint256 reward = calculateReward(_stake);
+        uint256 reward = calculateReward(_amountStandard);
         require(remaining(SEURO_ADDRESS) >= reward, "err-overlimit");
 
         // Transfer funds from sender to this contract
         // TODO send to some other guy not this contract!
 
-        IERC20(TST_ADDRESS).transferFrom(msg.sender, address(this), _stake);
+        IERC20(TST_ADDRESS).transferFrom(msg.sender, address(this), _amountStandard);
 
         Position memory pos = _positions[msg.sender];
 
@@ -86,18 +89,18 @@ contract Staking is ERC721, Ownable, Pausable {
         }
 
         // update the position
-        pos.stake += _stake;
+        pos.stake += _amountStandard;
         pos.nonce += 1;
         pos.reward += reward;
 
         // update the position
         _positions[msg.sender] = pos;
 
-        // update the remaining SEURO
-        SEURO_ALLOCATED += reward;
+        // update the rewards in SEUR to be paid out
+        allocatedSeuro += reward;
     }
 
-    function burn() public ifNotPaused {
+    function claimReward() public ifNotPaused {
         require(block.timestamp >= maturity, "err-maturity");
 
         Position memory pos = _positions[msg.sender];
@@ -128,14 +131,22 @@ contract Staking is ERC721, Ownable, Pausable {
 
     function position(address owner) external view returns (Position memory) { return _positions[owner]; }
 
-    function catastrophy() external onlyOwner {
+    function enableCatastrophy() external onlyOwner {
         require(active == true, "err-already-active");
-        require(catastrophic == false, "err-already-catastrophic");
-        catastrophic = true; active = false;
+        require(isCatastrophy == false, "err-already-isCatastrophy");
+        isCatastrophy = true;
+        active = false;
     }
 
-    function catastrophicClose() external {
-        require(catastrophic == true, "err-not-allowed");
+    function disableCatastrophy() external onlyOwner {
+        require(active == false, "err-already-active");
+        require(isCatastrophy == true, "err-already-isCatastrophy-false");
+        isCatastrophy = false;
+        active = true;
+    }
+
+    function emergencyWithdraw() external {
+        require(isCatastrophy == true, "err-not-catastrophy");
 
         Position memory pos = _positions[msg.sender];
         require(pos.nonce > 0, "err-no-position");

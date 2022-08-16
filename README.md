@@ -17,19 +17,19 @@ The IBCO tests are run against a forked version of the Ethereum mainnet. You wil
 - In your new Infura project's settings, locate the Project ID
 - Copy Project ID to your new `.env` file as the `INFURA_API_KEY` value:
 ```
-INFURA_API_KEY=123examp1eap1key123456
+INFURA_API_KEY=<hexadecimal characters>
 ```
 
 ## Testing
-You can run the project's full test suite using Hardhat
+If you are in root, you can run the project's full test suite using the Makefile by
 ```
-npx hardhat test
+make test
 ```
-Or a specific contract's tests e.g.
+Or all the tests in one of the three stages by:
 ```
-npx hardhat test test/ibco.js
+make testStage2
 ```
-
+Since this project uses Hardhat, you can use its default ways to run tests, should you prefer it.
 ## Coverage
 Run the code coverage suite with
 ```

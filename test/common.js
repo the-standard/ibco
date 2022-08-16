@@ -7,6 +7,7 @@ const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
 const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const USDT_ADDRESS = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+const SEURO_ADDRESS = '0x4A8D1B11A6F431b8eBa69E617282aF1849F63052';
 const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
 const DAI_BYTES = ethers.utils.formatBytes32String('DAI');
 
@@ -111,11 +112,25 @@ const defaultConvertUsdToEur = amount => {
   return amount.mul(chainlinkDecScale).div(DEFAULT_CHAINLINK_EUR_USD_PRICE);
 }
 
+const getLibraryFactory = async (signerAccount, linkedContract) => {
+  const LibContract = await ethers.getContractFactory('SimpleRate');
+  const lib = await LibContract.deploy();
+  await lib.deployed();
+  return await ethers.getContractFactory(linkedContract, {
+    signer: signerAccount,
+    libraries: {
+      SimpleRate: lib.address,
+    },
+  });
+}
+
+
 module.exports = {
   POSITION_MANAGER_ADDRESS,
   WETH_ADDRESS,
   DAI_ADDRESS,
   USDT_ADDRESS,
+  SEURO_ADDRESS,
   WETH_BYTES,
   DAI_BYTES,
   CHAINLINK_ETH_USD,
@@ -141,6 +156,7 @@ module.exports = {
   format6Dec,
   parse6Dec,
   scaleUpForDecDiff,
-  defaultConvertUsdToEur
+  defaultConvertUsdToEur,
+  getLibraryFactory
 }
 

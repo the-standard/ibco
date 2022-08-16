@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { POSITION_MANAGER_ADDRESS, DECIMALS_18, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE } = require('../common.js');
+const { POSITION_MANAGER_ADDRESS, DECIMALS_18, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory } = require('../common.js');
 
 let owner, customer, wallet, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, BondingEventContract, BondStorageContract, RatioCalculatorContract, RatioCalculator, pricing, SwapManager;
 
@@ -9,12 +9,11 @@ describe('BondingEvent', async () => {
   beforeEach(async () => {
     [owner, customer, wallet] = await ethers.getSigners();
     BondingEventContract = await ethers.getContractFactory('BondingEvent');
-    const SEuroContract = await ethers.getContractFactory('SEuro');
     const ERC20Contract = await ethers.getContractFactory('DUMMY');
-    BondStorageContract = await ethers.getContractFactory('BondStorage');
+    BondStorageContract = await getLibraryFactory(owner, 'BondStorage');
     const TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
     RatioCalculatorContract = await ethers.getContractFactory('RatioCalculator');
-    SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
+    SEuro = await ERC20Contract.deploy('sEURO', 'SEUR', 18);
     TST = await ERC20Contract.deploy('TST', 'TST', 18);
     USDT = await ERC20Contract.deploy('USDT', 'USDT', 6);
     const ChainlinkEurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);

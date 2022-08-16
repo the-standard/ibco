@@ -26,8 +26,6 @@ describe('SEuroCalculator', async () => {
 
   beforeEach(async () => {
     [owner, offering, customer] = await ethers.getSigners();
-    const SEuroContract = await ethers.getContractFactory('SEuro');
-    await SEuroContract.deploy('SEuro', 'SEUR', []);
     BondingCurveContract = await ethers.getContractFactory('BondingCurve');
     BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
     const SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');

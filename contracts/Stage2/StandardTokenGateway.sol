@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.15;
 
 import "contracts/interfaces/IChainlink.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
@@ -10,72 +10,95 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // - price per token in EUR;
 // - amount of obtainable tokens as bonding rewards left
 contract StandardTokenGateway is AccessControl {
+    // Deployed TST contract on mainnet with a maximum supply of 1 billion tokens
+    address public constant TST_ADDRESS = 0xa0b93B9e90aB887E53F9FB8728c009746e989B53;
 
-    // permitted role to update dependencies and prices
-	bytes32 public constant TST_TOKEN_GATEWAY = keccak256("TST_TOKEN_GATEWAY");
-	uint256 public constant TST_MAX_AMOUNT = 10 ** 9 * 1 ether; // 1B tokens
-	
-    // Reward token
-	IERC20 private immutable TOKEN;
-    
-	// Make the math simpler whilst TST < 1.00 EUR, store the inverted token price:
-	// (price of one TST in EUR)^-1
-	uint256 public tokenPrice = 20;
-	// Enabled when the price is less than 1
-	bool public inversed = true;
+    // Reward token (TST)
+    IERC20 private immutable TOKEN;
 
-	// The amount of TST tokens that are to be paid out in the future.
-	uint256 public pendingPayout;
+    // Make the math simpler whilst TST < 1.00 EUR, store the inverted token price:
+    // (price of one TST in EUR)^-1
+    uint256 public tokenPrice = 20;
+    // Enabled when the price is less than 1
+    bool public inverted = true;
 
-	// The amount of TST available to get as bond reward
-	uint256 public bondRewardPoolSupply;
+    // The amount of TST tokens that are to be paid out in the future.
+    uint256 public pendingPayout = 0;
 
-	// The storage address
-	address public storageAddress;
+    // The amount of TST available to get as bond reward
+    uint256 public bondRewardPoolSupply = 0;
 
-	// By default enabled.
-	// False when token transfers are disabled.
-	bool public isActive = true;
+    // By default enabled.
+    // False when token transfers are disabled.
+    bool private isActive = true;
 
-	constructor(address _tokenAddress) {
-		_setupRole(TST_TOKEN_GATEWAY, msg.sender);
-		TOKEN = IERC20(_tokenAddress);
-	}
+    // The storage address
+    address public storageAddress;
 
-	modifier onlyGatewayOwner { require(hasRole(TST_TOKEN_GATEWAY, msg.sender), "invalid-user"); _; }
+    bytes32 public constant TST_TOKEN_GATEWAY = keccak256("TST_TOKEN_GATEWAY");
 
-	modifier onlyStorageOwner { require(msg.sender == storageAddress, "err-not-storage-caller"); _; }
+    constructor(address _tokenAddress) {
+        _setupRole(TST_TOKEN_GATEWAY, msg.sender);
+        TOKEN = IERC20(_tokenAddress);
+    }
 
-	modifier isActivated { require(isActive == true, "err-in-maintenance"); _; }
+    modifier onlyGatewayOwner {
+        require(hasRole(TST_TOKEN_GATEWAY, msg.sender), "invalid-gateway-owner");
+        _;
+    }
 
-	function deactivateSystem() public onlyGatewayOwner { isActive = false; }
+    modifier onlyStorageOwner {
+        require(msg.sender == storageAddress, "err-not-storage-caller");
+        _;
+    }
 
-	function activateSystem() public onlyGatewayOwner { isActive = true; }
+    modifier isActivated {
+        require(isActive == true, "err-in-maintenance");
+        _;
+    }
 
-	function setUnitPrice(uint256 _newPrice, bool _inversed) public onlyGatewayOwner {
-		tokenPrice = _newPrice;
-		inversed = _inversed;
-	}
+    function deactivateSystem() public onlyGatewayOwner {
+        isActive = false;
+    }
 
-	function updateRewardSupply() public { bondRewardPoolSupply = TOKEN.balanceOf(address(this)); }
+    function activateSystem() public onlyGatewayOwner {
+        isActive = true;
+    }
 
-	modifier enoughBalance(uint256 _toSend) {
-		require(TOKEN.balanceOf(address(this)) > _toSend, "err-insufficient-tokens"); _;
-	}
+    function setUnitPrice(uint256 _newPrice, bool _inverted) public onlyGatewayOwner {
+        tokenPrice = _newPrice;
+        inverted = _inverted;
+    }
 
-	function getSeuroStandardTokenPrice() public view returns (uint256, bool) { return (tokenPrice, inversed); }
+    function updateRewardSupply() public {
+        bondRewardPoolSupply = TOKEN.balanceOf(address(this));
+    }
 
-	function setStorageAddress(address _newAddress) public onlyGatewayOwner {
-		require(_newAddress != address(0), "err-zero-address");
-		storageAddress = _newAddress;
-	}
+    modifier enoughBalance(uint256 _toSend) {
+        uint256 currBalance = TOKEN.balanceOf(address(this));
+        require(currBalance > _toSend, "err-insufficient-tokens");
+        _;
+    }
 
-	function decreaseRewardSupply(uint256 _amount) public onlyStorageOwner enoughBalance(_amount) {
-		require(bondRewardPoolSupply - _amount > 0, "dec-supply-uf");
-		bondRewardPoolSupply -= _amount;
-	}
+    function getSeuroStandardTokenPrice() public view returns (uint256, bool) {
+        return (tokenPrice, inverted);
+    }
 
-	function transferReward(address _toUser, uint256 _amount) external onlyStorageOwner isActivated enoughBalance(_amount) {
-		TOKEN.transfer(_toUser, _amount);
-	}
+    function getRewardSupply() public view returns (uint256) {
+        return bondRewardPoolSupply;
+    }
+
+    function setStorageAddress(address _newAddress) public onlyGatewayOwner {
+        require(_newAddress != address(0), "err-zero-address");
+        storageAddress = _newAddress;
+    }
+
+    function decreaseRewardSupply(uint256 _amount) public onlyStorageOwner enoughBalance(_amount) {
+        require(bondRewardPoolSupply - _amount > 0, "dec-supply-uf");
+        bondRewardPoolSupply -= _amount;
+    }
+
+    function transferReward(address _toUser, uint256 _amount) external onlyStorageOwner isActivated enoughBalance(_amount) {
+        TOKEN.transfer(_toUser, _amount);
+    }
 }
