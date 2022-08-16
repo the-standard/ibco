@@ -3,7 +3,7 @@ const { expect } = require('chai');
 
 const { getLibraryFactory, etherBalances, CHAINLINK_DEC } = require('./common');
 
-describe('rate', async () => {
+describe('rates', async () => {
   it('does the conversions', async () => {
     const [owner] = await ethers.getSigners();
     const tester = await (await getLibraryFactory(owner, 'RatesLibraryTester')).deploy();

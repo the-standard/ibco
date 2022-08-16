@@ -114,13 +114,13 @@ const defaultConvertUsdToEur = amount => {
 }
 
 const getLibraryFactory = async (signerAccount, linkedContract) => {
-  const LibContract = await ethers.getContractFactory('SimpleRate');
+  const LibContract = await ethers.getContractFactory('Rates');
   const lib = await LibContract.deploy();
   await lib.deployed();
   return await ethers.getContractFactory(linkedContract, {
     signer: signerAccount,
     libraries: {
-      SimpleRate: lib.address,
+      Rates: lib.address,
     },
   });
 }
