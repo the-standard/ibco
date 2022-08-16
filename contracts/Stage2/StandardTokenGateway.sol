@@ -16,7 +16,7 @@ contract StandardTokenGateway is AccessControl {
     // Reward token (TST)
     IERC20 private immutable TOKEN;
 
-    uint256 public priceTstEur = 5000000;
+    uint256 public priceTstEur = 5500000;
     uint8 public priceDec = 8;
 
     // The amount of TST tokens that are to be paid out in the future.
