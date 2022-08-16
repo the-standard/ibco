@@ -2,13 +2,13 @@ const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const crypto = require('crypto');
 
-let owner, user1, Directory, DirectoryContract;
-const { etherBalances } = require('../common.js');
+let user1, Directory, DirectoryContract;
 
 beforeEach(async () => {
+  let owner;
   [owner, user1] = await ethers.getSigners();
   DirectoryContract = await ethers.getContractFactory('StakingDirectory');
-  Directory = await DirectoryContract.deploy();
+  Directory = await DirectoryContract.connect(owner).deploy();
 });
 
 function address() {
