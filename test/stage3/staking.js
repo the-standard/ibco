@@ -6,10 +6,9 @@ const { etherBalances } = require('../common.js');
 
 beforeEach(async () => {
   [owner, user1, user2] = await ethers.getSigners();
-  const SEuroContract = await ethers.getContractFactory('SEuro');
   const ERC20Contract = await ethers.getContractFactory('DUMMY');
   StakingContract = await ethers.getContractFactory('Staking');
-  SEuro = await SEuroContract.deploy('sEURO', 'SEUR', [owner.address]);
+  SEuro = await ERC20Contract.deploy('sEURO', 'SEUR', 18);
   TST = await ERC20Contract.deploy('TST', 'TST', 18);
   TST_ADDRESS = TST.address;
   SEUR_ADDRESS = SEuro.address;
