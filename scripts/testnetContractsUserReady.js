@@ -10,7 +10,6 @@ async function main() {
   const SEuroCalculator = await ethers.getContractAt('SEuroCalculator', addresses.SEuroCalculator);
   const USDT = await ethers.getContractAt('DUMMY', addresses.USDT);
   const TokenManager = await ethers.getContractAt('TokenManager', addresses.TokenManager);
-  const SEuro = await ethers.getContractAt('SEuro', addresses.SEuro);
   const OperatorStage2 = await ethers.getContractAt('OperatorStage2', addresses.OperatorStage2);
   const BondStorage = await ethers.getContractAt('BondStorage', addresses.BondStorage);
   const BondingEvent = await ethers.getContractAt('BondingEvent', addresses.BondingEvent);
@@ -19,7 +18,6 @@ async function main() {
   const USDTUSDChainlink = await (await ethers.getContractFactory('Chainlink')).deploy(100000000);
 
   await SEuroOffering.activate();
-  await SEuro.grantRole(await SEuro.MINTER_ROLE(), SEuroOffering.address);
   await SEuroCalculator.grantRole(await SEuroCalculator.OFFERING(), SEuroOffering.address);
   await BondingCurve.grantRole(await BondingCurve.UPDATER(), SEuroOffering.address);
   await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), SEuroCalculator.address);

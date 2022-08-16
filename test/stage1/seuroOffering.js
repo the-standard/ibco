@@ -52,14 +52,14 @@ describe('SEuroOffering', async () => {
   beforeEach(async () => {
     [owner, user, collateralWallet] = await ethers.getSigners();
 
-    const SEuroContract = await ethers.getContractFactory('SEuro');
+    const SEuroContract = await ethers.getContractFactory('DUMMY');
     const SEuroOfferingContract = await ethers.getContractFactory('SEuroOffering');
     BondingCurveContract = await ethers.getContractFactory('BondingCurve');
     SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');
     TokenManagerContract = await ethers.getContractFactory('TokenManager');
 
     WETH = await ethers.getContractAt('WETH', WETH_ADDRESS);
-    SEuro = await SEuroContract.deploy('SEuro', 'SEUR', [owner.address]);
+    SEuro = await SEuroContract.deploy('SEuro', 'SEUR', 18);
     BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
     SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, CHAINLINK_EUR_USD, CHAINLINK_DEC);
     TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC);
