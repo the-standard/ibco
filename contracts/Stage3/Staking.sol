@@ -11,6 +11,7 @@ import "contracts/Rates.sol";
 contract Staking is ERC721, Ownable, Pausable {
     uint256 private _tokenId;
     uint256 private immutable RATE_FACTOR = 10 ** 5;
+    uint8 private immutable RATE_DEC = 5;
 
     // Standard Token data feed
     StandardTokenGateway public tokenGateway;
@@ -51,8 +52,8 @@ contract Staking is ERC721, Ownable, Pausable {
 
     // calculates the reward in SEURO based in the input of amount of TSTs
     function calculateReward(uint256 _amountStandard) public view returns (uint256 reward) {
-        (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
-        return (Rates.convert(_amountStandard, tokenPrice, !inverted) * SI_RATE) / RATE_FACTOR;
+        uint256 tstReward = Rates.convertDefault(_amountStandard, SI_RATE, RATE_DEC);
+        return Rates.convertDefault(tstReward, tokenGateway.priceTstEur(), tokenGateway.priceDec());
     }
 
     // fetches the balance of the contract for the give erc20 token

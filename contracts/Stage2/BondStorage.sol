@@ -96,15 +96,14 @@ contract BondStorage is AccessControl {
 
     function otherTokenToStandardToken(uint256 _amount) private view returns (uint256) {
         (, int256 eurOtherRate, , , ) = IChainlink(chainlinkEurOther).latestRoundData();
-        (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
-        return Rates.convert((_amount * 10 ** otherUsdDec) / uint256(eurOtherRate), tokenPrice, inverted);
+        uint256 eur = Rates.convertInverse(_amount, uint256(eurOtherRate), otherUsdDec);
+        return Rates.convertInverse(eur, tokenGateway.priceTstEur(), tokenGateway.priceDec());
     }
 
     function potentialPayout(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturityInWeeks) private view returns (uint256 tokenPayout) {
         Bond memory dummyBond = Bond(_principalSeuro, _principalOther, _rate, _maturityInWeeks, false, PositionMetaData(0, 0, 0, 0));
         (uint256 seuroPayout, , uint256 otherPayout, ) = calculateBond(dummyBond);
-        (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
-        tokenPayout = Rates.convert(seuroPayout, tokenPrice, inverted) + otherTokenToStandardToken(otherPayout);
+        tokenPayout = Rates.convertInverse(seuroPayout, tokenGateway.priceTstEur(), tokenGateway.priceDec()) + otherTokenToStandardToken(otherPayout);
         // if we are able to payout this bond in TST
         require(tokenPayout < tokenGateway.bondRewardPoolSupply() == true, "err-insuff-tst-supply");
     }
@@ -143,12 +142,11 @@ contract BondStorage is AccessControl {
             if (hasExpired(bonds[i]) && !bonds[i].tapped) {
                 tapBond(_user, i); // prevents the abuse of squeezing profit from same bond more than once
 
-                (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
                 // here we calculate how much we are paying out in sEUR in total and the
                 // profit component, also in sEUR.
                 (uint256 totalPayoutSeuro, uint256 profitSeuro, uint256 totalPayoutOther, uint256 profitOther) = calculateBond(bonds[i]);
-                uint256 payoutTok = Rates.convert(totalPayoutSeuro, tokenPrice, inverted) + otherTokenToStandardToken(totalPayoutOther);
-                uint256 profitTok = Rates.convert(profitSeuro, tokenPrice, inverted) + otherTokenToStandardToken(profitOther);
+                uint256 payoutTok = Rates.convertInverse(totalPayoutSeuro, tokenGateway.priceTstEur(), tokenGateway.priceDec()) + otherTokenToStandardToken(totalPayoutOther);
+                uint256 profitTok = Rates.convertInverse(profitSeuro, tokenGateway.priceTstEur(), tokenGateway.priceDec()) + otherTokenToStandardToken(profitOther);
 
                 // increase the user's accumulated profit. only for show or as "fun to know"
                 increaseProfitAmount(_user, profitTok);
