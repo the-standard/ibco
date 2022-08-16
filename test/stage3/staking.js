@@ -22,7 +22,7 @@ describe('Staking', async () => {
   it('opens the pool and sets all the variables', async () => {
     let blockNum = await ethers.provider.getBlock();
     const start = blockNum.timestamp;
-    const endTime = start + 3600 // an hour later
+    const endTime = start + 3600; // an hour later
     const maturity = start + 600; // 10 minutes later
 
     const Staking = await StakingContract.deploy("Staking", "STS", start, endTime, maturity, TGateway.address, TST_ADDRESS, SEUR_ADDRESS, simpleInterestRate);
@@ -111,9 +111,9 @@ describe('Staking', async () => {
     it('mints a token and creates a position', async () => {
       const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, 5000, TGateway.address, TST_ADDRESS, SEUR_ADDRESS, simpleInterestRate);
 
-      // Set TSTSEURO price as 2, i.e., 1 TST = 2 SEURs
-      // The price is 2 and inverted because 1 SEUR = 0.5 TST
-      await TGateway.connect(owner).setUnitPrice(2, true);
+      // Set sEURO/TST price as 20, i.e., 1 TST = 0.05 sEURO
+      // The price is 20 and inverted because 1 SEUR = 20 TST
+      await TGateway.connect(owner).setUnitPrice(20, true);
 
       const standardBalance = etherBalances['8K'];
       await expect(Staking.startStake(standardBalance)).to.be.revertedWith('err-not-active');
@@ -134,8 +134,6 @@ describe('Staking', async () => {
       let bal = await TST.balanceOf(user1.address);
       expect(bal).to.eq(standardBalance);
 
-      // the reward should be 5% of 8000 TSTs but in SEUR:
-      // 0.05 * 8000 = 400 TSTs = 800 SEUR
       await Staking.connect(user1).startStake(standardBalance);
       balance = await TST.balanceOf(user1.address);
       expect(balance).to.eq(0);
@@ -144,8 +142,9 @@ describe('Staking', async () => {
       expect(await Staking.balanceOf(user1.address)).to.eq(1);
       expect(await Staking.ownerOf(0)).to.eq(user1.address);
 
-      // 8000 (TST) in -> 800 (SEUR) out -> factor 10
-      let rewardInSeuro1 = bal.div(10);
+      // the reward should be 5% of 8000 TSTs but in SEUR:
+      // 5% of 8000 = 400 TST = 20 sEURO
+      let rewardInSeuro1 = bal.div(400);
       contractSeuroBalance = contractSeuroBalance.sub(rewardInSeuro1);
       expect(await Staking.remaining(SEuro.address)).to.eq(contractSeuroBalance);
 
@@ -188,7 +187,6 @@ describe('Staking', async () => {
       balance = await TST.balanceOf(user2.address);
       expect(balance).to.eq(otherStandardBal);
 
-      // reward 5% of 10000 TSTs but in SEUR = 1000 SEUR
       await Staking.connect(user2).startStake(otherStandardBal);
       balance = await TST.balanceOf(user2.address);
       expect(balance).to.eq(0);
@@ -197,7 +195,9 @@ describe('Staking', async () => {
       expect(await Staking.balanceOf(user2.address)).to.eq(1);
       expect(await Staking.ownerOf(1)).to.eq(user2.address);
 
-      let rewardInSeuro2 = otherStandardBal.div(10);
+      // the reward should be 5% of 10000 TSTs but in SEUR:
+      // 5% of 10000 = 500 TST = 25 sEURO
+      let rewardInSeuro2 = otherStandardBal.div(400);
       contractSeuroBalance = contractSeuroBalance.sub(rewardInSeuro2);
       expect(await Staking.remaining(SEuro.address)).to.eq(contractSeuroBalance);
 
@@ -253,7 +253,7 @@ describe('Staking', async () => {
     });
 
     it('tests the exchange rate', async () => {
-      await TGateway.connect(owner).setUnitPrice(2, true);
+      await TGateway.connect(owner).setUnitPrice(20, true);
       let blockNum = await ethers.provider.getBlock();
       const then = blockNum.timestamp + 600;
 
@@ -265,8 +265,8 @@ describe('Staking', async () => {
       let standardBalance = etherBalances["8K"];
       let reward = await Staking.calculateReward(standardBalance);
 
-      // 5% of 8,000 TST = 400 TST = 800 sEURO
-      let expectedReward = ethers.utils.parseEther('800');
+      // 5% of 8,000 TST = 400 TST = 20 sEURO
+      let expectedReward = ethers.utils.parseEther('20');
       expect(reward).to.eq(expectedReward);
 
       // new amounts
@@ -277,14 +277,14 @@ describe('Staking', async () => {
       await Staking.activate();
 
       // 1.5% of 2,000,000 == 30,000 TST
-      // 30,000 TST == 60,000 sEURO
-      expectedReward = ethers.utils.parseEther('60000');
+      // 30,000 TST == 1,500 sEURO
+      expectedReward = ethers.utils.parseEther('1500');
       reward = await Staking.calculateReward(standardBalance);
       expect(reward).to.eq(expectedReward);
     });
 
     it('burns and withdraws seuro', async () => {
-      await TGateway.connect(owner).setUnitPrice(2, true);
+      await TGateway.connect(owner).setUnitPrice(20, true);
       let blockNum = await ethers.provider.getBlock();
       const then = blockNum.timestamp;
 
@@ -297,8 +297,7 @@ describe('Staking', async () => {
       await Staking.activate();
 
       // add funds
-      let value = etherBalances.ONE_MILLION;
-      await SEuro.mint(Staking.address, value);
+      await SEuro.mint(Staking.address, etherBalances.ONE_MILLION);
 
       await TST.connect(owner).mint(user1.address, standardBalance);
       await TST.connect(user1).approve(Staking.address, standardBalance);
@@ -325,8 +324,8 @@ describe('Staking', async () => {
       expect(p[2]).to.eq(false);  // closed for business
 
       const SeuroBalance = await SEuro.balanceOf(user1.address);
-      value = ethers.utils.parseEther('800');
-      expect(SeuroBalance).to.eq(value);
+      const expectedSeuros = standardBalance.div(400);
+      expect(SeuroBalance).to.eq(expectedSeuros);
 
       TSTBalance = await TST.balanceOf(user1.address);
       expect(TSTBalance).to.eq(standardBalance);
