@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { DECIMALS_18, etherBalances, SEURO_ADDRESS } = require('../common.js');
+const { DECIMALS_18, etherBalances } = require('../common.js');
 
 describe('BondingCurve', async () => {
   let BondingCurve, TestBondingCurve;
