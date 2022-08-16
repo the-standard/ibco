@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS, WETH_BYTES, DAI_BYTES, etherBalances } = require('../common.js');
+const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS, WETH_BYTES, DAI_BYTES, etherBalances, getLibraryFactory } = require('../common.js');
 
 describe('SEuroOffering', async () => {
   const DAI_DEC = 18;
@@ -43,7 +43,7 @@ describe('SEuroOffering', async () => {
   }
 
   async function getBucketPrice(index) {
-    const TestBondingCurve = await (await ethers.getContractFactory('TestBondingCurve')).deploy(
+    const TestBondingCurve = await (await getLibraryFactory(owner, 'TestBondingCurve')).deploy(
       INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE
     );
     return await TestBondingCurve.callStatic.getPriceOfBucket(index);
@@ -54,8 +54,8 @@ describe('SEuroOffering', async () => {
 
     const ERC20Contract = await ethers.getContractFactory('DUMMY');
     const SEuroOfferingContract = await ethers.getContractFactory('SEuroOffering');
-    BondingCurveContract = await ethers.getContractFactory('BondingCurve');
-    SEuroCalculatorContract = await ethers.getContractFactory('SEuroCalculator');
+    BondingCurveContract = await getLibraryFactory(owner, 'BondingCurve');
+    SEuroCalculatorContract = await getLibraryFactory(owner, 'SEuroCalculator');
     TokenManagerContract = await ethers.getContractFactory('TokenManager');
 
     WETH = await ethers.getContractAt('WETH', WETH_ADDRESS);

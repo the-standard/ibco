@@ -16,6 +16,7 @@ const CHAINLINK_DAI_USD = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
 const CHAINLINK_USDT_USD = '0x3E7d1eAB13ad0104d2750B8863b489D65364e32D';
 const CHAINLINK_EUR_USD = '0xb49f677943BC038e9857d61E7d053CaA2C1734C1';
 const CHAINLINK_DEC = 8;
+const CHAINLINK_SCALE = BigNumber.from(10).pow(CHAINLINK_DEC);
 const DEFAULT_CHAINLINK_EUR_USD_PRICE = 105000000;
 
 // Only usable for tokens with 18 decimals such as TST and SEURO
@@ -51,7 +52,6 @@ const MIN_TICK = -887270;
 const MAX_TICK = 887270;
 const DEFAULT_SQRT_PRICE = BigNumber.from(2).pow(96);
 const ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
-const STANDARD_TOKENS_PER_EUR = 20; // 1 TST = 0.05 EUR
 const DECIMALS_18 = BigNumber.from(10).pow(18);
 const DECIMALS_6 = BigNumber.from(10).pow(6);
 
@@ -113,15 +113,20 @@ const defaultConvertUsdToEur = amount => {
 }
 
 const getLibraryFactory = async (signerAccount, linkedContract) => {
-  const LibContract = await ethers.getContractFactory('SimpleRate');
+  const LibContract = await ethers.getContractFactory('Rates');
   const lib = await LibContract.deploy();
   await lib.deployed();
   return await ethers.getContractFactory(linkedContract, {
     signer: signerAccount,
     libraries: {
-      SimpleRate: lib.address,
+      Rates: lib.address,
     },
   });
+}
+
+const eurToTST = amount => {
+  // 0.055
+  return amount.mul(1000).div(55);
 }
 
 
@@ -138,6 +143,7 @@ module.exports = {
   CHAINLINK_USDT_USD,
   CHAINLINK_EUR_USD,
   CHAINLINK_DEC,
+  CHAINLINK_SCALE,
   DEFAULT_CHAINLINK_EUR_USD_PRICE,
   etherBalances,
   MOST_STABLE_FEE,
@@ -146,7 +152,6 @@ module.exports = {
   MAX_TICK,
   DEFAULT_SQRT_PRICE,
   ONE_WEEK_IN_SECONDS,
-  STANDARD_TOKENS_PER_EUR,
   DECIMALS_18,
   DECIMALS_6,
   rates,
@@ -157,6 +162,7 @@ module.exports = {
   parse6Dec,
   scaleUpForDecDiff,
   defaultConvertUsdToEur,
-  getLibraryFactory
+  getLibraryFactory,
+  eurToTST
 }
 

@@ -16,11 +16,8 @@ contract StandardTokenGateway is AccessControl {
     // Reward token (TST)
     IERC20 private immutable TOKEN;
 
-    // Make the math simpler whilst TST < 1.00 EUR, store the inverted token price:
-    // (price of one TST in EUR)^-1
-    uint256 public tokenPrice = 20;
-    // Enabled when the price is less than 1
-    bool public inverted = true;
+    uint256 public priceTstEur = 5500000;
+    uint8 public priceDec = 8;
 
     // The amount of TST tokens that are to be paid out in the future.
     uint256 public pendingPayout = 0;
@@ -65,9 +62,9 @@ contract StandardTokenGateway is AccessControl {
         isActive = true;
     }
 
-    function setUnitPrice(uint256 _newPrice, bool _inverted) public onlyGatewayOwner {
-        tokenPrice = _newPrice;
-        inverted = _inverted;
+    function setTstEurPrice(uint256 _price, uint8 _dec) public onlyGatewayOwner {
+        priceTstEur = _price;
+        priceDec = _dec;
     }
 
     function updateRewardSupply() public {
@@ -78,10 +75,6 @@ contract StandardTokenGateway is AccessControl {
         uint256 currBalance = TOKEN.balanceOf(address(this));
         require(currBalance > _toSend, "err-insufficient-tokens");
         _;
-    }
-
-    function getSeuroStandardTokenPrice() public view returns (uint256, bool) {
-        return (tokenPrice, inverted);
     }
 
     function getRewardSupply() public view returns (uint256) {

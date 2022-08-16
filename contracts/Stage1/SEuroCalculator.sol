@@ -5,6 +5,7 @@ import "contracts/Stage1/BondingCurve.sol";
 import "contracts/Stage1/TokenManager.sol";
 import "contracts/interfaces/IChainlink.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "contracts/Rates.sol";
 
 contract SEuroCalculator is AccessControl {
     // multiplier used to assist calculation of fractions
@@ -39,10 +40,11 @@ contract SEuroCalculator is AccessControl {
         bondingCurve = BondingCurve(_newAddress);
     }
 
-    function calculateEuroRate(address _tokUsdCl, uint8 _tokUsdDec) private view returns (uint256) {
-        (,int256 tokUsd,,,) = IChainlink(_tokUsdCl).latestRoundData();
+    function calculateEuros(uint256 _amount, TokenManager.Token memory _token) private view returns (uint256 euros) {
+        (,int256 tokUsd,,,) = IChainlink(_token.chainlinkAddr).latestRoundData();
         (,int256 eurUsd,,,) = IChainlink(EUR_USD_CL).latestRoundData();
-        return FIXED_POINT * uint256(tokUsd) / uint256(eurUsd) / 10 ** (_tokUsdDec - EUR_USD_CL_DEC);
+        uint256 usd = Rates.convertDefault(_amount, uint256(tokUsd), _token.chainlinkDec);
+        euros = Rates.convertInverse(usd, uint256(eurUsd), EUR_USD_CL_DEC);
     }
 
     // Calculates exactly how much sEURO should be minted, given the amount and relevant Chainlink data feed
@@ -51,8 +53,7 @@ contract SEuroCalculator is AccessControl {
     /// @param _amount the amount of the given token that you'd like to calculate the exchange value for
     /// @param _token Token Manager Token for which you'd like to calculate
     function calculate(uint256 _amount, TokenManager.Token memory _token) external onlyOffering returns (uint256) {
-        uint256 euros = calculateEuroRate(_token.chainlinkAddr, _token.chainlinkDec) * _amount / 10 ** _token.dec;
-        return bondingCurve.calculatePrice(euros);
+        return bondingCurve.calculatePrice(calculateEuros(_amount, _token));
     }
 
     // A read-only function to estimate how much sEURO would be received, given the amount and relevant Chainlink data feed
@@ -60,7 +61,6 @@ contract SEuroCalculator is AccessControl {
     /// @param _amount the amount of the given token that you'd like to estimate the exchange value for
     /// @param _token Token Manager Token for which you'd like to estimate
     function readOnlyCalculate(uint256 _amount, TokenManager.Token memory _token) external view returns (uint256) {
-        uint256 euros = calculateEuroRate(_token.chainlinkAddr, _token.chainlinkDec) * _amount / 10 ** _token.dec;
-        return bondingCurve.readOnlyCalculatePrice(euros);
+        return bondingCurve.readOnlyCalculatePrice(calculateEuros(_amount, _token));
     }
 }
