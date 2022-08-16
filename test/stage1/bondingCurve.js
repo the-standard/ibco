@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { DECIMALS_18, etherBalances } = require('../common.js');
+const { DECIMALS_18, etherBalances, getLibraryFactory } = require('../common.js');
 
 describe('BondingCurve', async () => {
   let BondingCurve, TestBondingCurve;
@@ -11,9 +11,9 @@ describe('BondingCurve', async () => {
   beforeEach(async () => {
     [owner, customer, updater, calculator] = await ethers.getSigners();
 
-    const BondingCurveContract = await ethers.getContractFactory('BondingCurve');
+    const BondingCurveContract = await getLibraryFactory(owner, 'BondingCurve');
     BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
-    TestBondingCurve = await (await ethers.getContractFactory('TestBondingCurve')).deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
+    TestBondingCurve = await (await getLibraryFactory(owner, 'TestBondingCurve')).deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   });
 
   const getBucketPrice = async (index) => {

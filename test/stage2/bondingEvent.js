@@ -1,6 +1,7 @@
 const { ethers } = require('hardhat');
+const { BigNumber } = ethers;
 const { expect } = require('chai');
-const { POSITION_MANAGER_ADDRESS, DECIMALS_18, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, STANDARD_TOKENS_PER_EUR, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory } = require('../common.js');
+const { POSITION_MANAGER_ADDRESS, DECIMALS_18, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, eurToTST } = require('../common.js');
 
 let owner, customer, wallet, SEuro, TST, USDT, BondingEvent, BondStorage, TokenGateway, BondingEventContract, BondStorageContract, RatioCalculatorContract, RatioCalculator, pricing, SwapManager;
 
@@ -150,7 +151,7 @@ describe('BondingEvent', async () => {
     }
 
     async function expectedTokProfit(seuroProfit) {
-      let expectedReward = (STANDARD_TOKENS_PER_EUR * seuroProfit).toString();
+      let expectedReward = eurToTST(BigNumber.from(seuroProfit));
       let actualReward = ((await helperGetProfit()).div(DECIMALS_18)).toString();
       expect(actualReward).to.equal(expectedReward);
     }

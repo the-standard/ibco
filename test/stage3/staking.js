@@ -110,9 +110,9 @@ describe('Staking', async () => {
     it('mints a token and creates a position', async () => {
       const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, 5000, TGateway.address, TST_ADDRESS, SEUR_ADDRESS, simpleInterestRate);
 
-      // Set sEURO/TST price as 20, i.e., 1 TST = 0.05 sEURO
-      // The price is 20 and inverted because 1 SEUR = 20 TST
-      await TGateway.connect(owner).setUnitPrice(20, true);
+      // Set TST / sEURO price as 0.05 (5000000 / 10 ^ 8)
+      // or 20 TST = 1 sEURO
+      await TGateway.connect(owner).setTstEurPrice(5000000, 8);
 
       const standardBalance = etherBalances['8K'];
       await expect(Staking.startStake(standardBalance)).to.be.revertedWith('err-not-active');
@@ -252,7 +252,7 @@ describe('Staking', async () => {
     });
 
     it('tests the exchange rate', async () => {
-      await TGateway.connect(owner).setUnitPrice(20, true);
+      await TGateway.connect(owner).setTstEurPrice(5000000, 8);
       let blockNum = await ethers.provider.getBlock();
       const then = blockNum.timestamp + 600;
 
@@ -283,7 +283,7 @@ describe('Staking', async () => {
     });
 
     it('burns and withdraws seuro', async () => {
-      await TGateway.connect(owner).setUnitPrice(20, true);
+      await TGateway.connect(owner).setTstEurPrice(5000000, 8);
       let blockNum = await ethers.provider.getBlock();
       const then = blockNum.timestamp;
 

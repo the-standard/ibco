@@ -2,7 +2,7 @@ const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, STANDARD_TOKENS_PER_EUR, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE, defaultConvertUsdToEur, encodePriceSqrt, scaleUpForDecDiff, parse6Dec, getLibraryFactory } = require('../common.js');
+const { POSITION_MANAGER_ADDRESS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE, defaultConvertUsdToEur, encodePriceSqrt, scaleUpForDecDiff, parse6Dec, getLibraryFactory, eurToTST } = require('../common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 const eurUsdPrice = DEFAULT_CHAINLINK_EUR_USD_PRICE;
 
@@ -99,7 +99,7 @@ describe('BondingReward', async () => {
   
           const payoutSeuro = amountSEuro.add(amountSEuro.div(10)); // ten percent rate
           const payoutOther = amountOther.add(amountOther.div(10)); // ten percent rate
-          const payoutStandard = (payoutSeuro.mul(STANDARD_TOKENS_PER_EUR)).add(defaultConvertUsdToEur(payoutOther).mul(STANDARD_TOKENS_PER_EUR));
+          const payoutStandard = eurToTST(payoutSeuro).add(eurToTST(defaultConvertUsdToEur(payoutOther)));
           // claim has been properly registered in bond backend
           actualClaim = await BStorage.getClaimAmount(customer.address);
           expect(actualClaim).to.equal(payoutStandard);
@@ -172,8 +172,8 @@ describe('BondingReward', async () => {
   
           const payoutSeuro = amountSEuro.add(amountSEuro.div(10)); // ten percent rate
           const payoutOther = amountOther.add(amountOther.div(10)); // ten percent rate
-          const payoutStandard = (payoutSeuro.mul(STANDARD_TOKENS_PER_EUR))
-            .add(convertUsdToEurWithScale(payoutOther, EUR_USD_CONVERSION_SCALE).mul(STANDARD_TOKENS_PER_EUR));
+          const payoutStandard = eurToTST((payoutSeuro))
+            .add(eurToTST(convertUsdToEurWithScale(payoutOther, EUR_USD_CONVERSION_SCALE)));
           // claim has been properly registered in bond backend
           actualClaim = await BStorage.getClaimAmount(customer.address);
           expect(actualClaim).to.equal(payoutStandard);

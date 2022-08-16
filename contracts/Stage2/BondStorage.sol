@@ -4,7 +4,7 @@ pragma solidity ^0.8.15;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "contracts/Stage2/StandardTokenGateway.sol";
-import "contracts/SimpleRate.sol";
+import "contracts/Rates.sol";
 
 contract BondStorage is AccessControl {
     bytes32 public constant WHITELIST_ADMIN = keccak256("WHITELIST_ADMIN");
@@ -79,10 +79,10 @@ contract BondStorage is AccessControl {
     // Returns the total payout and the accrued interest ("profit") component separately.
     // Both the payout and the profit is in sEURO.
     function calculateBond(Bond memory bond) private pure returns (uint256 seuroPayout, uint256 seuroProfit, uint256 otherPayout, uint256 otherProfit) {
-        // basic (rate * principal) calculations
-        seuroProfit = bond.rate * bond.principalSeuro / 100000;
+        // rates are stored as 5 dec in operator
+        seuroProfit = Rates.convertDefault(bond.principalSeuro, bond.rate, 5);
         seuroPayout = bond.principalSeuro + seuroProfit;
-        otherProfit = bond.rate * bond.principalOther / 100000;
+        otherProfit = Rates.convertDefault(bond.principalOther, bond.rate, 5);
         otherPayout = bond.principalOther + otherProfit;
     }
 
@@ -96,15 +96,16 @@ contract BondStorage is AccessControl {
 
     function otherTokenToStandardToken(uint256 _amount) private view returns (uint256) {
         (, int256 eurOtherRate, , , ) = IChainlink(chainlinkEurOther).latestRoundData();
-        (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
-        return SimpleRate.convert((_amount * 10 ** otherUsdDec) / uint256(eurOtherRate), tokenPrice, inverted);
+        uint256 eur = Rates.convertInverse(_amount, uint256(eurOtherRate), otherUsdDec);
+        return seuroToStandardToken(eur);
     }
+
+    function seuroToStandardToken(uint256 _amount) private view returns (uint256) { return Rates.convertInverse(_amount, tokenGateway.priceTstEur(), tokenGateway.priceDec()); }
 
     function potentialPayout(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturityInWeeks) private view returns (uint256 tokenPayout) {
         Bond memory dummyBond = Bond(_principalSeuro, _principalOther, _rate, _maturityInWeeks, false, PositionMetaData(0, 0, 0, 0));
         (uint256 seuroPayout, , uint256 otherPayout, ) = calculateBond(dummyBond);
-        (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
-        tokenPayout = SimpleRate.convert(seuroPayout, tokenPrice, inverted) + otherTokenToStandardToken(otherPayout);
+        tokenPayout = seuroToStandardToken(seuroPayout) + otherTokenToStandardToken(otherPayout);
         // if we are able to payout this bond in TST
         require(tokenPayout < tokenGateway.bondRewardPoolSupply() == true, "err-insuff-tst-supply");
     }
@@ -143,12 +144,11 @@ contract BondStorage is AccessControl {
             if (hasExpired(bonds[i]) && !bonds[i].tapped) {
                 tapBond(_user, i); // prevents the abuse of squeezing profit from same bond more than once
 
-                (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
                 // here we calculate how much we are paying out in sEUR in total and the
                 // profit component, also in sEUR.
                 (uint256 totalPayoutSeuro, uint256 profitSeuro, uint256 totalPayoutOther, uint256 profitOther) = calculateBond(bonds[i]);
-                uint256 payoutTok = SimpleRate.convert(totalPayoutSeuro, tokenPrice, inverted) + otherTokenToStandardToken(totalPayoutOther);
-                uint256 profitTok = SimpleRate.convert(profitSeuro, tokenPrice, inverted) + otherTokenToStandardToken(profitOther);
+                uint256 payoutTok = seuroToStandardToken(totalPayoutSeuro) + otherTokenToStandardToken(totalPayoutOther);
+                uint256 profitTok = seuroToStandardToken(profitSeuro) + otherTokenToStandardToken(profitOther);
 
                 // increase the user's accumulated profit. only for show or as "fun to know"
                 increaseProfitAmount(_user, profitTok);
