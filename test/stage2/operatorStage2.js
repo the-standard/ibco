@@ -9,8 +9,7 @@ let owner, customer, SEuro, TST, USDT;
 beforeEach(async () => {
   [owner, customer] = await ethers.getSigners();
   const ERC20Contract = await ethers.getContractFactory('DUMMY');
-  const SEuroContract = await ethers.getContractFactory('SEuro');
-  SEuro = await SEuroContract.deploy('sEURO', 'sEUR', [owner.address]);
+  SEuro = await ERC20Contract.deploy('sEURO', 'sEUR', 18);
   USDT = await ERC20Contract.deploy('USDT', 'USDT', 6);
   TST = await ERC20Contract.deploy('TST', 'TST', 18);
 });
