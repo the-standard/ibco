@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "contracts/Stage2/StandardTokenGateway.sol";
 import "contracts/Pausable.sol";
-import "contracts/SimpleInterest.sol";
+import "contracts/SimpleRate.sol";
 
 contract Staking is ERC721, Ownable, Pausable {
     uint256 private _tokenId;
@@ -52,7 +52,7 @@ contract Staking is ERC721, Ownable, Pausable {
     // calculates the reward in SEURO based in the input of amount of TSTs
     function calculateReward(uint256 _amountStandard) public view returns (uint256 reward) {
         (uint256 tokenPrice, bool inverted) = tokenGateway.getSeuroStandardTokenPrice();
-        return (SimpleInterest.convert(_amountStandard, tokenPrice, inverted) * SI_RATE) / RATE_FACTOR;
+        return (SimpleRate.convert(_amountStandard, tokenPrice, inverted) * SI_RATE) / RATE_FACTOR;
     }
 
     // fetches the balance of the contract for the give erc20 token
