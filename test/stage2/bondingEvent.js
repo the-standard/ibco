@@ -278,7 +278,6 @@ describe('BondingEvent', async () => {
         const usdcProfit3 = amountOther.div(10);
         expectedProfit3 = eurToTST(seuroProfit3).add(eurToTST(defaultConvertUsdToEur(usdcProfit3)));
         expect(await helperGetProfit()).to.eq(expectedProfit1.add(expectedProfit2).add(expectedProfit3));
-        console.log('hi')
 
         expectedActiveBonds = 0;
         actualActiveBonds = await helperGetActiveBonds();
@@ -386,8 +385,6 @@ describe('BondingEvent', async () => {
         expect(positions).to.be.length(2);
         ({ position } = await BondingEvent.getPositionByTokenId(positions[1].tokenId));
         // shifting ticks to -3700 & 2000 OR -2000 & 3700 puts the new tick (1412) into middle 20%
-        console.log(position.lowerTick)
-        console.log(position.upperTick)
         const expectedDiff = 1000;
         expect(position.lowerTick).to.equal(pricing.lowerTick - expectedDiff);
         expect(position.upperTick).to.equal(pricing.upperTick + expectedDiff);
