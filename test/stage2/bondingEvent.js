@@ -284,19 +284,26 @@ describe('BondingEvent', async () => {
         expect(actualActiveBonds).to.equal(expectedActiveBonds);
       });
     });
+  });
 
-    describe('excess seuro', async () => {
-      it('will transfer the excess sEURO if there is a designated wallet', async () => {
-        // difficult to test transfer of excess sEURO, because it would require a mid-transaction price slip
-        await BondingEvent.setExcessCollateralWallet(wallet.address);
-        expect(await SEuro.balanceOf(wallet.address)).to.equal(0);
+  describe('excess seuro', async () => {
+    it('will transfer the excess sEURO if there is a designated wallet', async () => {
+      await deployBondingEvent(1000000000000, 1);
+      await mintUsers();
+      await readyDependencies();
+      // difficult to test transfer of excess sEURO, because it would require a mid-transaction price slip
+      await BondingEvent.setExcessCollateralWallet(wallet.address);
+      expect(await SEuro.balanceOf(wallet.address)).to.equal(0);
 
-        await testStartBond(etherBalances.TWO_MILLION, durations.ONE_YR_WEEKS,
-          rates.TEN_PC, USDC
-        );
+      const amountSEuro = etherBalances.TWO_MILLION;
+      const { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
+      await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
+      await USDC.connect(customer).approve(BondingEvent.address, amountOther);
+      await BondingEvent.connect(owner).bond(
+        customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+      );
 
-        expect(await USDC.balanceOf(wallet.address)).to.be.gt(0);
-      });
+      expect(await SEuro.balanceOf(wallet.address)).to.be.gt(0);
     });
   });
 

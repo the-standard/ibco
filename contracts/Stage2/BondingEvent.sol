@@ -262,7 +262,7 @@ contract BondingEvent is AccessControl {
         (uint160 price,,,,,,) = pool.slot0();
         bool seuroIsToken0 = getAscendingPair().token0 == SEURO_ADDRESS;
         (lowerTick, upperTick) = getViableTickRange(price);
-        amountOther = ratioCalculator.getRatioForSEuro(_amountSEuro, price, lowerTick, upperTick, seuroIsToken0) * 100001 / 100000;
+        amountOther = ratioCalculator.getRatioForSEuro(_amountSEuro, price, lowerTick, upperTick, seuroIsToken0);
     }
 
     function retractLiquidity(uint256 _tokenId, uint128 _liquidity) private returns (uint256 retractedLiquidity0, uint256 retractedLiquidity1) {
