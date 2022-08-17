@@ -1,8 +1,8 @@
 const { ethers, network } = require('hardhat');
 const fs = require('fs');
-const { encodePriceSqrt, MOST_STABLE_FEE, etherBalances, scaleUpForDecDiff, parse6Dec } = require('../test/common');
+const { encodePriceSqrt, MOST_STABLE_FEE, etherBalances, parse6Dec } = require('../test/common');
 let addresses;
-let DummyTST, DummyUSDT, SEuroAddress, SEuroOffering, OperatorStage2, BondStorage, BondingEvent, StandardTokenGateway, BondingCurve, SEuroCalculator, Staking;
+let DummyTST, DummyUSDC, SEuroAddress, SEuroOffering, OperatorStage2, BondStorage, BondingEvent, StandardTokenGateway, BondingCurve, SEuroCalculator, Staking;
 
 const INITIAL_PRICE = ethers.utils.parseEther('0.8');
 const MAX_SUPPLY = ethers.utils.parseEther('200000000');
@@ -15,20 +15,23 @@ const completed = async (contract, name) => {
 }
 
 const getPricing = () => {
-  // note: ticks represent that sEURO is 18dec and USDT is 6dec
-  // tick -276700 approx. 0.96 USDT per SEUR
-  // tick -273300 approx. 1.35 USDT per SEUR
-  // 273300 and 276700 are the inverse of these prices
-  return SEuroAddress.toLowerCase() < DummyUSDT.address.toLowerCase() ?
+  // USDC / sEURO price of 1.23 reflects:
+  // eur / usd 1.017 (17th aug) ;
+  // seuro / euro 0.8 (ibco initial price) ;
+  //
+  // tick 2700 approx. 1 USDC = 1.31 sEURO
+  // tick -1000 approx. 1 USDC = 0.905 sEURO
+  // -2700 and 1000 are the inverse of these prices
+  return SEuroAddress.toLowerCase() < DummyUSDC.address.toLowerCase() ?
     {
-      initial: encodePriceSqrt(114, scaleUpForDecDiff(100, 12)),
-      lowerTick: -276700,
-      upperTick: -273300
+      initial: encodePriceSqrt(100, 123),
+      lowerTick: -2700,
+      upperTick: 1000
     } :
     {
-      initial: encodePriceSqrt(scaleUpForDecDiff(100, 12), 114),
-      lowerTick: 273300,
-      upperTick: 276700
+      initial: encodePriceSqrt(123, 100),
+      lowerTick: -1000,
+      upperTick: 2700
     }
 }
 
@@ -53,14 +56,14 @@ const createChainlinkMocks = async () => {
   }
 }
 
-const deployContracts = async () => {  
+const deployContracts = async () => {
   const { externalContracts } = JSON.parse(fs.readFileSync('scripts/deploymentConfig.json'))[network.name];
   SEuroAddress = externalContracts.seuro;
 
   DummyTST = await (await ethers.getContractFactory('DUMMY')).deploy('Standard Token', 'TST', 18);
   await completed(DummyTST, 'TST');
-  DummyUSDT = await (await ethers.getContractFactory('DUMMY')).deploy('Tether', 'USDT', 6);
-  await completed(DummyUSDT, 'USDT');
+  DummyUSDC = await (await ethers.getContractFactory('DUMMY')).deploy('Tether', 'USDC', 18);
+  await completed(DummyUSDC, 'USDC');
   BondingCurve = await (await ethers.getContractFactory('BondingCurve')).deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   await completed(BondingCurve, 'BondingCurve')
   const chainlink = !!externalContracts.chainlink ?
@@ -89,7 +92,7 @@ const deployContracts = async () => {
   const pricing = getPricing();
   OperatorStage2 = await (await ethers.getContractFactory('OperatorStage2')).deploy();
   BondingEvent = await (await ethers.getContractFactory('BondingEvent')).deploy(
-    SEuroAddress, DummyUSDT.address, externalContracts.uniswapLiquidityManager, BondStorage.address, OperatorStage2.address,
+    SEuroAddress, DummyUSDC.address, externalContracts.uniswapLiquidityManager, BondStorage.address, OperatorStage2.address,
     RatioCalculator.address, pricing.initial, pricing.lowerTick, pricing.upperTick, MOST_STABLE_FEE
   );
   await completed(BondingEvent, 'BondingEvent')
@@ -106,7 +109,7 @@ const deployContracts = async () => {
 
   addresses = {
     TST: DummyTST.address,
-    USDT: DummyUSDT.address,
+    USDC: DummyUSDC.address,
     SEuro: SEuroAddress,
     SEuroOffering: SEuroOffering.address,
     SEuroCalculator: SEuroCalculator.address,
@@ -135,7 +138,7 @@ const activateStaking = async() => {
 }
 
 const mintUser = async (address) => {
-  await DummyUSDT.mint(address, parse6Dec(100_000_000));
+  await DummyUSDC.mint(address, parse6Dec(100_000_000));
   await DummyTST.mint(address, etherBalances.HUNDRED_MILLION);
 }
 
