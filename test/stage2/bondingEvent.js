@@ -214,8 +214,8 @@ describe('BondingEvent', async () => {
         await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
         await helperUpdateBondStatus();
         
-        const seuroProfit = amountSeuro.mul(6).div(10);
-        const usdcProfit = amountOther.mul(6).div(10);
+        const seuroProfit = amountSeuro.mul(6).div(100);
+        const usdcProfit = amountOther.mul(6).div(100);
         const expectedProfit = eurToTST(seuroProfit).add(eurToTST(defaultConvertUsdToEur(usdcProfit)));
         expect(await helperGetProfit()).to.eq(expectedProfit);
       });
@@ -287,7 +287,7 @@ describe('BondingEvent', async () => {
 
     describe('excess seuro', async () => {
       it('will transfer the excess sEURO if there is a designated wallet', async () => {
-        // difficult to test transfer of excess usdt, because it would require a mid-transaction price slip
+        // difficult to test transfer of excess sEURO, because it would require a mid-transaction price slip
         await BondingEvent.setExcessCollateralWallet(wallet.address);
         expect(await SEuro.balanceOf(wallet.address)).to.equal(0);
 
@@ -295,7 +295,7 @@ describe('BondingEvent', async () => {
           rates.TEN_PC, USDC
         );
 
-        expect(await SEuro.balanceOf(wallet.address)).to.be.gt(0);
+        expect(await USDC.balanceOf(wallet.address)).to.be.gt(0);
       });
     });
   });

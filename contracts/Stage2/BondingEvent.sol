@@ -253,6 +253,7 @@ contract BondingEvent is AccessControl {
     // A tick range is considered viable for the bonding if the current price is within 40th and 60th percentile of tick range
     // If these ticks would not give us a viable ratio for bonding, we expand the tick range
     // Expanded by a magnitude of 100 ticks (ten times), then 1,000 ticks (ten times), then 10,000 etc, until viable
+    // adds 0.001% to prevent bonding failure due to price slippage
     /// @param _amountSEuro The amount of sEURO token to bond
     /// @return amountOther The required amount of other token to bond with given sEURO amount
     /// @return lowerTick The lower tick of the viable price range
@@ -261,7 +262,7 @@ contract BondingEvent is AccessControl {
         (uint160 price,,,,,,) = pool.slot0();
         bool seuroIsToken0 = getAscendingPair().token0 == SEURO_ADDRESS;
         (lowerTick, upperTick) = getViableTickRange(price);
-        amountOther = ratioCalculator.getRatioForSEuro(_amountSEuro, price, lowerTick, upperTick, seuroIsToken0);
+        amountOther = ratioCalculator.getRatioForSEuro(_amountSEuro, price, lowerTick, upperTick, seuroIsToken0) * 100001 / 100000;
     }
 
     function retractLiquidity(uint256 _tokenId, uint128 _liquidity) private returns (uint256 retractedLiquidity0, uint256 retractedLiquidity1) {
