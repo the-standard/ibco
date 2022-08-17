@@ -253,7 +253,6 @@ contract BondingEvent is AccessControl {
     // A tick range is considered viable for the bonding if the current price is within 40th and 60th percentile of tick range
     // If these ticks would not give us a viable ratio for bonding, we expand the tick range
     // Expanded by a magnitude of 100 ticks (ten times), then 1,000 ticks (ten times), then 10,000 etc, until viable
-    // adds 0.001% to prevent bonding failure due to price slippage
     /// @param _amountSEuro The amount of sEURO token to bond
     /// @return amountOther The required amount of other token to bond with given sEURO amount
     /// @return lowerTick The lower tick of the viable price range
