@@ -5,7 +5,7 @@ let addresses;
 let DummyTST, DummyUSDC, SEuroAddress, SEuroOffering, OperatorStage2, BondStorage, BondingEvent, StandardTokenGateway, BondingCurve, SEuroCalculator, Staking;
 
 const INITIAL_PRICE = ethers.utils.parseEther('0.8');
-const MAX_SUPPLY = ethers.utils.parseEther('200000000');
+const MAX_SUPPLY = ethers.utils.parseEther('85000000');
 const BUCKET_SIZE = ethers.utils.parseEther('100000');
 
 const completed = async (contract, name) => {
