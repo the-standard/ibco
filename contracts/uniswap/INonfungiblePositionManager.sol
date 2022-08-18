@@ -5,10 +5,10 @@ pragma abicoder v2;
 import '@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol';
 import '@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol';
 
-import './IPoolInitializer.sol';
-import './IERC721Permit.sol';
-import './IPeripheryPayments.sol';
-import './IPeripheryImmutableState.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/IPeripheryImmutableState.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/IPeripheryPayments.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/IERC721Permit.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/IPoolInitializer.sol';
 import './PoolAddress.sol';
 
 /// @title Non-fungible token for positions
