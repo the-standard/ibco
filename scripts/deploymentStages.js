@@ -1,36 +1,42 @@
 const { ethers, network } = require('hardhat');
 const fs = require('fs');
-const { encodePriceSqrt, MOST_STABLE_FEE, etherBalances, scaleUpForDecDiff, parse6Dec } = require('../test/common');
+const { encodePriceSqrt, MOST_STABLE_FEE, etherBalances, scaleUpForDecDiff, parse6Dec, getLibraryFactory } = require('../test/common');
 let addresses;
-let DummyTST, DummyUSDT, SEuroAddress, SEuroOffering, OperatorStage2, BondStorage, BondingEvent, StandardTokenGateway, BondingCurve, SEuroCalculator, Staking;
+let DummyTST, DummyUSDC, SEuroAddress, SEuroOffering, OperatorStage2, BondStorage, BondingEvent, StandardTokenGateway, BondingCurve, SEuroCalculator, Staking;
 
 const INITIAL_PRICE = ethers.utils.parseEther('0.8');
-const MAX_SUPPLY = ethers.utils.parseEther('200000000');
+const MAX_SUPPLY = ethers.utils.parseEther('85000000');
 const BUCKET_SIZE = ethers.utils.parseEther('100000');
 
 const completed = async (contract, name) => {
-  console.log(`${name} deploying ...`)
+  console.log(`${name} deploying ...`);
   await contract.deployed();
-  console.log(`${name} deployed at ${contract.address}`)
-}
+  console.log(`${name} deployed at ${contract.address}`);
+};
 
 const getPricing = () => {
-  // note: ticks represent that sEURO is 18dec and USDT is 6dec
-  // tick -276700 approx. 0.96 USDT per SEUR
-  // tick -273300 approx. 1.35 USDT per SEUR
-  // 273300 and 276700 are the inverse of these prices
-  return SEuroAddress.toLowerCase() < DummyUSDT.address.toLowerCase() ?
+  // prices and ticks scaled up because USDC is 6 dec
+  //
+  // USDC / sEURO price of 1.23 reflects:
+  // eur / usd 1.017 (17th aug);
+  // seuro / euro 0.8 (ibco initial price).
+  // 
+  // 1.23 price is tick ~278394
+  // tick 275300 approx. 1 USDC = 0.903 sEURO
+  // tick 279000 approx. 1 USDC = 1.307 sEURO
+  // -279000 and -275300 are the inverse of these prices
+  return SEuroAddress.toLowerCase() < DummyUSDC.address.toLowerCase() ?
     {
-      initial: encodePriceSqrt(114, scaleUpForDecDiff(100, 12)),
-      lowerTick: -276700,
-      upperTick: -273300
+      initial: encodePriceSqrt(100, scaleUpForDecDiff(123, 12)),
+      lowerTick: -279000,
+      upperTick: -275300
     } :
     {
-      initial: encodePriceSqrt(scaleUpForDecDiff(100, 12), 114),
-      lowerTick: 273300,
-      upperTick: 276700
-    }
-}
+      initial: encodePriceSqrt(scaleUpForDecDiff(123, 12), 100),
+      lowerTick: 275300,
+      upperTick: 279000
+    };
+};
 
 const createChainlinkMocks = async () => {
   const dec = 8;
@@ -38,7 +44,7 @@ const createChainlinkMocks = async () => {
   let price = 102673000;
   const EurUsdChainlink = await (await ethers.getContractFactory('Chainlink')).deploy(price);
   // ~$1669 per eth
-  price = 166944811357
+  price = 166944811357;
   const EthUsdChainlink = await (await ethers.getContractFactory('Chainlink')).deploy(price);
 
   return {
@@ -50,63 +56,64 @@ const createChainlinkMocks = async () => {
       address: EthUsdChainlink.address,
       dec: dec
     }
-  }
-}
+  };
+};
 
-const deployContracts = async () => {  
+const deployContracts = async () => {
+  const [owner] = await ethers.getSigners();
   const { externalContracts } = JSON.parse(fs.readFileSync('scripts/deploymentConfig.json'))[network.name];
   SEuroAddress = externalContracts.seuro;
 
   DummyTST = await (await ethers.getContractFactory('DUMMY')).deploy('Standard Token', 'TST', 18);
   await completed(DummyTST, 'TST');
-  DummyUSDT = await (await ethers.getContractFactory('DUMMY')).deploy('Tether', 'USDT', 6);
-  await completed(DummyUSDT, 'USDT');
-  BondingCurve = await (await ethers.getContractFactory('BondingCurve')).deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
-  await completed(BondingCurve, 'BondingCurve')
+  DummyUSDC = await (await ethers.getContractFactory('DUMMY')).deploy('USD Coin', 'USDC', 6);
+  await completed(DummyUSDC, 'USDC');
+  BondingCurve = await (await getLibraryFactory(owner, 'BondingCurve')).deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
+  await completed(BondingCurve, 'BondingCurve');
   const chainlink = !!externalContracts.chainlink ?
     externalContracts.chainlink :
     await createChainlinkMocks();
-  SEuroCalculator = await (await ethers.getContractFactory('SEuroCalculator')).deploy(
+  SEuroCalculator = await (await getLibraryFactory(owner, 'SEuroCalculator')).deploy(
     BondingCurve.address, chainlink.eurUsd.address, chainlink.eurUsd.dec
   );
-  await completed(SEuroCalculator, 'SEuroCalculator')
+  await completed(SEuroCalculator, 'SEuroCalculator');
   const TokenManager = await (await ethers.getContractFactory('TokenManager')).deploy(
     externalContracts.weth, chainlink.ethUsd.address, chainlink.ethUsd.dec
   );
-  await completed(TokenManager, 'TokenManager')
+  await completed(TokenManager, 'TokenManager');
   SEuroOffering = await (await ethers.getContractFactory('SEuroOffering')).deploy(
     SEuroAddress, SEuroCalculator.address, TokenManager.address, BondingCurve.address
   );
-  await completed(SEuroOffering, 'SEuroOffering')
+  await completed(SEuroOffering, 'SEuroOffering');
   StandardTokenGateway = await (await ethers.getContractFactory('StandardTokenGateway')).deploy(DummyTST.address);
-  await completed(StandardTokenGateway, 'StandardTokenGateway')
-  BondStorage = await (await ethers.getContractFactory('BondStorage')).deploy(
-    StandardTokenGateway.address, chainlink.eurUsd.address, chainlink.eurUsd.dec
+  await completed(StandardTokenGateway, 'StandardTokenGateway');
+  BondStorage = await (await getLibraryFactory(owner, 'BondStorage')).deploy(
+    StandardTokenGateway.address, chainlink.eurUsd.address, 20
   );
-  await completed(BondStorage, 'BondStorage')
+  await completed(BondStorage, 'BondStorage');
   const RatioCalculator = await (await ethers.getContractFactory('RatioCalculator')).deploy();
-  await completed(RatioCalculator, 'RatioCalculator')
+  await completed(RatioCalculator, 'RatioCalculator');
   const pricing = getPricing();
   OperatorStage2 = await (await ethers.getContractFactory('OperatorStage2')).deploy();
   BondingEvent = await (await ethers.getContractFactory('BondingEvent')).deploy(
-    SEuroAddress, DummyUSDT.address, externalContracts.uniswapLiquidityManager, BondStorage.address, OperatorStage2.address,
+    SEuroAddress, DummyUSDC.address, externalContracts.uniswapLiquidityManager, BondStorage.address, OperatorStage2.address,
     RatioCalculator.address, pricing.initial, pricing.lowerTick, pricing.upperTick, MOST_STABLE_FEE
   );
-  await completed(BondingEvent, 'BondingEvent')
+  await completed(BondingEvent, 'BondingEvent');
 
   let oneWeek = 60 * 60 * 24 * 7;
   let seuroPerTst = 5000;
   let fivePc = 5000;
   let maturity = 5000;
   const currentBlockTS = (await ethers.provider.getBlock()).timestamp;
-  Staking = await (await ethers.getContractFactory('Staking')).deploy(
-	  'TST Staking', 'TST-S', currentBlockTS, currentBlockTS + oneWeek, maturity, DummyTST.address, SEuroAddress, seuroPerTst, fivePc
+  Staking = await (await getLibraryFactory(owner, 'Staking')).deploy(
+    'TST Staking', 'TST-S', currentBlockTS, currentBlockTS + oneWeek, maturity, DummyTST.address, SEuroAddress, seuroPerTst, fivePc
   );
   await completed(Staking, 'Staking');
 
   addresses = {
     TST: DummyTST.address,
-    USDT: DummyUSDT.address,
+    USDC: DummyUSDC.address,
     SEuro: SEuroAddress,
     SEuroOffering: SEuroOffering.address,
     SEuroCalculator: SEuroCalculator.address,
@@ -119,25 +126,25 @@ const deployContracts = async () => {
     Staking: Staking.address
   };
 
-  return addresses
-}
+  return addresses;
+};
 
 const activateSEuroOffering = async () => {
   const [owner] = await ethers.getSigners();
   const SEuroOffering = await ethers.getContractAt('SEuroOffering', addresses.SEuroOffering);
   await SEuroOffering.connect(owner).activate();
-}
+};
 
-const activateStaking = async() => {
+const activateStaking = async () => {
   const [owner] = await ethers.getSigners();
   const Staking = await ethers.getContractAt('Staking', addresses.Staking);
   await Staking.connect(owner).activate();
-}
+};
 
 const mintUser = async (address) => {
-  await DummyUSDT.mint(address, parse6Dec(100_000_000));
+  await DummyUSDC.mint(address, parse6Dec(100_000_000));
   await DummyTST.mint(address, etherBalances.HUNDRED_MILLION);
-}
+};
 
 const giveContractsRequiredPermissions = async () => {
   await SEuroCalculator.grantRole(await SEuroCalculator.OFFERING(), SEuroOffering.address);
@@ -147,24 +154,24 @@ const giveContractsRequiredPermissions = async () => {
   await OperatorStage2.setBonding(BondingEvent.address);
   await StandardTokenGateway.setStorageAddress(BondStorage.address);
   await DummyTST.mint(StandardTokenGateway.address, etherBalances.HUNDRED_MILLION);
-}
+};
 
 const mintTokensForAccount = async (accounts) => {
   const mints = accounts.map(async account => {
     await mintUser(account);
-  })
+  });
   await Promise.all(mints);
-}
+};
 
 const contractsFrontendReady = async (accounts) => {
   await activateSEuroOffering();
   await activateStaking();
   await giveContractsRequiredPermissions();
   await mintTokensForAccount(accounts);
-}
+};
 
 module.exports = {
   deployContracts,
   contractsFrontendReady,
   mintUser
-}
+};
