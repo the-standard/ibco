@@ -238,6 +238,7 @@ contract BondingEvent is AccessControl {
         lowerTick = lowerTickDefault;
         upperTick = upperTickDefault;
         int24 currentPriceTick = ratioCalculator.getTickAt(_price);
+        console.logInt(currentPriceTick);
         int24 magnitude = 100; uint8 i;
         // expand tick range by magnitude 100 ticks ten times, then by magnitude 1000 ticks ten times etc. until a viable ratio is found
         while (!viableTickPriceRatio(currentPriceTick, lowerTick, upperTick)) {

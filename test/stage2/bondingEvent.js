@@ -152,12 +152,6 @@ describe('BondingEvent', async () => {
       return amountOther;
     }
 
-    async function expectedTokProfit(seuroProfit) {
-      let expectedReward = eurToTST(BigNumber.from(seuroProfit));
-      let actualReward = ((await helperGetProfit()).div(DECIMALS_18)).toString();
-      expect(actualReward).to.equal(expectedReward);
-    }
-
     const verifyExpectedProfit = async (seuroProfit, otherProfit) => {
       const expectedProfit = eurToTST(seuroProfit).add(eurToTST(usdcToSeuro(otherProfit)));
       expect(await helperGetProfit()).to.eq(expectedProfit);
