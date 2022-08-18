@@ -43,6 +43,26 @@ describe('StakingDirectory', async () => {
     await expect(list.length).to.eq(0);
   });
 
+  it('deletes an address in the middle of the directory', async () => {
+    const addr1 = address();
+    const addr2 = address();
+    const addr3 = address();
+    const addr4 = address();
+
+    await Directory.add(addr1);
+    await Directory.add(addr2);
+    await Directory.add(addr3);
+    await Directory.add(addr4);
+
+    await Directory.del(addr2);
+    let list = await Directory.list();
+
+    await expect(list[0]).to.equal(addr1);
+    await expect(list[1]).to.equal(addr3);
+    await expect(list[2]).to.equal(addr4);
+  });
+
+
   it('tests ownership', async () => {
     const addr1 = address();
 
