@@ -21,12 +21,24 @@ function address() {
 describe('StakingDirectory', async () => {
   it('adds an address to the directory', async () => {
     const addr1 = address();
+    const addr2 = address();
+
     await Directory.add(addr1);
+    await Directory.add(addr2);
 
     let list = await Directory.list();
     await expect(list[0]).to.eq(addr1);
 
+    list = await Directory.list();
+    await expect(list[1]).to.eq(addr2);
+
     await Directory.del(addr1);
+    list = await Directory.list();
+    await expect(list.length).to.eq(1);
+    
+    await expect(list[0]).to.eq(addr2);
+
+    await Directory.del(addr2);
     list = await Directory.list();
     await expect(list.length).to.eq(0);
   });
@@ -36,7 +48,7 @@ describe('StakingDirectory', async () => {
 
     const add = Directory.connect(user1).add(addr1);
     await expect(add).to.be.revertedWith('Ownable: caller is not the owner');
-   
+
     const del = Directory.connect(user1).del(addr1);
     await expect(del).to.be.revertedWith('Ownable: caller is not the owner');
   });

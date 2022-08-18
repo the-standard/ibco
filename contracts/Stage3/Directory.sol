@@ -5,32 +5,24 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract StakingDirectory is Ownable {
 
-    mapping(uint => address) private entries;
-    uint private entryCount;   
+    address[] public entries;
 
     constructor() {}
 
     function add(address _address) external onlyOwner {
-        entries[entryCount] = _address;
-        entryCount++;
+        entries.push(_address);
+    }
+
+    function deleteEntry(uint256 index) private {
+        for (uint256 i = index; i < entries.length - 1; i++) entries[i] = entries[i+1];
+        entries.pop();
     }
 
     function del(address _address) external onlyOwner {
-        for (uint i = 0; i < entryCount; i++) {
-            if (entries[i] != _address) {
-                continue;
-            }
-            delete entries[i];
-            entryCount--;
-            return;
-        }
+        for (uint256 i = 0; i < entries.length; i++) if (entries[i] == _address) deleteEntry(i);
     }
 
-    function list() public view returns (address []memory) {
-        address[] memory ret = new address[](entryCount);
-        for (uint i = 0; i < entryCount; i++) {
-            ret[i] = entries[i];
-        }
-        return ret;
+    function list() public view returns (address[] memory) {
+        return entries;
     }
 }
