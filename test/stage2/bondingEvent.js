@@ -1,7 +1,6 @@
 const { ethers } = require('hardhat');
-const { BigNumber } = ethers;
 const { expect } = require('chai');
-const { POSITION_MANAGER_ADDRESS, DECIMALS_18, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, eurToTST, defaultConvertUsdToEur } = require('../common.js');
+const { POSITION_MANAGER_ADDRESS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, eurToTST, defaultConvertUsdToEur } = require('../common.js');
 
 let owner, customer, wallet, SEuro, TST, USDC, BondingEvent, BondStorage, TokenGateway, BondingEventContract, BondStorageContract, RatioCalculatorContract, RatioCalculator, pricing, SwapManager;
 
