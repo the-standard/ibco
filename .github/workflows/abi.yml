@@ -20,7 +20,7 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: 16.x
-    - run: npm ci && npx hardhat compile && mkdir ibco && cp artifacts/contracts/**/*.json ibco/
+    - run: npm ci && npx hardhat compile && mkdir ibco && cp artifacts/contracts/**/**/*.json ibco/
     - id: 'auth'
       uses: 'google-github-actions/auth@v0'
       with:
