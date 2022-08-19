@@ -37,15 +37,15 @@ contract SEuroOffering is Ownable, Pausable {
 
     modifier validAddress(address _newAddress) { require(_newAddress != address(0), "err-addr-invalid"); _; }
 
-    function setCalculator(address _newAddress) external onlyOwner validAddress(_newAddress) {
+    function setCalculator(address _newAddress) public onlyOwner validAddress(_newAddress) {
         sEuroRateCalculator = SEuroCalculator(_newAddress);
     }
 
-    function setTokenManager(address _newAddress) external onlyOwner validAddress(_newAddress) {
+    function setTokenManager(address _newAddress) public onlyOwner validAddress(_newAddress) {
         tokenManager = TokenManager(_newAddress);
     }
 
-    function setBondingCurve(address _newAddress) external onlyOwner validAddress(_newAddress) {
+    function setBondingCurve(address _newAddress) public onlyOwner validAddress(_newAddress) {
         bondingCurve = BondingCurve(_newAddress);
     }
 
@@ -110,7 +110,7 @@ contract SEuroOffering is Ownable, Pausable {
     }
 
     // Sets the wallet that will receive all collateral exchanged for sEURO
-    function setCollateralWallet(address _collateralWallet) external onlyOwner { collateralWallet = _collateralWallet; }
+    function setCollateralWallet(address _collateralWallet) public onlyOwner { collateralWallet = _collateralWallet; }
 
     function cmpString(string memory a, string memory b) private pure returns (bool) {
         return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
