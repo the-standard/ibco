@@ -49,7 +49,7 @@ contract SEuroOffering is Ownable, Pausable {
         bondingCurve = BondingCurve(_newAddress);
     }
 
-    function getSeuros(uint256 _amount, TokenManager.Token memory _token) private returns (uint256) {
+    function getSeuros(uint256 _amount, TokenManager.TokenData memory _token) private returns (uint256) {
         return sEuroRateCalculator.calculate(_amount, _token);
     }
 
@@ -74,7 +74,7 @@ contract SEuroOffering is Ownable, Pausable {
     // Accepted tokens and their byte array values are dictated by the TokenManager contract
     /// @param _amount the amount of the given token that you'd like to exchange for sEURO
     function swap(string memory _symbol, uint256 _amount) external ifActive ifNotPaused {
-        TokenManager.Token memory token = tokenManager.get(_symbol);
+        TokenManager.TokenData memory token = tokenManager.get(_symbol);
         IERC20 erc20Token = IERC20(token.addr);
         require(erc20Token.balanceOf(msg.sender) >= _amount, "err-tok-bal");
         require(erc20Token.allowance(msg.sender, address(this)) >= _amount, "err-tok-allow");
@@ -88,7 +88,7 @@ contract SEuroOffering is Ownable, Pausable {
 
     // Payable function that exchanges the ETH value of the transaction for an equivalent amount of sEURO
     function swapETH() external payable ifActive ifNotPaused {
-        TokenManager.Token memory token = tokenManager.get("WETH");
+        TokenManager.TokenData memory token = tokenManager.get("WETH");
         WETH(token.addr).deposit{value: msg.value}();
         uint256 seuros = getSeuros(msg.value, token);
         Seuro.mint(msg.sender, seuros);
