@@ -3,7 +3,6 @@ const { expect } = require('chai');
 const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS, WETH_BYTES, DAI_BYTES, etherBalances, getLibraryFactory } = require('../common.js');
 
 describe('SEuroOffering', async () => {
-  const DAI_DEC = 18;
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
@@ -172,7 +171,6 @@ describe('SEuroOffering', async () => {
       describe('swapETH', async () => {
         it('swaps for eth', async () => {
           const toSwap = ethers.utils.parseEther('1');
-          const ethBytes = ethers.utils.formatBytes32String('ETH');
 
           const expectedEuros = await getEthToSEuro(toSwap);
           const swap = SEuroOffering.connect(user).swapETH({ value: toSwap });
@@ -292,7 +290,6 @@ describe('SEuroOffering', async () => {
   describe('readOnlyCalculateSwap', async () => {
     it('calculates the read-only swap amount for token', async () => {
       const toSwap = ethers.utils.parseEther('1');
-      const wethBytes = ethers.utils.formatBytes32String('WETH');
       const expectedSeuros = await getEthToSEuro(toSwap);
       const seuros = await SEuroOffering.readOnlyCalculateSwap('WETH', toSwap);
 
