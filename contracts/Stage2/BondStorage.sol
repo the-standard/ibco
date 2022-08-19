@@ -100,7 +100,7 @@ contract BondStorage is AccessControl {
         return seuroToStandardToken(eur);
     }
 
-    function seuroToStandardToken(uint256 _amount) private view returns (uint256) { return Rates.convertInverse(_amount, tokenGateway.priceTstEur(), tokenGateway.priceDec()); }
+    function seuroToStandardToken(uint256 _amount) private view returns (uint256) { return Rates.convertInverse(_amount, tokenGateway.getPrice(), tokenGateway.priceDec()); }
 
     function potentialPayout(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturityInWeeks) private view returns (uint256 tokenPayout) {
         Bond memory dummyBond = Bond(_principalSeuro, _principalOther, _rate, _maturityInWeeks, false, PositionMetaData(0, 0, 0, 0));
