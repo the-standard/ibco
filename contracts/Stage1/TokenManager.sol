@@ -28,6 +28,14 @@ contract TokenManager is Ownable {
         return tokenSymbols;
     }
 
+    function getDecimalFor(string memory _symbol) external view returns(uint8) {
+        return tokenMetaData[_symbol].dec;
+    }
+
+    function getAddressFor(string memory _symbol) external view returns(address) {
+        return tokenMetaData[_symbol].addr;
+    }
+
     // Add a token to the accepted list of tokens
     /// @param _addr the address of the token
     /// @param _chainlinkAddr the address of the token / USD Chainlink data feed
