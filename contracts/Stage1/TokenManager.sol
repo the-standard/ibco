@@ -24,11 +24,11 @@ contract TokenManager is Ownable {
         revert("err-tok-not-found");
     }
 
-    function getAcceptedTokens() external view returns (string[] memory) {
+    function getAcceptedTokens() public view returns (string[] memory) {
         return tokenSymbols;
     }
 
-    function getTokenDecimalFor(string memory _symbol) external view returns(uint8) {
+    function getTokenDecimalFor(string memory _symbol) public view returns(uint8) {
         return tokenMetaData[_symbol].dec;
     }
 
@@ -36,7 +36,7 @@ contract TokenManager is Ownable {
         return tokenMetaData[_symbol].chainlinkDec;
     }
 
-    function getTokenAddressFor(string memory _symbol) external view returns(address) {
+    function getTokenAddressFor(string memory _symbol) public view returns(address) {
         return tokenMetaData[_symbol].addr;
     }
 
