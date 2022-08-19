@@ -24,7 +24,7 @@ contract SEuroCalculator is AccessControl {
     constructor(address _bondingCurve, address _eurUsdCl, uint8 _eurUsdDec) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setRoleAdmin(OFFERING, DEFAULT_ADMIN_ROLE);
-		grantRole(OFFERING, msg.sender);
+        grantRole(OFFERING, msg.sender);
 
         bondingCurve = BondingCurve(_bondingCurve);
         EUR_USD_CL = _eurUsdCl;
@@ -40,7 +40,7 @@ contract SEuroCalculator is AccessControl {
         bondingCurve = BondingCurve(_newAddress);
     }
 
-    function calculateEuros(uint256 _amount, TokenManager.Token memory _token) private view returns (uint256 euros) {
+    function calculateEuros(uint256 _amount, TokenManager.TokenData memory _token) private view returns (uint256 euros) {
         (,int256 tokUsd,,,) = IChainlink(_token.chainlinkAddr).latestRoundData();
         (,int256 eurUsd,,,) = IChainlink(EUR_USD_CL).latestRoundData();
         uint256 usd = Rates.convertDefault(_amount, uint256(tokUsd), _token.chainlinkDec);
@@ -52,7 +52,7 @@ contract SEuroCalculator is AccessControl {
     // It is therefore a state-changing function
     /// @param _amount the amount of the given token that you'd like to calculate the exchange value for
     /// @param _token Token Manager Token for which you'd like to calculate
-    function calculate(uint256 _amount, TokenManager.Token memory _token) external onlyOffering returns (uint256) {
+    function calculate(uint256 _amount, TokenManager.TokenData memory _token) external onlyOffering returns (uint256) {
         return bondingCurve.calculatePrice(calculateEuros(_amount, _token));
     }
 
@@ -60,7 +60,7 @@ contract SEuroCalculator is AccessControl {
     // This function provides a simplified calculation and is therefore just an estimation
     /// @param _amount the amount of the given token that you'd like to estimate the exchange value for
     /// @param _token Token Manager Token for which you'd like to estimate
-    function readOnlyCalculate(uint256 _amount, TokenManager.Token memory _token) external view returns (uint256) {
+    function readOnlyCalculate(uint256 _amount, TokenManager.TokenData memory _token) external view returns (uint256) {
         return bondingCurve.readOnlyCalculatePrice(calculateEuros(_amount, _token));
     }
 }

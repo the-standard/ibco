@@ -1,58 +1,81 @@
 //SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.15;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract TokenManager is Ownable {
+    string[] public tokenSymbols;
+    mapping(string => TokenData) tokenMetaData;
 
-    bytes32 private constant WETH_NAME = bytes32("WETH");
-    uint8 private constant WETH_DEC = 18;
-
-    Token[] public tokens;
-
-    struct Token { bytes32 name; address addr; uint8 dec; address chainlinkAddr; uint8 chainlinkDec; }
+    struct TokenData { address addr; uint8 dec; address chainlinkAddr; uint8 chainlinkDec; }
 
     /// @param _wethAddress address of WETH token
     /// @param _ethUsdCL address of Chainlink data feed for ETH / USD
     /// @param _ethUsdCLDec number of decimals that ETH / USD data feed uses
     constructor(address _wethAddress, address _ethUsdCL, uint8 _ethUsdCLDec) {
-        addDefaultTokens(_wethAddress, _ethUsdCL, _ethUsdCLDec);
+        addAcceptedToken(_wethAddress, _ethUsdCL, _ethUsdCLDec);
     }
 
     // Gets the details for the given token, if it is accepted
-    /// @param _name 32-byte array value representation of the token symbol e.g. "WETH", "USDT"
-    function get(bytes32 _name) external view returns(Token memory token) {
-        for (uint256 i = 0; i < tokens.length; i++) if (tokens[i].name == _name) token = tokens[i];
-        require(token.name != bytes32(0), "err-tok-not-found");
+    /// @param _symbol The token symbol e.g. "WETH", "USDC", "USDT"
+    function get(string memory _symbol) external view returns(TokenData memory) {
+        for (uint256 i = 0; i < tokenSymbols.length; i++) if (cmpString(tokenSymbols[i], _symbol)) return tokenMetaData[_symbol];
+        revert("err-tok-not-found");
     }
 
-    function addDefaultTokens(address _wethAddress, address _ethUsdCL, uint8 _ethUsdCLDec) private {
-        addAcceptedToken(WETH_NAME, _wethAddress, WETH_DEC, _ethUsdCL, _ethUsdCLDec);
+    function getAcceptedTokens() external view returns (string[] memory) {
+        return tokenSymbols;
     }
 
-    // Get an array of all the accepted tokens
-    function getAcceptedTokens() external view returns (Token[] memory) {
-        return tokens;
+    function getTokenDecimalFor(string memory _symbol) external view returns(uint8) {
+        return tokenMetaData[_symbol].dec;
     }
+
+    function getChainlinkDecimalFor(string memory _symbol) external view returns(uint8) {
+        return tokenMetaData[_symbol].chainlinkDec;
+    }
+
+    function getTokenAddressFor(string memory _symbol) external view returns(address) {
+        return tokenMetaData[_symbol].addr;
+    }
+
+    function getChainlinkAddressFor(string memory _symbol) external view returns(address) {
+        return tokenMetaData[_symbol].chainlinkAddr;
+    }
+
 
     // Add a token to the accepted list of tokens
-    /// @param _name 32-byte array value representation of the token symbol e.g. "WETH", "USDT"
     /// @param _addr the address of the token
-    /// @param _dec the decimals of the token
     /// @param _chainlinkAddr the address of the token / USD Chainlink data feed
     /// @param _chainlinkDec the number of decimals the Chainlink data feed uses
-    function addAcceptedToken(bytes32 _name, address _addr, uint8 _dec, address _chainlinkAddr, uint8 _chainlinkDec) public onlyOwner {
-        tokens.push(Token(_name, _addr, _dec, _chainlinkAddr, _chainlinkDec));
+    function addAcceptedToken(address _addr, address _chainlinkAddr, uint8 _chainlinkDec) public onlyOwner {
+        (string memory symbol, uint8 decimals) = getTokenMetaData(_addr);
+        tokenSymbols.push(symbol);
+        tokenMetaData[symbol] = TokenData(_addr, decimals, _chainlinkAddr, _chainlinkDec);
     }
 
     function deleteToken(uint256 index) private {
-        for (uint256 i = index; i < tokens.length - 1; i++) tokens[i] = tokens[i+1];
-        tokens.pop();
+        for (uint256 i = index; i < tokenSymbols.length - 1; i++) tokenSymbols[i] = tokenSymbols[i+1];
+        tokenSymbols.pop();
     }
 
     // Remove accepted token from accepted list of tokens
-    /// @param _name 32-byte array value representation of the token symbol e.g. "WETH", "USDT"
-    function removeAcceptedToken(bytes32 _name) public onlyOwner {
-        for (uint256 i = 0; i < tokens.length; i++) if (tokens[i].name == _name) deleteToken(i);
+    /// @param _symbol The token symbol e.g. "WETH", "USDT"
+    function removeAcceptedToken(string memory _symbol) public onlyOwner {
+        for (uint256 i = 0; i < tokenSymbols.length; i++) if (cmpString(tokenSymbols[i], _symbol)) deleteToken(i);
+        tokenMetaData[_symbol] = TokenData(address(0), 0, address(0), 0);
+    }
+
+    function cmpString(string memory a, string memory b) private pure returns (bool) {
+        return (keccak256(abi.encodePacked((a))) == keccak256(abi.encodePacked((b))));
+    }
+
+    function getTokenMetaData(address _addr) private view returns (string memory, uint8) {
+        string memory sym = ERC20(_addr).symbol();
+        require(!cmpString(sym, ""), "err-empty-symbol");
+        uint8 dec = ERC20(_addr).decimals();
+        require(dec > 0, "err-zero-decimals");
+        return (sym, dec);
     }
 }

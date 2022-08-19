@@ -3,7 +3,6 @@ const { expect } = require('chai');
 const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS, WETH_BYTES, DAI_BYTES, etherBalances, getLibraryFactory } = require('../common.js');
 
 describe('SEuroOffering', async () => {
-  const DAI_DEC = 18;
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
@@ -92,7 +91,7 @@ describe('SEuroOffering', async () => {
       await buyWETH(user, toSwap);
       await WETH.connect(user).approve(SEuroOffering.address, toSwap);
 
-      const swap = SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
+      const swap = SEuroOffering.connect(user).swap('WETH', toSwap);
 
       await expect(swap).to.be.revertedWith('err-ibco-inactive');
       const userSEuroBalance = await SEuro.balanceOf(user.address);
@@ -111,8 +110,8 @@ describe('SEuroOffering', async () => {
 
 
         const expectedEuros = await getEthToSEuro(toSwap);
-        const swap = SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
-        await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs(WETH_BYTES, toSwap, expectedEuros);
+        const swap = SEuroOffering.connect(user).swap('WETH', toSwap);
+        await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs('WETH', toSwap, expectedEuros);
         const userSEuroBalance = await SEuro.balanceOf(user.address);
         expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
       });
@@ -121,7 +120,7 @@ describe('SEuroOffering', async () => {
         const toSwap = ethers.utils.parseEther('1');
         await buyWETH(user, toSwap);
 
-        const swap = SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
+        const swap = SEuroOffering.connect(user).swap('WETH', toSwap);
 
         await expect(swap).to.be.revertedWith('err-tok-allow');
         const userSEuroBalance = await SEuro.balanceOf(user.address);
@@ -133,7 +132,7 @@ describe('SEuroOffering', async () => {
         await WETH.connect(user).withdraw(await WETH.balanceOf(user.address));
         await WETH.connect(user).approve(SEuroOffering.address, toSwap);
 
-        const swap = SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
+        const swap = SEuroOffering.connect(user).swap('WETH', toSwap);
 
         await expect(swap).to.be.revertedWith('err-tok-bal');
         const userSEuroBalance = await SEuro.balanceOf(user.address);
@@ -143,7 +142,7 @@ describe('SEuroOffering', async () => {
       it('will swap for any accepted token', async () => {
         const toSwap = ethers.utils.parseEther('1');
         const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
-        await TokenManager.connect(owner).addAcceptedToken(DAI_BYTES, DAI_ADDRESS, DAI_DEC, CHAINLINK_DAI_USD, CHAINLINK_DEC);
+        await TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD, CHAINLINK_DEC);
 
         await buyToken(user, DAI_ADDRESS, toSwap);
         const Dai = await ethers.getContractAt('IERC20', DAI_ADDRESS);
@@ -151,8 +150,8 @@ describe('SEuroOffering', async () => {
         await Dai.connect(user).approve(SEuroOffering.address, userTokens);
 
         const expectedEuros = await getDaiToSEuro(userTokens);
-        const swap = SEuroOffering.connect(user).swap(DAI_BYTES, userTokens);
-        await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs(DAI_BYTES, userTokens, expectedEuros);
+        const swap = SEuroOffering.connect(user).swap('DAI', userTokens);
+        await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs('DAI', userTokens, expectedEuros);
         const userSEuroBalance = await SEuro.balanceOf(user.address);
         expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
       });
@@ -162,7 +161,7 @@ describe('SEuroOffering', async () => {
         await buyWETH(user, amount);
         await WETH.connect(user).approve(SEuroOffering.address, amount);
 
-        await SEuroOffering.connect(user).swap(WETH_BYTES, amount);
+        await SEuroOffering.connect(user).swap('WETH', amount);
 
         const bucket = await BondingCurve.currentBucket();
         expect(bucket.index).to.equal(1);
@@ -172,11 +171,10 @@ describe('SEuroOffering', async () => {
       describe('swapETH', async () => {
         it('swaps for eth', async () => {
           const toSwap = ethers.utils.parseEther('1');
-          const ethBytes = ethers.utils.formatBytes32String('ETH');
 
           const expectedEuros = await getEthToSEuro(toSwap);
           const swap = SEuroOffering.connect(user).swapETH({ value: toSwap });
-          await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs(ethBytes, toSwap, expectedEuros);
+          await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs('ETH', toSwap, expectedEuros);
           const userSEuroBalance = await SEuro.balanceOf(user.address);
           expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
         });
@@ -199,8 +197,8 @@ describe('SEuroOffering', async () => {
           pause = SEuroOffering.connect(owner).pause();
           await expect(pause).not.to.be.reverted;
           expect(await SEuroOffering.paused()).to.equal(true);
-    
-          let swap = SEuroOffering.swap(WETH_BYTES, etherBalances['8K']);
+
+          let swap = SEuroOffering.swap('WETH', etherBalances['8K']);
           await expect(swap).to.be.revertedWith('err-paused');
           let swapETH = SEuroOffering.swapETH({value: etherBalances['8K']});
           await expect(swapETH).to.be.revertedWith('err-paused');
@@ -211,8 +209,8 @@ describe('SEuroOffering', async () => {
           unpause = SEuroOffering.connect(owner).unpause();
           await expect(unpause).not.to.be.reverted;
           expect(await SEuroOffering.paused()).to.equal(false);
-    
-          swap = SEuroOffering.swap(WETH_BYTES, etherBalances['8K']);
+
+          swap = SEuroOffering.swap('WETH', etherBalances['8K']);
           await expect(swap).not.to.be.revertedWith('err-paused');
           swapETH = SEuroOffering.swapETH({value: etherBalances['8K']});
           await expect(swapETH).not.to.be.revertedWith('err-paused');
@@ -229,7 +227,7 @@ describe('SEuroOffering', async () => {
       const toSwap = ethers.utils.parseEther('1');
       await buyWETH(user, toSwap);
       await WETH.connect(user).approve(SEuroOffering.address, toSwap);
-      await SEuroOffering.connect(user).swap(WETH_BYTES, toSwap);
+      await SEuroOffering.connect(user).swap('WETH', toSwap);
       expect(await WETH.balanceOf(collateralWallet.address)).to.equal(toSwap);
 
       await SEuroOffering.connect(user).swapETH({ value: toSwap });
@@ -292,9 +290,8 @@ describe('SEuroOffering', async () => {
   describe('readOnlyCalculateSwap', async () => {
     it('calculates the read-only swap amount for token', async () => {
       const toSwap = ethers.utils.parseEther('1');
-      const wethBytes = ethers.utils.formatBytes32String('WETH');
       const expectedSeuros = await getEthToSEuro(toSwap);
-      const seuros = await SEuroOffering.readOnlyCalculateSwap(wethBytes, toSwap);
+      const seuros = await SEuroOffering.readOnlyCalculateSwap('WETH', toSwap);
 
       expect(seuros).to.equal(expectedSeuros);
     });

@@ -28,11 +28,11 @@ These are the functions exposed to the user in the sEURO Offering contract. This
 
 These are the functions exposed to the user in the Token Manager contract. This contract can be used to retrieve all accepted tokens for the sEURO Offering, and obtain the details for each token.
 
-**getAcceptedTokens()**
+getAcceptedTokens(): returns an array of all the accepted token symbols, e.g., ["WETH", "USDT", "USDC"]
 
-*Description*: provides list of all ERC20 tokens that are swappable for sEURO
+getTokenDecimalFor(string symbol): returns the decimals for the token symbol, e.g. 18 for WETH
 
-*Output*: list of token details: symbol (converted to 32-byte array), address, decimals, Chainlink TOK/USD data feed address, Chainlink data feed decimals
+getTokenAddressFor(string symbol): returns the deployed contract address for the token
 
 
 # Stage 1 Architecture
