@@ -30,9 +30,9 @@ These are the functions exposed to the user in the Token Manager contract. This 
 
 **getAcceptedTokens()**
 
-*Description*: provides list of all ERC20 tokens that are swappable for sEURO
+*Description*: provides list of all ERC20 token symbols that are swappable for sEURO
 
-*Output*: list of token details: symbol (converted to 32-byte array), address, decimals, Chainlink TOK/USD data feed address, Chainlink data feed decimals
+*Output*: a string array of symbols
 
 
 # Stage 1 Architecture
