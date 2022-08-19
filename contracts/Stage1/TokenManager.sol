@@ -2,7 +2,7 @@
 pragma solidity ^0.8.15;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "contracts/interfaces/ISeuro.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract TokenManager is Ownable {
     string[] public tokenSymbols;
@@ -55,9 +55,9 @@ contract TokenManager is Ownable {
     }
 
     function getTokenMetaData(address _addr) private view returns (string memory, uint8) {
-        string memory sym = ISeuro(_addr).symbol();
+        string memory sym = ERC20(_addr).symbol();
         require(!cmpString(sym, ""), "err-empty-symbol");
-        uint8 dec = ISeuro(_addr).decimals();
+        uint8 dec = ERC20(_addr).decimals();
         require(dec > 0, "err-zero-decimals");
         return (sym, dec);
     }
