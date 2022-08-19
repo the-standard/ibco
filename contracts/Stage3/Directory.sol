@@ -1,15 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.15;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract StakingDirectory is Ownable {
+contract StakingDirectory is AccessControl {
 
     address[] public entries;
 
-    constructor() {}
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
 
-    function add(address _address) external onlyOwner {
+    modifier onlyAdmin {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "invalid-admin");
+        _;
+    }
+
+    function add(address _address) external onlyAdmin {
         entries.push(_address);
     }
 
@@ -18,7 +25,7 @@ contract StakingDirectory is Ownable {
         entries.pop();
     }
 
-    function del(address _address) external onlyOwner {
+    function del(address _address) external onlyAdmin {
         for (uint256 i = 0; i < entries.length; i++) if (entries[i] == _address) deleteEntry(i);
     }
 

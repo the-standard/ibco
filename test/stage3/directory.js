@@ -67,9 +67,9 @@ describe('StakingDirectory', async () => {
     const addr1 = address();
 
     const add = Directory.connect(user1).add(addr1);
-    await expect(add).to.be.revertedWith('Ownable: caller is not the owner');
+    await expect(add).to.be.revertedWith('invalid-admin');
 
     const del = Directory.connect(user1).del(addr1);
-    await expect(del).to.be.revertedWith('Ownable: caller is not the owner');
+    await expect(del).to.be.revertedWith('invalid-admin');
   });
 });
