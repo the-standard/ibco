@@ -1,10 +1,10 @@
 name: Upload ABI CI
 
-on: push
-  # pull_request:
-  #   branches:
-  #     - master
-  #   types: [closed]
+on:
+  pull_request:
+    branches:
+      - master
+    types: [closed]
 
 env:
   INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
@@ -13,7 +13,7 @@ jobs:
   upload:
     runs-on: ubuntu-latest
 
-    # if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true
     steps:
     - uses: actions/checkout@v3
     - name: Use Node.js ${{ matrix.node-version }}
