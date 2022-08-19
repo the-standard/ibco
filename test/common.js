@@ -35,17 +35,6 @@ let etherBalances = {
   ONE_BILLION: ethers.utils.parseEther('1000000000'),
 };
 
-// const parseOtherTokens = (valueStr) => {
-//  return ethers.utils.parseUnits(valueStr, 6);
-// }
-
-// Only usable for tokens with 6 decimals such as USDT and USDC
-// let otherBalances = {
-//  THOUSAND: parseOtherTokens('1000'),
-//  MILLION: parseOtherTokens('1000000'),
-//  BILLION: parseOtherTokens('1000000000'),
-//};
-
 const MOST_STABLE_FEE = 500;
 const STABLE_TICK_SPACING = 10;
 const MIN_TICK = -887270;
