@@ -20,6 +20,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
+      - run: npx hardhat clean
       - run: npx hardhat test --parallel
       - run: npx hardhat size-contracts
       - run: npx eslint test/
