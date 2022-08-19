@@ -150,8 +150,8 @@ describe('SEuroOffering', async () => {
         await Dai.connect(user).approve(SEuroOffering.address, userTokens);
 
         const expectedEuros = await getDaiToSEuro(userTokens);
-        const swap = SEuroOffering.connect(user).swap("DAI", userTokens);
-        await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs("DAI", userTokens, expectedEuros);
+        const swap = SEuroOffering.connect(user).swap('DAI', userTokens);
+        await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs('DAI', userTokens, expectedEuros);
         const userSEuroBalance = await SEuro.balanceOf(user.address);
         expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
       });
@@ -174,7 +174,7 @@ describe('SEuroOffering', async () => {
 
           const expectedEuros = await getEthToSEuro(toSwap);
           const swap = SEuroOffering.connect(user).swapETH({ value: toSwap });
-          await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs("ETH", toSwap, expectedEuros);
+          await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs('ETH', toSwap, expectedEuros);
           const userSEuroBalance = await SEuro.balanceOf(user.address);
           expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
         });
