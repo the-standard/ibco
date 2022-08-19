@@ -4,9 +4,6 @@ const { WETH_ADDRESS, DAI_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_D
 
 describe('TokenManager', async () => {
   const WETH_DEC = 18;
-  const WETH_TOKEN = [ WETH_ADDRESS, 18, CHAINLINK_ETH_USD, CHAINLINK_DEC];
-  const DAI_TOKEN = [ DAI_ADDRESS, 18, CHAINLINK_DAI_USD, CHAINLINK_DEC];
-
   let TokenManager, owner, user;
 
   beforeEach(async () => {
