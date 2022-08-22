@@ -98,13 +98,13 @@ contract SEuroOffering is Ownable, Pausable {
     }
 
     // Restricted function to activate the sEURO Offering
-    function activate() external onlyOwner {
+    function activate() public onlyOwner {
         status.active = true;
         status.start = block.timestamp;
     }
 
     // Restricted function to complete the sEURO Offering
-    function complete() external onlyOwner {
+    function complete() public onlyOwner {
         status.active = false;
         status.stop = block.timestamp;
     }
