@@ -97,12 +97,12 @@ contract BondingEvent is AccessControl {
     function setOperator(address _newAddress) public onlyPoolOwner validAddress(_newAddress) { operatorAddress = _newAddress; }
 
     // Sets address of wallet, which will receive excess bonding collateral
-    function setExcessCollateralWallet(address _newAddress) external onlyPoolOwner validAddress(_newAddress) { excessCollateralWallet = _newAddress; }
+    function setExcessCollateralWallet(address _newAddress) public onlyPoolOwner validAddress(_newAddress) { excessCollateralWallet = _newAddress; }
 
-    function setRatioCalculator(address _newAddress) external onlyPoolOwner validAddress(_newAddress) { ratioCalculator = IRatioCalculator(_newAddress); }
+    function setRatioCalculator(address _newAddress) public onlyPoolOwner validAddress(_newAddress) { ratioCalculator = IRatioCalculator(_newAddress); }
 
     // Sets default lower and upper tick for liquidity positions, if valid
-    function adjustTickDefaults(int24 _newLower, int24 _newHigher) external onlyPoolOwner validTicks(_newLower, _newHigher) {
+    function adjustTickDefaults(int24 _newLower, int24 _newHigher) public onlyPoolOwner validTicks(_newLower, _newHigher) {
         lowerTickDefault = _newLower;
         upperTickDefault = _newHigher;
     }
@@ -118,7 +118,7 @@ contract BondingEvent is AccessControl {
     }
 
     // Gets all the Uniswap liquidity pool token IDs that this pool manages
-    function getPositions() external view returns (Position[] memory) { return positions; }
+    function getPositions() public view returns (Position[] memory) { return positions; }
 
     // Gets data for the given position token ID
     /// @param _tokenId the ID of the position token
@@ -284,7 +284,7 @@ contract BondingEvent is AccessControl {
 
     function getLiquidityOfPosition(uint256 _tokenId) private view returns(uint128 liquidity) { (,,,,,,,liquidity,,,,) = manager.positions(_tokenId); }
 
-    function clearPositionAndBurn(uint256 _tokenId) external onlyPoolOwner {
+    function clearPositionAndBurn(uint256 _tokenId) public onlyPoolOwner {
         require(excessCollateralWallet != address(0), "err-no-wallet-assigned");
         (uint256 retractedAmount0, uint256 retractedAmount1) = retractLiquidity(_tokenId, getLiquidityOfPosition(_tokenId));
         (uint256 collectedAmount0, uint256 collectedAmount1) = collectAll(_tokenId);
