@@ -81,9 +81,9 @@ contract StandardTokenGateway is AccessControl {
         return bondRewardPoolSupply;
     }
 
-    function getPrice() public view returns (uint256) {
-        return priceTstEur;
-    }
+    function getPrice() public view returns (uint256) { return priceTstEur; }
+
+    function getDec() public view returns (uint8) { return priceDec; }
 
     function setStorageAddress(address _newAddress) public onlyGatewayOwner {
         require(_newAddress != address(0), "err-zero-address");
