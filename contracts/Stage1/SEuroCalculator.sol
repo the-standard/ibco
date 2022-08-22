@@ -8,8 +8,6 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "contracts/Rates.sol";
 
 contract SEuroCalculator is AccessControl {
-    // multiplier used to assist calculation of fractions
-    uint256 public constant FIXED_POINT = 1_000_000_000_000_000_000;
     // address of Offering contract, the key dependent of this contract
 	bytes32 public constant OFFERING = keccak256("OFFERING");
 

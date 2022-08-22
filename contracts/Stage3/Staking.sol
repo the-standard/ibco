@@ -53,7 +53,7 @@ contract Staking is ERC721, Ownable, Pausable {
     // calculates the reward in SEURO based in the input of amount of TSTs
     function calculateReward(uint256 _amountStandard) public view returns (uint256 reward) {
         uint256 tstReward = Rates.convertDefault(_amountStandard, SI_RATE, RATE_DEC);
-        return Rates.convertDefault(tstReward, tokenGateway.getPrice(), tokenGateway.getDec());
+        return Rates.convertDefault(tstReward, tokenGateway.priceTstEur(), tokenGateway.getDec());
     }
 
     // fetches the balance of the contract for the give erc20 token
