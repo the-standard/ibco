@@ -32,12 +32,12 @@ contract OperatorStage2 is AccessControl, Pausable {
 
     modifier onlyOperatorStage2() { require(hasRole(OPERATOR_STAGE_2, msg.sender), "err-invalid-sender"); _; }
 
-    function setStorage(address _newAddress) public onlyOperatorStage2 {
+    function setStorage(address _newAddress) external onlyOperatorStage2 {
         require(_newAddress != address(bondStorage), "err-same-address");
         bondStorage = BondStorage(_newAddress);
     }
 
-    function setBonding(address _newAddress) public onlyOperatorStage2 {
+    function setBonding(address _newAddress) external onlyOperatorStage2 {
         require(_newAddress != address(bondingEvent), "err-same-address");
         bondingEvent = BondingEvent(_newAddress);
     }
@@ -53,7 +53,7 @@ contract OperatorStage2 is AccessControl, Pausable {
         revert("err-rate-not-found");
     }
 
-    function removeRate(uint256 _rate) public onlyOperatorStage2 {
+    function removeRate(uint256 _rate) external onlyOperatorStage2 {
         // delete rate from available rates without caring for order
         // so sorting may be required on the frontend
         // copy last rate to deleted item's such that there is a duplicate of it
@@ -65,9 +65,9 @@ contract OperatorStage2 is AccessControl, Pausable {
     }
 
     // Displays all the rates available as pairs of (rate, duration)
-    function showRates() public view returns (BondRate[] memory) { return ratesAvailable; }
+    function showRates() external view returns (BondRate[] memory) { return ratesAvailable; }
 
-    function newBond(uint256 _amountSeuro, uint256 _rate) public ifNotPaused {
+    function newBond(uint256 _amountSeuro, uint256 _rate) external ifNotPaused {
         (BondRate memory bondRate,) = getBondRate(_rate);
         bondingEvent.bond(msg.sender, _amountSeuro, bondRate.durationInWeeks, _rate);
     }

@@ -24,11 +24,11 @@ contract TokenManager is Ownable {
         revert("err-tok-not-found");
     }
 
-    function getAcceptedTokens() public view returns (string[] memory) {
+    function getAcceptedTokens() external view returns (string[] memory) {
         return tokenSymbols;
     }
 
-    function getTokenDecimalFor(string memory _symbol) public view returns(uint8) {
+    function getTokenDecimalFor(string memory _symbol) external view returns(uint8) {
         return tokenMetaData[_symbol].dec;
     }
 
@@ -36,7 +36,7 @@ contract TokenManager is Ownable {
         return tokenMetaData[_symbol].chainlinkDec;
     }
 
-    function getTokenAddressFor(string memory _symbol) public view returns(address) {
+    function getTokenAddressFor(string memory _symbol) external view returns(address) {
         return tokenMetaData[_symbol].addr;
     }
 
@@ -62,7 +62,7 @@ contract TokenManager is Ownable {
 
     // Remove accepted token from accepted list of tokens
     /// @param _symbol The token symbol e.g. "WETH", "USDT"
-    function removeAcceptedToken(string memory _symbol) public onlyOwner {
+    function removeAcceptedToken(string memory _symbol) external onlyOwner {
         for (uint256 i = 0; i < tokenSymbols.length; i++) if (cmpString(tokenSymbols[i], _symbol)) deleteToken(i);
         tokenMetaData[_symbol] = TokenData(address(0), 0, address(0), 0);
     }

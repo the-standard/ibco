@@ -54,20 +54,20 @@ contract StandardTokenGateway is AccessControl {
         _;
     }
 
-    function deactivateSystem() public onlyGatewayOwner {
+    function deactivateSystem() external onlyGatewayOwner {
         isActive = false;
     }
 
-    function activateSystem() public onlyGatewayOwner {
+    function activateSystem() external onlyGatewayOwner {
         isActive = true;
     }
 
-    function setTstEurPrice(uint256 _price, uint8 _dec) public onlyGatewayOwner {
+    function setTstEurPrice(uint256 _price, uint8 _dec) external onlyGatewayOwner {
         priceTstEur = _price;
         priceDec = _dec;
     }
 
-    function updateRewardSupply() public {
+    function updateRewardSupply() external {
         bondRewardPoolSupply = TOKEN.balanceOf(address(this));
     }
 
@@ -77,18 +77,12 @@ contract StandardTokenGateway is AccessControl {
         _;
     }
 
-    function getRewardSupply() public view returns (uint256) {
-        return bondRewardPoolSupply;
-    }
-
-    function getDec() public view returns (uint8) { return priceDec; }
-
-    function setStorageAddress(address _newAddress) public onlyGatewayOwner {
+    function setStorageAddress(address _newAddress) external onlyGatewayOwner {
         require(_newAddress != address(0), "err-zero-address");
         storageAddress = _newAddress;
     }
 
-    function decreaseRewardSupply(uint256 _amount) public onlyStorageOwner enoughBalance(_amount) {
+    function decreaseRewardSupply(uint256 _amount) external onlyStorageOwner enoughBalance(_amount) {
         require(bondRewardPoolSupply - _amount > 0, "dec-supply-uf");
         bondRewardPoolSupply -= _amount;
     }
