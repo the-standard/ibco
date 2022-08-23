@@ -16,7 +16,7 @@ contract StakingDirectory is AccessControl {
         _;
     }
 
-    function add(address _address) public onlyAdmin {
+    function add(address _address) external onlyAdmin {
         entries.push(_address);
     }
 
@@ -25,11 +25,11 @@ contract StakingDirectory is AccessControl {
         entries.pop();
     }
 
-    function del(address _address) public onlyAdmin {
+    function del(address _address) external onlyAdmin {
         for (uint256 i = 0; i < entries.length; i++) if (entries[i] == _address) deleteEntry(i);
     }
 
-    function list() public view returns (address[] memory) {
+    function list() external view returns (address[] memory) {
         return entries;
     }
 }
