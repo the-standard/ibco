@@ -19,9 +19,6 @@ contract StandardTokenGateway is AccessControl {
     uint256 public priceTstEur = 5500000;
     uint8 public priceDec = 8;
 
-    // The amount of TST tokens that are to be paid out in the future.
-    uint256 public pendingPayout = 0;
-
     // The amount of TST available to get as bond reward
     uint256 public bondRewardPoolSupply = 0;
 
