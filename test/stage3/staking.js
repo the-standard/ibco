@@ -115,7 +115,7 @@ describe('Staking', async () => {
       await TGateway.connect(owner).setTstEurPrice(5000000, 8);
 
       const standardBalance = etherBalances['8K'];
-      await expect(Staking.startStake(standardBalance)).to.be.revertedWith('err-not-active');
+      await expect(Staking.mint(standardBalance)).to.be.revertedWith('err-not-active');
 
       // activate the pool
       await Staking.activate();
@@ -125,7 +125,7 @@ describe('Staking', async () => {
       await SEuro.mint(Staking.address, contractSeuroBalance);
 
       // try without TST allowance
-      let mint = Staking.connect(user1).startStake(standardBalance);
+      let mint = Staking.connect(user1).mint(standardBalance);
       await expect(mint).to.be.revertedWith('ERC20: insufficient allowance');
 
       await TST.connect(owner).mint(user1.address, standardBalance);
@@ -133,7 +133,7 @@ describe('Staking', async () => {
       let bal = await TST.balanceOf(user1.address);
       expect(bal).to.eq(standardBalance);
 
-      await Staking.connect(user1).startStake(standardBalance);
+      await Staking.connect(user1).mint(standardBalance);
       balance = await TST.balanceOf(user1.address);
       expect(balance).to.eq(0);
 
@@ -159,7 +159,7 @@ describe('Staking', async () => {
       await TST.connect(owner).mint(user1.address, standardBalance);
       await TST.connect(user1).approve(Staking.address, standardBalance);
 
-      await Staking.connect(user1).startStake(standardBalance);
+      await Staking.connect(user1).mint(standardBalance);
       expect(await Staking.balanceOf(user1.address)).to.eq(1);
 
       p = await Staking.position(user1.address);
@@ -176,7 +176,7 @@ describe('Staking', async () => {
       expect(await Staking.remaining(SEuro.address)).to.eq(contractSeuroBalance);
 
       // with not enough TST
-      mint = Staking.connect(user1).startStake(10);
+      mint = Staking.connect(user1).mint(10);
       await expect(mint).to.be.revertedWith('err-not-min');
 
       const otherStandardBal = etherBalances['10K'];
@@ -186,7 +186,7 @@ describe('Staking', async () => {
       balance = await TST.balanceOf(user2.address);
       expect(balance).to.eq(otherStandardBal);
 
-      await Staking.connect(user2).startStake(otherStandardBal);
+      await Staking.connect(user2).mint(otherStandardBal);
       balance = await TST.balanceOf(user2.address);
       expect(balance).to.eq(0);
 
@@ -226,7 +226,7 @@ describe('Staking', async () => {
       expect(balance).to.eq(standardBalance);
 
       // actually mint
-      let mint = Staking.connect(user1).startStake(standardBalance);
+      let mint = Staking.connect(user1).mint(standardBalance);
       await expect(mint).to.be.revertedWith('err-not-started');
 
       // move the time ahead
@@ -235,19 +235,19 @@ describe('Staking', async () => {
 
       // over the seuro allowance of 1m
       const tfm = ethers.utils.parseEther('25000000');
-      mint = Staking.connect(user1).startStake(tfm);
+      mint = Staking.connect(user1).mint(tfm);
       await expect(mint).to.be.revertedWith('err-overlimit');
 
       // move the time ahead again
       await ethers.provider.send("evm_increaseTime", [3600]);
       await ethers.provider.send("evm_mine");
 
-      mint = Staking.connect(user1).startStake(standardBalance);
+      mint = Staking.connect(user1).mint(standardBalance);
       await expect(mint).to.be.revertedWith('err-finished');
 
       // check the disabled
       await Staking.disable();
-      mint = Staking.connect(user1).startStake(standardBalance);
+      mint = Staking.connect(user1).mint(standardBalance);
       await expect(mint).to.be.revertedWith('err-not-active');
     });
 
@@ -290,7 +290,7 @@ describe('Staking', async () => {
       const Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, then + 5000, TGateway.address, TST_ADDRESS, SEUR_ADDRESS, simpleInterestRate);
 
       const standardBalance = etherBalances["8K"];
-      await expect(Staking.startStake(standardBalance)).to.be.revertedWith('err-not-active');
+      await expect(Staking.mint(standardBalance)).to.be.revertedWith('err-not-active');
 
       // activate the pool
       await Staking.activate();
@@ -303,11 +303,11 @@ describe('Staking', async () => {
       let TSTBalance = await TST.balanceOf(user1.address);
       expect(TSTBalance).to.eq(standardBalance);
 
-      await Staking.connect(user1).startStake(standardBalance);
+      await Staking.connect(user1).mint(standardBalance);
       TSTBalance = await TST.balanceOf(user1.address);
       expect(TSTBalance).to.eq(0);
 
-      let burn = Staking.connect(user1).claimReward();
+      let burn = Staking.connect(user1).burn();
       await expect(burn).to.be.revertedWith('err-maturity');
 
       // move the time ahead
@@ -315,7 +315,7 @@ describe('Staking', async () => {
       await ethers.provider.send("evm_mine");
 
       // should burn now
-      burn = Staking.connect(user1).claimReward();
+      burn = Staking.connect(user1).burn();
       await expect(burn).to.not.be.reverted;
 
       // check the position
@@ -332,11 +332,11 @@ describe('Staking', async () => {
       expect(await Staking.balanceOf(user1.address)).to.eq(0);
 
       // check we cannot re-burn and empty
-      burn = Staking.connect(user1).claimReward();
+      burn = Staking.connect(user1).burn();
       await expect(burn).to.be.revertedWith('err-closed');
 
       // can't burn with no position.
-      burn = Staking.connect(user2).claimReward();
+      burn = Staking.connect(user2).burn();
       await expect(burn).to.be.revertedWith('err-not-valid');
     });
   });
@@ -413,7 +413,7 @@ describe('Staking', async () => {
       const standardBalance = etherBalances["8K"];
       await TST.connect(owner).mint(user1.address, standardBalance);
       await TST.connect(user1).approve(Staking.address, standardBalance);
-      await Staking.connect(user1).startStake(standardBalance);
+      await Staking.connect(user1).mint(standardBalance);
       balance = await TST.balanceOf(user1.address);
       expect(balance).to.eq(0);
 
@@ -475,9 +475,9 @@ describe('Staking', async () => {
       await expect(pause).not.to.be.reverted;
       expect(await Staking.paused()).to.equal(true);
 
-      let mint = Staking.startStake(etherBalances['8K']);
+      let mint = Staking.mint(etherBalances['8K']);
       await expect(mint).to.be.revertedWith('err-paused');
-      let burn = Staking.claimReward();
+      let burn = Staking.burn();
       await expect(burn).to.be.revertedWith('err-paused');
 
       let unpause = Staking.connect(user1).unpause();
@@ -487,9 +487,9 @@ describe('Staking', async () => {
       await expect(unpause).not.to.be.reverted;
       expect(await Staking.paused()).to.equal(false);
 
-      mint = Staking.startStake(etherBalances['8K']);
+      mint = Staking.mint(etherBalances['8K']);
       await expect(mint).not.to.be.revertedWith('err-paused');
-      burn = Staking.claimReward();
+      burn = Staking.burn();
       await expect(burn).not.to.be.revertedWith('err-paused');
     });
   });

@@ -51,8 +51,8 @@ contract Staking is ERC721, Ownable, Pausable {
     function disable() public onlyOwner { require(active, "err-not-active"); active = false; }
 
     // calculates the reward in SEURO based in the input of amount of TSTs
-    function calculateReward(uint256 _amountStandard) public view returns (uint256 reward) {
-        uint256 tstReward = Rates.convertDefault(_amountStandard, SI_RATE, RATE_DEC);
+    function calculateReward(uint256 _amount) public view returns (uint256 reward) {
+        uint256 tstReward = Rates.convertDefault(_amount, SI_RATE, RATE_DEC);
         return Rates.convertDefault(tstReward, tokenGateway.priceTstEur(), tokenGateway.priceDec());
     }
 
@@ -63,20 +63,20 @@ contract Staking is ERC721, Ownable, Pausable {
     function remaining(address _address) public view returns (uint256) { return balance(_address) - allocatedSeuro; }
 
     // Main API to begin staking
-    function startStake(uint256 _amountStandard) public ifNotPaused {
+    function mint(uint256 _amount) public ifNotPaused {
         require(active == true, "err-not-active");
-        require(_amountStandard >= minTST, "err-not-min");
+        require(_amount >= minTST, "err-not-min");
         require(block.timestamp >= windowStart, "err-not-started");
         require(block.timestamp < windowEnd, "err-finished");
 
         // calculate the reward so we can also update the remaining SEURO
-        uint256 reward = calculateReward(_amountStandard);
+        uint256 reward = calculateReward(_amount);
         require(remaining(SEURO_ADDRESS) >= reward, "err-overlimit");
 
         // Transfer funds from sender to this contract
         // TODO send to some other guy not this contract!
 
-        IERC20(TST_ADDRESS).transferFrom(msg.sender, address(this), _amountStandard);
+        IERC20(TST_ADDRESS).transferFrom(msg.sender, address(this), _amount);
 
         Position memory pos = _positions[msg.sender];
 
@@ -90,7 +90,7 @@ contract Staking is ERC721, Ownable, Pausable {
         }
 
         // update the position
-        pos.stake += _amountStandard;
+        pos.stake += _amount;
         pos.nonce += 1;
         pos.reward += reward;
 
@@ -101,7 +101,7 @@ contract Staking is ERC721, Ownable, Pausable {
         allocatedSeuro += reward;
     }
 
-    function claimReward() public ifNotPaused {
+    function burn() public ifNotPaused {
         require(block.timestamp >= maturity, "err-maturity");
 
         Position memory pos = _positions[msg.sender];
