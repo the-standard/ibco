@@ -17,15 +17,15 @@ contract BondStorage is AccessControl {
     // dec should be default chainlink 8 for default 18 dec tokens (to match sEURO)
     // dec should be 20 when other asset is a 6 dec token
     address public chainlinkEurOther;
-    uint8 public otherUsdDec;
+    uint8 public eurOtherDec;
 
-    constructor(address _gatewayAddress, address _chainlinkEurOther, uint8 _otherUsdDec) {
+    constructor(address _gatewayAddress, address _chainlinkEurOther, uint8 _eurOtherDec) {
         _grantRole(WHITELIST_ADMIN, msg.sender);
         _setRoleAdmin(WHITELIST_BOND_STORAGE, WHITELIST_ADMIN);
         grantRole(WHITELIST_BOND_STORAGE, msg.sender);
         tokenGateway = StandardTokenGateway(_gatewayAddress);
         chainlinkEurOther = _chainlinkEurOther;
-        otherUsdDec = _otherUsdDec;
+        eurOtherDec = _eurOtherDec;
     }
 
     modifier onlyWhitelisted() { require(hasRole(WHITELIST_BOND_STORAGE, msg.sender), "invalid-storage-operator"); _; }
@@ -96,7 +96,7 @@ contract BondStorage is AccessControl {
 
     function otherTokenToStandardToken(uint256 _amount) private view returns (uint256) {
         (, int256 eurOtherRate, , , ) = IChainlink(chainlinkEurOther).latestRoundData();
-        uint256 eur = Rates.convertInverse(_amount, uint256(eurOtherRate), otherUsdDec);
+        uint256 eur = Rates.convertInverse(_amount, uint256(eurOtherRate), eurOtherDec);
         return seuroToStandardToken(eur);
     }
 
