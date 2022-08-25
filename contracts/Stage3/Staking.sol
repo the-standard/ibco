@@ -46,13 +46,13 @@ contract Staking is ERC721, Ownable, Pausable {
         minTST = 1 ether;
     }
 
-    function activate() public onlyOwner { require(active == false, "err-already-active"); active = true; }
+    function activate() external onlyOwner { require(active == false, "err-already-active"); active = true; }
 
-    function disable() public onlyOwner { require(active, "err-not-active"); active = false; }
+    function disable() external onlyOwner { require(active, "err-not-active"); active = false; }
 
     // calculates the reward in SEURO based in the input of amount of TSTs
-    function calculateReward(uint256 _amountStandard) public view returns (uint256 reward) {
-        uint256 tstReward = Rates.convertDefault(_amountStandard, SI_RATE, RATE_DEC);
+    function calculateReward(uint256 _amount) public view returns (uint256 reward) {
+        uint256 tstReward = Rates.convertDefault(_amount, SI_RATE, RATE_DEC);
         return Rates.convertDefault(tstReward, tokenGateway.priceTstEur(), tokenGateway.priceDec());
     }
 
@@ -63,20 +63,20 @@ contract Staking is ERC721, Ownable, Pausable {
     function remaining(address _address) public view returns (uint256) { return balance(_address) - allocatedSeuro; }
 
     // Main API to begin staking
-    function startStake(uint256 _amountStandard) public ifNotPaused {
+    function mint(uint256 _amount) external ifNotPaused {
         require(active == true, "err-not-active");
-        require(_amountStandard >= minTST, "err-not-min");
+        require(_amount >= minTST, "err-not-min");
         require(block.timestamp >= windowStart, "err-not-started");
         require(block.timestamp < windowEnd, "err-finished");
 
         // calculate the reward so we can also update the remaining SEURO
-        uint256 reward = calculateReward(_amountStandard);
+        uint256 reward = calculateReward(_amount);
         require(remaining(SEURO_ADDRESS) >= reward, "err-overlimit");
 
         // Transfer funds from sender to this contract
         // TODO send to some other guy not this contract!
 
-        IERC20(TST_ADDRESS).transferFrom(msg.sender, address(this), _amountStandard);
+        IERC20(TST_ADDRESS).transferFrom(msg.sender, address(this), _amount);
 
         Position memory pos = _positions[msg.sender];
 
@@ -90,7 +90,7 @@ contract Staking is ERC721, Ownable, Pausable {
         }
 
         // update the position
-        pos.stake += _amountStandard;
+        pos.stake += _amount;
         pos.nonce += 1;
         pos.reward += reward;
 
@@ -101,7 +101,7 @@ contract Staking is ERC721, Ownable, Pausable {
         allocatedSeuro += reward;
     }
 
-    function claimReward() public ifNotPaused {
+    function burn() external ifNotPaused {
         require(block.timestamp >= maturity, "err-maturity");
 
         Position memory pos = _positions[msg.sender];
@@ -124,30 +124,30 @@ contract Staking is ERC721, Ownable, Pausable {
     }
 
     // withdraw to the owner's address
-    function withdraw(address _address) public onlyOwner {
+    function withdraw(address _address) external onlyOwner {
         uint256 bal = IERC20(_address).balanceOf(address(this));
 
         require(bal > 0, "err-no-funds");
         IERC20(_address).transfer(owner(), bal);
     }
 
-    function position(address owner) public view returns (Position memory) { return _positions[owner]; }
+    function position(address owner) external view returns (Position memory) { return _positions[owner]; }
 
-    function enableCatastrophy() public onlyOwner {
+    function enableCatastrophy() external onlyOwner {
         require(active == true, "err-already-active");
         require(isCatastrophy == false, "err-already-isCatastrophy");
         isCatastrophy = true;
         active = false;
     }
 
-    function disableCatastrophy() public onlyOwner {
+    function disableCatastrophy() external onlyOwner {
         require(active == false, "err-already-active");
         require(isCatastrophy == true, "err-already-isCatastrophy-false");
         isCatastrophy = false;
         active = true;
     }
 
-    function emergencyWithdraw() public {
+    function emergencyWithdraw() external {
         require(isCatastrophy == true, "err-not-catastrophy");
 
         Position memory pos = _positions[msg.sender];
