@@ -8,8 +8,6 @@ const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
 const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
 const USDT_ADDRESS = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
 const SEURO_ADDRESS = '0x4A8D1B11A6F431b8eBa69E617282aF1849F63052';
-const WETH_BYTES = ethers.utils.formatBytes32String('WETH');
-const DAI_BYTES = ethers.utils.formatBytes32String('DAI');
 
 const CHAINLINK_ETH_USD = '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
 const CHAINLINK_DAI_USD = '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
@@ -91,9 +89,9 @@ const parse6Dec = (amount) => {
   return BigNumber.from(amount).mul(DECIMALS_6);
 }
 
-const scaleUpForDecDiff = (reserve, decDiff) => {
+const scaleUpForDecDiff = (amount, decDiff) => {
   const scale = BigNumber.from(10).pow(decDiff);
-  return BigNumber.from(reserve).mul(scale);
+  return BigNumber.from(amount).mul(scale);
 }
 
 const defaultConvertUsdToEur = amount => {
@@ -125,8 +123,6 @@ module.exports = {
   DAI_ADDRESS,
   USDT_ADDRESS,
   SEURO_ADDRESS,
-  WETH_BYTES,
-  DAI_BYTES,
   CHAINLINK_ETH_USD,
   CHAINLINK_DAI_USD,
   CHAINLINK_USDT_USD,

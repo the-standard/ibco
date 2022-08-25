@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS, WETH_BYTES, DAI_BYTES, etherBalances, getLibraryFactory } = require('../common.js');
+const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS, etherBalances, getLibraryFactory } = require('../common.js');
 
 describe('SEuroOffering', async () => {
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
@@ -21,7 +21,7 @@ describe('SEuroOffering', async () => {
 
   async function getEthToSEuro(amount) {
     const token = {
-      name: WETH_BYTES,
+      name: 'WETH',
       addr: WETH_ADDRESS,
       dec: 18,
       chainlinkAddr: CHAINLINK_ETH_USD,
@@ -32,7 +32,7 @@ describe('SEuroOffering', async () => {
 
   async function getDaiToSEuro(amount) {
     const token = {
-      name: DAI_BYTES,
+      name: 'DAI',
       addr: DAI_ADDRESS,
       dec: 18,
       chainlinkAddr: CHAINLINK_DAI_USD,
@@ -141,7 +141,6 @@ describe('SEuroOffering', async () => {
 
       it('will swap for any accepted token', async () => {
         const toSwap = ethers.utils.parseEther('1');
-        const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
         await TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD, CHAINLINK_DEC);
 
         await buyToken(user, DAI_ADDRESS, toSwap);
@@ -149,11 +148,11 @@ describe('SEuroOffering', async () => {
         const userTokens = await Dai.balanceOf(user.address);
         await Dai.connect(user).approve(SEuroOffering.address, userTokens);
 
-        const expectedEuros = await getDaiToSEuro(userTokens);
+        const expectedSeuros = await getDaiToSEuro(userTokens);
         const swap = SEuroOffering.connect(user).swap('DAI', userTokens);
-        await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs('DAI', userTokens, expectedEuros);
+        await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs('DAI', userTokens, expectedSeuros);
         const userSEuroBalance = await SEuro.balanceOf(user.address);
-        expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
+        expect(userSEuroBalance).to.equal(expectedSeuros);
       });
 
       it('updates the price in bonding curve when bucket is crossed', async () => {
