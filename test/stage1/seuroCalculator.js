@@ -1,17 +1,17 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { etherBalances, WETH_ADDRESS, DAI_ADDRESS, USDT_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD, CHAINLINK_USDT_USD, CHAINLINK_EUR_USD, parse6Dec, WETH_BYTES, DAI_BYTES, getLibraryFactory, CHAINLINK_SCALE, DECIMALS_18 } = require('../common.js');
+const { etherBalances, WETH_ADDRESS, DAI_ADDRESS, USDT_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC, CHAINLINK_DAI_USD, CHAINLINK_USDT_USD, CHAINLINK_EUR_USD, parse6Dec, getLibraryFactory, CHAINLINK_SCALE, DECIMALS_18, scaleUpForDecDiff } = require('../common.js');
 
 describe('SEuroCalculator', async () => {
   const WETH_TOKEN = {
-    name: WETH_BYTES,
+    name: 'WETH',
     addr: WETH_ADDRESS,
     dec: 18,
     chainlinkAddr: CHAINLINK_ETH_USD,
     chainlinkDec: CHAINLINK_DEC
   };
   const DAI_TOKEN = {
-    name: DAI_BYTES,
+    name: 'DAI',
     addr: DAI_ADDRESS,
     dec: 18,
     chainlinkAddr: CHAINLINK_DAI_USD,
@@ -43,6 +43,8 @@ describe('SEuroCalculator', async () => {
   }
 
   async function expectedSEuros(token, amount) {
+    const decDiff = 18 - token.dec;
+    amount = scaleUpForDecDiff(amount, decDiff);
     const usd = await tokenToUsd(token, amount);
     const euros = await usdToEur(usd);
     return DECIMALS_18.mul(euros).div((await BondingCurve.currentBucket()).price);
@@ -63,7 +65,6 @@ describe('SEuroCalculator', async () => {
   it('calculates the rate for 6 decimal tokens', async () => {
     const amount = parse6Dec(1000);
     const token = {
-      name: ethers.utils.formatBytes32String('USDT'),
       addr: USDT_ADDRESS,
       dec: 6,
       chainlinkAddr: CHAINLINK_USDT_USD,
