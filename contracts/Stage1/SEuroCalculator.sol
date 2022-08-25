@@ -38,10 +38,13 @@ contract SEuroCalculator is AccessControl {
         bondingCurve = BondingCurve(_newAddress);
     }
 
+    function scaleTo18Dec(uint256 _amount, TokenManager.TokenData memory _token) private pure returns (uint256 euros) { return _amount * 10 ** (18 - _token.dec); }
+
     function calculateEuros(uint256 _amount, TokenManager.TokenData memory _token) private view returns (uint256 euros) {
         (,int256 tokUsd,,,) = IChainlink(_token.chainlinkAddr).latestRoundData();
         (,int256 eurUsd,,,) = IChainlink(EUR_USD_CL).latestRoundData();
-        uint256 usd = Rates.convertDefault(_amount, uint256(tokUsd), _token.chainlinkDec);
+        uint256 amount = scaleTo18Dec(_amount, _token);
+        uint256 usd = Rates.convertDefault(amount, uint256(tokUsd), _token.chainlinkDec);
         euros = Rates.convertInverse(usd, uint256(eurUsd), EUR_USD_CL_DEC);
     }
 
