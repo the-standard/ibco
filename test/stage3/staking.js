@@ -108,7 +108,7 @@ describe('Staking', async () => {
 
       await TST.connect(owner).mint(user1.address, value);
       await TST.connect(user1).approve(Staking.address, value);
-      await Staking.connect(user1).startStake(value);
+      await Staking.connect(user1).mint(value);
       // stake of 1_000_000 tst
       // 5% interest = 50_000 tst
       // 50_000 * 0.055 = 2750 seuro
@@ -119,7 +119,7 @@ describe('Staking', async () => {
       let expectedRemaining = value.sub(expectedReward);
       expect(remaining).to.equal(expectedRemaining);
 
-      await Staking.connect(user1).claimReward();
+      await Staking.connect(user1).burn();
 
       expect(await Staking.balance(SEuro.address)).to.eq(value.sub(expectedReward));
       expect(await Staking.remaining(SEuro.address)).to.eq(value.sub(expectedReward));
