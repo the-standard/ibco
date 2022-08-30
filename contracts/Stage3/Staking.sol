@@ -120,6 +120,7 @@ contract Staking is ERC721, Ownable, Pausable {
         IERC20(SEURO_ADDRESS).transfer(msg.sender, pos.reward);
 
         _positions[msg.sender] = pos;
+        allocatedSeuro -= pos.reward;
     }
 
     // withdraw to the owner's address

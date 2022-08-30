@@ -88,7 +88,9 @@ describe('Staking', async () => {
     });
 
     it('tests for the seuro remaining', async () => {
-      const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, 5000, TGateway.address, TST_ADDRESS, SEUR_ADDRESS, simpleInterestRate);
+      let blockNum = await ethers.provider.getBlock();
+      const start = blockNum.timestamp;
+      const Staking = await StakingContract.deploy("Staking", "STS", start, start + 3600, 5000, TGateway.address, TST_ADDRESS, SEUR_ADDRESS, simpleInterestRate);
 
       await Staking.activate();
 
@@ -103,6 +105,24 @@ describe('Staking', async () => {
 
       remaining = await Staking.remaining(SEuro.address);
       expect(remaining).to.eq(value);
+
+      await TST.connect(owner).mint(user1.address, value);
+      await TST.connect(user1).approve(Staking.address, value);
+      await Staking.connect(user1).mint(value);
+      // stake of 1_000_000 tst
+      // 5% interest = 50_000 tst
+      // 50_000 * 0.055 = 2750 seuro
+      expectedReward = ethers.utils.parseEther('2750');
+
+      expect(await Staking.balance(SEuro.address)).to.eq(value);
+      remaining = await Staking.remaining(SEuro.address);
+      let expectedRemaining = value.sub(expectedReward);
+      expect(remaining).to.equal(expectedRemaining);
+
+      await Staking.connect(user1).burn();
+
+      expect(await Staking.balance(SEuro.address)).to.eq(value.sub(expectedReward));
+      expect(await Staking.remaining(SEuro.address)).to.eq(value.sub(expectedReward));
     });
   });
 
