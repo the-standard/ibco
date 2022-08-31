@@ -7,8 +7,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "contracts/Stage2/StandardTokenGateway.sol";
 import "contracts/Pausable.sol";
 import "contracts/Rates.sol";
+import "contracts/Drainable.sol";
 
-contract Staking is ERC721, Ownable, Pausable {
+contract Staking is ERC721, Ownable, Pausable, Drainable {
     uint256 private _tokenId;
     uint256 private immutable RATE_FACTOR = 10 ** 5;
     uint8 private immutable RATE_DEC = 5;
@@ -163,5 +164,11 @@ contract Staking is ERC721, Ownable, Pausable {
         _burn(pos.tokenId);
 
         _positions[msg.sender] = pos;
+    }
+
+    // both erc721 and access control include supportsInterface, need to override both
+    // explanation here: https://forum.openzeppelin.com/t/derived-contract-must-override-function-supportsinterface/6315/5
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, AccessControl) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 }
