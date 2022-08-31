@@ -9,8 +9,9 @@ import "contracts/Stage1/SEuroCalculator.sol";
 import "contracts/Stage1/TokenManager.sol";
 import "contracts/Stage1/BondingCurve.sol";
 import "contracts/Pausable.sol";
+import "contracts/Drainable.sol";
 
-contract SEuroOffering is Ownable, Pausable {
+contract SEuroOffering is Ownable, Pausable, Drainable {
     // address of the wallet which will receive the collateral provided in swap and swapETH
     address public collateralWallet;
     Status public status;

@@ -5,10 +5,9 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "contracts/Stage2/BondStorage.sol";
 import "contracts/Stage2/BondingEvent.sol";
 import "contracts/Pausable.sol";
+import "contracts/Drainable.sol";
 
-import "hardhat/console.sol";
-
-contract OperatorStage2 is AccessControl, Pausable {
+contract OperatorStage2 is AccessControl, Pausable, Drainable {
     bytes32 public constant OPERATOR_STAGE_2 = keccak256("OPERATOR_STAGE_2");
 
     // BondStorage dependency
