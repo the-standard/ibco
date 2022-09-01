@@ -198,7 +198,7 @@ contract BondingEvent is AccessControl {
     // due to the high gas costs (see https://docs.uniswap.org/protocol/reference/periphery/lens/Quoter).
     /// @param _user The address of the bonding user (assuming higher layer contract which calls this function)
     /// @param _amountSeuro The amount of sEURO token to bond
-    /// @param _maturity The amount of weeks a bond is active.
+    /// @param _maturity The amount of seconds a bond is active.
     ///                          At the end of maturity, the principal + accrued interest is paid out all at once in TST.
     /// @param _rate The rate is represented as a 10,000-factor of each basis point so the most stable fee is 500 (= 0.05 pc)
     function _bond(address _user, uint256 _amountSeuro, uint256 _maturity, uint256 _rate) private onlyOperator {
