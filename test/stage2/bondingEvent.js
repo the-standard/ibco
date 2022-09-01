@@ -141,12 +141,12 @@ describe('BondingEvent', async () => {
       });
     });
 
-    async function testStartBond(seuroAmount, durationInWeeks, rateFormat, otherContract) {
+    async function testStartBond(seuroAmount, duration, rateFormat, otherContract) {
       const { amountOther } = await BondingEvent.getOtherAmount(seuroAmount);
       await SEuro.connect(customer).approve(BondingEvent.address, seuroAmount);
       await otherContract.connect(customer).approve(BondingEvent.address, amountOther);
       await BondingEvent.connect(owner).bond(
-        customer.address, seuroAmount, durationInWeeks, rateFormat,
+        customer.address, seuroAmount, duration, rateFormat,
       );
       return amountOther;
     }
@@ -163,7 +163,7 @@ describe('BondingEvent', async () => {
     describe('bond', async () => {
       it('bonds sEURO and USDC for 52 weeks and receives correct seuro profit', async () => {
         const amountSeuro = etherBalances.TWO_MILLION;
-        const amountOther = await testStartBond(amountSeuro, durations.ONE_YR_WEEKS,
+        const amountOther = await testStartBond(amountSeuro, durations.ONE_YR,
           rates.TEN_PC, USDC
         );
 
@@ -295,7 +295,7 @@ describe('BondingEvent', async () => {
         await BondingEvent.setExcessCollateralWallet(wallet.address);
         expect(await SEuro.balanceOf(wallet.address)).to.equal(0);
 
-        await testStartBond(etherBalances.TWO_MILLION, durations.ONE_YR_WEEKS,
+        await testStartBond(etherBalances.TWO_MILLION, durations.ONE_YR,
           rates.TEN_PC, USDC
         );
 
@@ -318,7 +318,7 @@ describe('BondingEvent', async () => {
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDC.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+          customer.address, amountSEuro, durations.ONE_YR, rates.TEN_PC,
         );
 
         const positions = await BondingEvent.getPositions();
@@ -337,12 +337,12 @@ describe('BondingEvent', async () => {
         await USDC.connect(customer).approve(BondingEvent.address, amountOther.mul(2));
 
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+          customer.address, amountSEuro, durations.ONE_YR, rates.TEN_PC,
         );
         let initialPositions = await BondingEvent.getPositions();
         const initialLiquidityTotal = (await BondingEvent.getPositionByTokenId(initialPositions[0].tokenId)).position.liquidity;
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+          customer.address, amountSEuro, durations.ONE_YR, rates.TEN_PC,
         );
 
         positions = await BondingEvent.getPositions();
@@ -362,7 +362,7 @@ describe('BondingEvent', async () => {
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDC.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+          customer.address, amountSEuro, durations.ONE_YR, rates.TEN_PC,
         );
 
         let positions = await BondingEvent.getPositions();
@@ -382,7 +382,7 @@ describe('BondingEvent', async () => {
         await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
         await USDC.connect(customer).approve(BondingEvent.address, amountOther);
         await BondingEvent.connect(owner).bond(
-          customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+          customer.address, amountSEuro, durations.ONE_YR, rates.TEN_PC,
         );
 
         positions = await BondingEvent.getPositions();
@@ -411,7 +411,7 @@ describe('BondingEvent', async () => {
       await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
       await USDC.connect(customer).approve(BondingEvent.address, amountOther);
       await BondingEvent.connect(owner).bond(
-        customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+        customer.address, amountSEuro, durations.ONE_YR, rates.TEN_PC,
       );
 
       for (let i = 0; i < 10; i++) {
@@ -478,7 +478,7 @@ describe('BondingEvent', async () => {
       await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
       await USDC.connect(customer).approve(BondingEvent.address, amountOther);
       await BondingEvent.connect(owner).bond(
-        customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+        customer.address, amountSEuro, durations.ONE_YR, rates.TEN_PC,
       );
       expect(await BondingEvent.getPositions()).to.be.length(1);
 
@@ -491,7 +491,7 @@ describe('BondingEvent', async () => {
       await SEuro.connect(customer).approve(BondingEvent.address, amountSEuro);
       await USDC.connect(customer).approve(BondingEvent.address, amountOther);
       await BondingEvent.connect(owner).bond(
-        customer.address, amountSEuro, durations.ONE_YR_WEEKS, rates.TEN_PC,
+        customer.address, amountSEuro, durations.ONE_YR, rates.TEN_PC,
       );
       const positions = await BondingEvent.getPositions();
       expect(positions).to.be.length(2);

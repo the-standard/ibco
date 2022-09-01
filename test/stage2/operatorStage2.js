@@ -14,6 +14,11 @@ beforeEach(async () => {
   TST = await ERC20Contract.deploy('TST', 'TST', 18);
 });
 
+const weeks = (amount) => {
+  const week = 60 * 60 * 24 * 7;
+  return amount * week;
+}
+
 describe('Stage 2', async () => {
   let BondingEventContract, BondingEvent, StorageContract, BStorage, TokenGatewayContract, TGateway, OperatorStage2, OP2, RatioCalculator;
 
@@ -98,7 +103,7 @@ describe('Stage 2', async () => {
         }
 
         it('transfers TST rewards successfully when bonding', async () => {
-          await OP2.connect(owner).addRate(rates.TWENTY_PC, 1);
+          await OP2.connect(owner).addRate(rates.TWENTY_PC, weeks(1));
           const {seuroPrincipal, otherPrincipal} = await testingSuite(etherBalances['125K'], rates.TWENTY_PC, 1);
           await expectedTokBalance(seuroPrincipal, otherPrincipal, 20);
         });
@@ -111,9 +116,9 @@ describe('Stage 2', async () => {
 
         it('adds and subtracts multiple new rates to grow and shrink the set of accepted rates', async () => {
           let expectedRates, actualRates;
-          await OP2.connect(owner).addRate(rates.FIVE_PC, 10);
-          await OP2.connect(owner).addRate(rates.TEN_PC, 20);
-          await OP2.connect(owner).addRate(rates.TWENTY_PC, 40);
+          await OP2.connect(owner).addRate(rates.FIVE_PC, weeks(10));
+          await OP2.connect(owner).addRate(rates.TEN_PC, weeks(20));
+          await OP2.connect(owner).addRate(rates.TWENTY_PC, weeks(40));
 
           expectedRates = 3;
           actualRates = (await OP2.showRates()).length;
@@ -129,7 +134,7 @@ describe('Stage 2', async () => {
         });
 
         it('adds a rate and bonds successfully, then removes it such that following bonding fails', async () => {
-          await OP2.connect(owner).addRate(rates.FIVE_PC, 10);
+          await OP2.connect(owner).addRate(rates.FIVE_PC, weeks(10));
           await testingSuite(etherBalances['125K'], rates.FIVE_PC, 10);
           await OP2.connect(owner).removeRate(rates.FIVE_PC);
           await expect(testingSuite(etherBalances['125K'], rates.FIVE_PC, 10)).to.be.revertedWith('err-rate-not-found');

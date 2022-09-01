@@ -18,7 +18,7 @@ const CHAINLINK_SCALE = BigNumber.from(10).pow(CHAINLINK_DEC);
 const DEFAULT_CHAINLINK_EUR_USD_PRICE = 105000000;
 
 // Only usable for tokens with 18 decimals such as TST and SEURO
-let etherBalances = {
+const etherBalances = {
   '8K': ethers.utils.parseEther('8000'),
   '10K': ethers.utils.parseEther('10000'),
   '80K': ethers.utils.parseEther('80000'),
@@ -42,7 +42,7 @@ const ONE_WEEK_IN_SECONDS = 7 * 24 * 60 * 60;
 const DECIMALS_18 = BigNumber.from(10).pow(18);
 const DECIMALS_6 = BigNumber.from(10).pow(6);
 
-let rates = {
+const rates = {
   HALF_PC: 500,
   FIVE_PC: 5000,
   SIX_PC: 6000,
@@ -51,13 +51,15 @@ let rates = {
   TWENTY_PC: 20000,
 };
 
-let durations = {
-  ONE_YR_WEEKS: 52,
-  HALF_YR_WEEKS: 26,
-  ONE_WEEK: 1,
-  TWO_WEEKS: 2,
-  FOUR_WEEKS: 4,
-  EIGHT_WEEKS: 8
+const week = 60 * 60 * 24 * 7
+
+const durations = {
+  ONE_YR: 52 * week,
+  HALF_YR: 26 * week,
+  ONE_WEEK: 1 * week,
+  TWO_WEEKS: 2 * week,
+  FOUR_WEEKS: 4 * week,
+  EIGHT_WEEKS: 8 * week
 };
 
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
