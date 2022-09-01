@@ -25,8 +25,6 @@ contract OperatorStage2 is AccessControl, Pausable, Drainable {
 
     constructor() {
         _setupRole(OPERATOR_STAGE_2, msg.sender);
-        // default rate 2% over a year
-        addRate(2000, 52);
     }
 
     modifier onlyOperatorStage2() { require(hasRole(OPERATOR_STAGE_2, msg.sender), "err-invalid-sender"); _; }

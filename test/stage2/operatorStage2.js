@@ -97,16 +97,10 @@ describe('Stage 2', async () => {
           expect(actualStandardBal).to.equal(expectedStandardBal);
         }
 
-        it('transfers TST rewards successfully when bonding with a custom rate', async () => {
+        it('transfers TST rewards successfully when bonding', async () => {
           await OP2.connect(owner).addRate(rates.TWENTY_PC, 1);
           const {seuroPrincipal, otherPrincipal} = await testingSuite(etherBalances['125K'], rates.TWENTY_PC, 1);
           await expectedTokBalance(seuroPrincipal, otherPrincipal, 20);
-        });
-
-        it('transfers TST rewards successfully when bonding with the default rate', async () => {
-          let twoPercent = 2000;
-          const {seuroPrincipal, otherPrincipal} = await testingSuite(etherBalances['125K'], twoPercent, 52);
-          await expectedTokBalance(seuroPrincipal, otherPrincipal, 2);
         });
 
         it('reverts when trying to bond with a non-added rate', async () => {
@@ -121,7 +115,7 @@ describe('Stage 2', async () => {
           await OP2.connect(owner).addRate(rates.TEN_PC, 20);
           await OP2.connect(owner).addRate(rates.TWENTY_PC, 40);
 
-          expectedRates = 4;
+          expectedRates = 3;
           actualRates = (await OP2.showRates()).length;
           expect(actualRates).to.equal(expectedRates);
           
@@ -129,7 +123,7 @@ describe('Stage 2', async () => {
           await expect(invalidRemoval).to.be.revertedWith('err-rate-not-found')
           await OP2.removeRate(rates.TWENTY_PC);
           await OP2.removeRate(rates.TEN_PC);
-          expectedRates = 2;
+          expectedRates = 1;
           actualRates = (await OP2.showRates()).length;
           expect(actualRates).to.equal(expectedRates);
         });
