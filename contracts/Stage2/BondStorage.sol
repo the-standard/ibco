@@ -39,7 +39,7 @@ contract BondStorage is AccessControl {
     // principalSeuro = amount bonding in sEURO
     // principalOther = amount bonding in other asset
     // rate = interest rate for bond - example: 500 is 0.5 pc per annum (= 0.005)
-    // maturity = length of bond in weeks
+    // maturity = length of bond in seconds
     // tapped = if profit has been squeezed from bond
     // PositionMetaData = liquidity position data
     struct Bond { uint256 principalSeuro; uint256 principalOther; uint256 rate; uint256 maturity; bool tapped; PositionMetaData data; }
@@ -92,7 +92,7 @@ contract BondStorage is AccessControl {
 
     function hasExpired(Bond memory bond) private view returns (bool) { return block.timestamp >= bond.maturity; }
 
-    function maturityDateAfterWeeks(uint256 _maturityInWeeks) private view returns (uint256) { return block.timestamp + _maturityInWeeks * 1 weeks; }
+    function maturityDate(uint256 _maturity) private view returns (uint256) { return block.timestamp + _maturity; }
 
     function otherTokenToStandardToken(uint256 _amount) private view returns (uint256) {
         (, int256 eurOtherRate, , , ) = IChainlink(chainlinkEurOther).latestRoundData();
@@ -102,8 +102,8 @@ contract BondStorage is AccessControl {
 
     function seuroToStandardToken(uint256 _amount) private view returns (uint256) { return Rates.convertInverse(_amount, tokenGateway.priceTstEur(), tokenGateway.priceDec()); }
 
-    function potentialPayout(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturityInWeeks) private view returns (uint256 tokenPayout) {
-        Bond memory dummyBond = Bond(_principalSeuro, _principalOther, _rate, _maturityInWeeks, false, PositionMetaData(0, 0, 0, 0));
+    function potentialPayout(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturity) private view returns (uint256 tokenPayout) {
+        Bond memory dummyBond = Bond(_principalSeuro, _principalOther, _rate, _maturity, false, PositionMetaData(0, 0, 0, 0));
         (uint256 seuroPayout, , uint256 otherPayout, ) = calculateBond(dummyBond);
         tokenPayout = seuroToStandardToken(seuroPayout) + otherTokenToStandardToken(otherPayout);
         // if we are able to payout this bond in TST
@@ -112,9 +112,9 @@ contract BondStorage is AccessControl {
 
     /// ================ BondStorage public APIs ==============
 
-    function startBond(address _user, uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturityInWeeks, uint256 _tokenId, uint128 _liquidity) external onlyWhitelisted {
+    function startBond(address _user, uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturity, uint256 _tokenId, uint128 _liquidity) external onlyWhitelisted {
         // reduce the amount of available bonding reward TSTs
-        tokenGateway.decreaseRewardSupply(potentialPayout(_principalSeuro, _principalOther, _rate, _maturityInWeeks));
+        tokenGateway.decreaseRewardSupply(potentialPayout(_principalSeuro, _principalOther, _rate, _maturity));
         
         if (!issuedBonds[_user].isInitialised) {
             setActive(_user);
@@ -122,7 +122,7 @@ contract BondStorage is AccessControl {
         }
 
         // finalise record of bond
-        addBond(_user, _principalSeuro, _principalOther, _rate, maturityDateAfterWeeks(_maturityInWeeks), PositionMetaData(_tokenId, _liquidity, _principalSeuro, _principalOther));
+        addBond(_user, _principalSeuro, _principalOther, _rate, maturityDate(_maturity), PositionMetaData(_tokenId, _liquidity, _principalSeuro, _principalOther));
         incrementActiveBonds(_user);
     }
 

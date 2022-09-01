@@ -14,6 +14,11 @@ beforeEach(async () => {
   TST = await ERC20Contract.deploy('TST', 'TST', 18);
 });
 
+const weeks = (amount) => {
+  const week = 60 * 60 * 24 * 7;
+  return amount * week;
+}
+
 describe('Stage 2', async () => {
   let BondingEventContract, BondingEvent, StorageContract, BStorage, TokenGatewayContract, TGateway, OperatorStage2, OP2, RatioCalculator;
 
@@ -97,16 +102,10 @@ describe('Stage 2', async () => {
           expect(actualStandardBal).to.equal(expectedStandardBal);
         }
 
-        it('transfers TST rewards successfully when bonding with a custom rate', async () => {
-          await OP2.connect(owner).addRate(rates.TWENTY_PC, 1);
+        it('transfers TST rewards successfully when bonding', async () => {
+          await OP2.connect(owner).addRate(rates.TWENTY_PC, weeks(1));
           const {seuroPrincipal, otherPrincipal} = await testingSuite(etherBalances['125K'], rates.TWENTY_PC, 1);
           await expectedTokBalance(seuroPrincipal, otherPrincipal, 20);
-        });
-
-        it('transfers TST rewards successfully when bonding with the default rate', async () => {
-          let twoPercent = 2000;
-          const {seuroPrincipal, otherPrincipal} = await testingSuite(etherBalances['125K'], twoPercent, 52);
-          await expectedTokBalance(seuroPrincipal, otherPrincipal, 2);
         });
 
         it('reverts when trying to bond with a non-added rate', async () => {
@@ -117,11 +116,11 @@ describe('Stage 2', async () => {
 
         it('adds and subtracts multiple new rates to grow and shrink the set of accepted rates', async () => {
           let expectedRates, actualRates;
-          await OP2.connect(owner).addRate(rates.FIVE_PC, 10);
-          await OP2.connect(owner).addRate(rates.TEN_PC, 20);
-          await OP2.connect(owner).addRate(rates.TWENTY_PC, 40);
+          await OP2.connect(owner).addRate(rates.FIVE_PC, weeks(10));
+          await OP2.connect(owner).addRate(rates.TEN_PC, weeks(20));
+          await OP2.connect(owner).addRate(rates.TWENTY_PC, weeks(40));
 
-          expectedRates = 4;
+          expectedRates = 3;
           actualRates = (await OP2.showRates()).length;
           expect(actualRates).to.equal(expectedRates);
           
@@ -129,13 +128,13 @@ describe('Stage 2', async () => {
           await expect(invalidRemoval).to.be.revertedWith('err-rate-not-found')
           await OP2.removeRate(rates.TWENTY_PC);
           await OP2.removeRate(rates.TEN_PC);
-          expectedRates = 2;
+          expectedRates = 1;
           actualRates = (await OP2.showRates()).length;
           expect(actualRates).to.equal(expectedRates);
         });
 
         it('adds a rate and bonds successfully, then removes it such that following bonding fails', async () => {
-          await OP2.connect(owner).addRate(rates.FIVE_PC, 10);
+          await OP2.connect(owner).addRate(rates.FIVE_PC, weeks(10));
           await testingSuite(etherBalances['125K'], rates.FIVE_PC, 10);
           await OP2.connect(owner).removeRate(rates.FIVE_PC);
           await expect(testingSuite(etherBalances['125K'], rates.FIVE_PC, 10)).to.be.revertedWith('err-rate-not-found');

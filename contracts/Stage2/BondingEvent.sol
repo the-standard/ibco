@@ -198,18 +198,18 @@ contract BondingEvent is AccessControl {
     // due to the high gas costs (see https://docs.uniswap.org/protocol/reference/periphery/lens/Quoter).
     /// @param _user The address of the bonding user (assuming higher layer contract which calls this function)
     /// @param _amountSeuro The amount of sEURO token to bond
-    /// @param _maturityInWeeks The amount of weeks a bond is active.
+    /// @param _maturity The amount of seconds a bond is active.
     ///                          At the end of maturity, the principal + accrued interest is paid out all at once in TST.
     /// @param _rate The rate is represented as a 10,000-factor of each basis point so the most stable fee is 500 (= 0.05 pc)
-    function _bond(address _user, uint256 _amountSeuro, uint256 _maturityInWeeks, uint256 _rate) private onlyOperator {
+    function _bond(address _user, uint256 _amountSeuro, uint256 _maturity, uint256 _rate) private onlyOperator {
         // information about the liquidity position after it has been successfully added
         AddedLiquidityResponse memory added = addLiquidity(_user, _amountSeuro);
         // begin bonding event
-        IBondStorage(bondStorageAddress).startBond(_user, _amountSeuro, added.otherAmount, _rate, _maturityInWeeks, added.tokenId, added.liquidity);
+        IBondStorage(bondStorageAddress).startBond(_user, _amountSeuro, added.otherAmount, _rate, _maturity, added.tokenId, added.liquidity);
     }
 
     // For interface purposes due to modifiers above
-    function bond(address _user, uint256 _amountSeuro, uint256 _weeks, uint256 _rate) external { _bond(_user, _amountSeuro, _weeks, _rate); }
+    function bond(address _user, uint256 _amountSeuro, uint256 _maturity, uint256 _rate) external { _bond(_user, _amountSeuro, _maturity, _rate); }
 
     function priceInMiddleTwentyPC(int24 _currentPriceTick, int24 _lowerTick, int24 _upperTick) private pure returns (bool) {
         // checks that the current pool price sits between 40th + 60th percentile of given tick range

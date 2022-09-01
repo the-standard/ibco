@@ -16,17 +16,15 @@ contract OperatorStage2 is AccessControl, Pausable, Drainable {
     // BondingEvent dependency
     BondingEvent public bondingEvent;
 
-    struct BondRate { uint256 rate; uint256 durationInWeeks; }
+    struct BondRate { uint256 rate; uint256 duration; }
 
     // Save the rates added
     BondRate[] ratesAvailable;
     // Emit an event when a new yield is added
-    event Yield(uint256 indexed rate, uint256 indexed durationInWeeks);
+    event Yield(uint256 indexed rate, uint256 indexed duration);
 
     constructor() {
         _setupRole(OPERATOR_STAGE_2, msg.sender);
-        // default rate 2% over a year
-        addRate(2000, 52);
     }
 
     modifier onlyOperatorStage2() { require(hasRole(OPERATOR_STAGE_2, msg.sender), "err-invalid-sender"); _; }
@@ -42,9 +40,9 @@ contract OperatorStage2 is AccessControl, Pausable, Drainable {
     }
 
     // Adds a new rate that allows a user to bond with
-    function addRate(uint256 _rate, uint256 _maturityInWeeks) public onlyOperatorStage2 {
-        ratesAvailable.push(BondRate(_rate, _maturityInWeeks));
-        emit Yield(_rate, _maturityInWeeks);
+    function addRate(uint256 _rate, uint256 duration) public onlyOperatorStage2 {
+        ratesAvailable.push(BondRate(_rate, duration));
+        emit Yield(_rate, duration);
     }
 
     function getBondRate(uint256 _rate) private view returns (BondRate memory rate, uint256 index) {
@@ -68,6 +66,6 @@ contract OperatorStage2 is AccessControl, Pausable, Drainable {
 
     function newBond(uint256 _amountSeuro, uint256 _rate) external ifNotPaused {
         (BondRate memory bondRate,) = getBondRate(_rate);
-        bondingEvent.bond(msg.sender, _amountSeuro, bondRate.durationInWeeks, _rate);
+        bondingEvent.bond(msg.sender, _amountSeuro, bondRate.duration, _rate);
     }
 }
