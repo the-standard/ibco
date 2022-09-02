@@ -150,7 +150,6 @@ const giveContractsRequiredPermissions = async () => {
   await SEuroCalculator.grantRole(await SEuroCalculator.OFFERING(), SEuroOffering.address);
   await BondingCurve.grantRole(await BondingCurve.UPDATER(), SEuroOffering.address);
   await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), SEuroCalculator.address);
-  await OperatorStage2.setStorage(BondStorage.address);
   await OperatorStage2.setBonding(BondingEvent.address);
   await StandardTokenGateway.setStorageAddress(BondStorage.address);
   await DummyTST.mint(StandardTokenGateway.address, etherBalances.HUNDRED_MILLION);

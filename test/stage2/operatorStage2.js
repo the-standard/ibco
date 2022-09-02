@@ -59,7 +59,6 @@ describe('Stage 2', async () => {
 
           await TGateway.connect(owner).setStorageAddress(BStorage.address);
           await BondingEvent.connect(owner).setOperator(OP2.address);
-          await OP2.connect(owner).setStorage(BStorage.address);
           await OP2.connect(owner).setBonding(BondingEvent.address);
         });
 
