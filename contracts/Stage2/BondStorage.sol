@@ -30,7 +30,7 @@ contract BondStorage is AccessControl {
 
     modifier onlyWhitelisted() { require(hasRole(WHITELIST_BOND_STORAGE, msg.sender), "invalid-storage-operator"); _; }
 
-    modifier ifActive(address _user) { require(issuedBonds[_user].isActive); _; }
+    modifier ifActive(address _user) { require(issuedBonds[_user].isActive, "err-user-inactive"); _; }
 
     // PositionMetaData holds meta data received from Uniswap when adding a liquidity position
     // tokenId = NFT handle
