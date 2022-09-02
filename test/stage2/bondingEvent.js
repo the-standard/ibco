@@ -218,7 +218,7 @@ describe('BondingEvent', async () => {
         await verifyExpectedProfit(seuroProfit, usdcProfit);
       });
 
-      it.only('bonds multiple times with various maturities and updates active and inactive bonds correctly', async () => {
+      it('bonds multiple times with various maturities and updates active and inactive bonds correctly', async () => {
         const amountSeuro = etherBalances.TWO_MILLION;
         const { amountOther } = await BondingEvent.getOtherAmount(amountSeuro);
         await SEuro.connect(customer).approve(BondingEvent.address, amountSeuro.mul(3));

@@ -161,7 +161,7 @@ contract BondStorage is AccessControl {
     function claimReward(address _user) external {
         uint256 reward = getClaimAmount(_user);
         tapUntappedBonds(_user);
-        if (active(_user)) setInactive(_user);
+        if (!active(_user)) setInactive(_user);
         require(reward > 0, "err-no-reward");
         tokenGateway.transferReward(_user, reward);
     }
