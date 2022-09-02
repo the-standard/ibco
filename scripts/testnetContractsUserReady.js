@@ -22,7 +22,6 @@ async function main() {
   await BondingCurve.grantRole(await BondingCurve.UPDATER(), SEuroOffering.address);
   await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), SEuroCalculator.address);
   await TokenManager.addAcceptedToken(ethers.utils.formatBytes32String("USDT"), USDT.address, await USDT.decimals(), USDTUSDChainlink.address, 8);
-  await OperatorStage2.setStorage(BondStorage.address);
   await OperatorStage2.setBonding(BondingEvent.address);
   await OperatorStage2.setGateway(StandardTokenGateway.address);
   await StandardTokenGateway.setStorageAddress(BondStorage.address);

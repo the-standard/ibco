@@ -88,21 +88,17 @@ describe('BondingReward', async () => {
           expect(bond.principalSeuro).to.eq(amountSEuro);
           expect(bond.principalOther).to.eq(amountOther);
   
-          let actualClaim = await BStorage.getClaimAmount(customer.address);
-          expect(actualClaim).to.equal(0);
+          let claimAmount = await BStorage.getClaimAmount(customer.address);
+          expect(claimAmount).to.equal(0);
   
           await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-  
-          actualClaim = await BStorage.getClaimAmount(customer.address);
-          expect(actualClaim).to.equal(0);
-          await BStorage.refreshBondStatus(customer.address);
   
           const payoutSeuro = amountSEuro.add(amountSEuro.div(10)); // ten percent rate
           const payoutOther = amountOther.add(amountOther.div(10)); // ten percent rate
           const payoutStandard = eurToTST(payoutSeuro).add(eurToTST(defaultConvertUsdToEur(payoutOther)));
           // claim has been properly registered in bond backend
-          actualClaim = await BStorage.getClaimAmount(customer.address);
-          expect(actualClaim).to.equal(payoutStandard);
+          claimAmount = await BStorage.getClaimAmount(customer.address);
+          expect(claimAmount).to.equal(payoutStandard);
   
           // verify TST balance is zero
           let actualStandardBal = await balanceTST();
@@ -161,22 +157,18 @@ describe('BondingReward', async () => {
           expect(bond.principalSeuro).to.eq(amountSEuro);
           expect(bond.principalOther).to.eq(amountOther);
   
-          let actualClaim = await BStorage.getClaimAmount(customer.address);
-          expect(actualClaim).to.equal(0);
+          let claimAmount = await BStorage.getClaimAmount(customer.address);
+          expect(claimAmount).to.equal(0);
   
           await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-  
-          actualClaim = await BStorage.getClaimAmount(customer.address);
-          expect(actualClaim).to.equal(0);
-          await BStorage.refreshBondStatus(customer.address);
   
           const payoutSeuro = amountSEuro.add(amountSEuro.div(10)); // ten percent rate
           const payoutOther = amountOther.add(amountOther.div(10)); // ten percent rate
           const payoutStandard = eurToTST((payoutSeuro))
             .add(eurToTST(convertUsdToEurWithScale(payoutOther, EUR_USD_CONVERSION_SCALE)));
           // claim has been properly registered in bond backend
-          actualClaim = await BStorage.getClaimAmount(customer.address);
-          expect(actualClaim).to.equal(payoutStandard);
+          claimAmount = await BStorage.getClaimAmount(customer.address);
+          expect(claimAmount).to.equal(payoutStandard);
   
           // verify TST balance is zero
           let actualStandardBal = await balanceTST();

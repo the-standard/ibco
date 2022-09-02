@@ -59,7 +59,6 @@ describe('Stage 2', async () => {
 
           await TGateway.connect(owner).setStorageAddress(BStorage.address);
           await BondingEvent.connect(owner).setOperator(OP2.address);
-          await OP2.connect(owner).setStorage(BStorage.address);
           await OP2.connect(owner).setBonding(BondingEvent.address);
         });
 
@@ -70,8 +69,6 @@ describe('Stage 2', async () => {
         async function testingSuite(amountSeuro, inputRate, inputDurationWeeks) {
           const { amountOther } = await BondingEvent.getOtherAmount(amountSeuro);
           await OP2.connect(customer).newBond(amountSeuro, inputRate);
-
-          await BStorage.connect(customer).refreshBondStatus(customer.address);
 
           let actualBalance = await customerBalance();
           expect(actualBalance).to.equal(0);
@@ -89,7 +86,6 @@ describe('Stage 2', async () => {
           }
 
           await helperFastForwardTime(inputDurationWeeks * ONE_WEEK_IN_SECONDS);
-          await BStorage.connect(customer).refreshBondStatus(customer.address);
           await BStorage.connect(customer).claimReward(customer.address);
           return {seuroPrincipal, otherPrincipal};
         }
