@@ -94,10 +94,6 @@ describe('BondingEvent', async () => {
       await readyDependencies();
     });
 
-    const helperUpdateBondStatus = async () => {
-      await BondStorage.refreshBondStatus(customer.address);
-    };
-
     const helperGetActiveBonds = async () => {
       return await BondStorage.getActiveBonds(customer.address);
     };
@@ -167,7 +163,6 @@ describe('BondingEvent', async () => {
           rates.TEN_PC, USDC
         );
 
-        await helperUpdateBondStatus();
         const bondsAmount = await helperGetActiveBonds();
         expect(bondsAmount).to.equal(1);
 
@@ -180,7 +175,6 @@ describe('BondingEvent', async () => {
         expect(actualRate).to.equal(rates.TEN_PC);
 
         await helperFastForwardTime(52 * ONE_WEEK_IN_SECONDS);
-        await helperUpdateBondStatus();
 
         const seuroProfit = amountSeuro.div(10);
         const usdcProfit = amountOther.div(10);
@@ -193,7 +187,6 @@ describe('BondingEvent', async () => {
           rates.TEN_PC, USDC
         );
 
-        await helperUpdateBondStatus();
         const bondsAmount = await helperGetActiveBonds();
         expect(bondsAmount).to.equal(1);
 
@@ -206,7 +199,6 @@ describe('BondingEvent', async () => {
         expect(actualRate).to.equal(rates.TEN_PC);
 
         await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-        await helperUpdateBondStatus();
 
         const seuroProfit = amountSeuro.div(10);
         const usdcProfit = amountOther.div(10);
@@ -220,14 +212,13 @@ describe('BondingEvent', async () => {
         );
 
         await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-        await helperUpdateBondStatus();
 
         const seuroProfit = amountSeuro.mul(6).div(100);
         const usdcProfit = amountOther.mul(6).div(100);
         await verifyExpectedProfit(seuroProfit, usdcProfit);
       });
 
-      it('bonds multiple times with various maturities and updates active and inactive bonds correctly', async () => {
+      it.only('bonds multiple times with various maturities and updates active and inactive bonds correctly', async () => {
         const amountSeuro = etherBalances.TWO_MILLION;
         const { amountOther } = await BondingEvent.getOtherAmount(amountSeuro);
         await SEuro.connect(customer).approve(BondingEvent.address, amountSeuro.mul(3));
@@ -246,46 +237,29 @@ describe('BondingEvent', async () => {
         let actualActiveBonds = await helperGetActiveBonds();
         expect(actualActiveBonds).to.equal(expectedActiveBonds);
 
-        let expectedReward = '0';
-        let actualReward = (await helperGetProfit()).toString();
-        expect(actualReward).to.equal(expectedReward);
+        let expectedProfit = '0';
+        expect((await helperGetProfit()).toString()).to.equal(expectedProfit);
 
         await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-        await helperUpdateBondStatus();
 
         let seuroProfit = amountSeuro.div(20);
         let usdcProfit = amountOther.div(20);
-        let expectedProfit = eurToTST(seuroProfit).add(eurToTST(usdcToSeuro(usdcProfit)));
+        expectedProfit = eurToTST(seuroProfit).add(eurToTST(usdcToSeuro(usdcProfit)));
         expect(await helperGetProfit()).to.eq(expectedProfit);
 
-        expectedActiveBonds = 2;
-        actualActiveBonds = await helperGetActiveBonds();
-        expect(actualActiveBonds).to.equal(expectedActiveBonds);
-
         await helperFastForwardTime(ONE_WEEK_IN_SECONDS);
-        await helperUpdateBondStatus();
 
         seuroProfit = amountSeuro.mul(6).div(100);
         usdcProfit = amountOther.mul(6).div(100);
         expectedProfit = expectedProfit.add(eurToTST(seuroProfit).add(eurToTST(usdcToSeuro(usdcProfit))));
         expect(await helperGetProfit()).to.eq(expectedProfit);
 
-        expect(actualReward).to.equal(expectedReward);
-        expectedActiveBonds = 1;
-        actualActiveBonds = await helperGetActiveBonds();
-        expect(actualActiveBonds).to.equal(expectedActiveBonds);
-
         await helperFastForwardTime(2 * ONE_WEEK_IN_SECONDS);
-        await helperUpdateBondStatus();
 
         seuroProfit = amountSeuro.div(10);
         usdcProfit = amountOther.div(10);
         expectedProfit = expectedProfit.add(eurToTST(seuroProfit).add(eurToTST(usdcToSeuro(usdcProfit))));
         expect(await helperGetProfit()).to.eq(expectedProfit);
-
-        expectedActiveBonds = 0;
-        actualActiveBonds = await helperGetActiveBonds();
-        expect(actualActiveBonds).to.equal(expectedActiveBonds);
       });
     });
 
