@@ -2,16 +2,12 @@
 pragma solidity ^0.8.15;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "contracts/Stage2/BondStorage.sol";
 import "contracts/Stage2/BondingEvent.sol";
 import "contracts/Pausable.sol";
 import "contracts/Drainable.sol";
 
 contract OperatorStage2 is AccessControl, Pausable, Drainable {
     bytes32 public constant OPERATOR_STAGE_2 = keccak256("OPERATOR_STAGE_2");
-
-    // BondStorage dependency
-    BondStorage public bondStorage;
 
     // BondingEvent dependency
     BondingEvent public bondingEvent;
@@ -28,11 +24,6 @@ contract OperatorStage2 is AccessControl, Pausable, Drainable {
     }
 
     modifier onlyOperatorStage2() { require(hasRole(OPERATOR_STAGE_2, msg.sender), "err-invalid-sender"); _; }
-
-    function setStorage(address _newAddress) external onlyOperatorStage2 {
-        require(_newAddress != address(bondStorage), "err-same-address");
-        bondStorage = BondStorage(_newAddress);
-    }
 
     function setBonding(address _newAddress) external onlyOperatorStage2 {
         require(_newAddress != address(bondingEvent), "err-same-address");
