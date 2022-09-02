@@ -30,6 +30,8 @@ contract BondStorage is AccessControl {
 
     modifier onlyWhitelisted() { require(hasRole(WHITELIST_BOND_STORAGE, msg.sender), "invalid-storage-operator"); _; }
 
+    modifier ifActive(address _user) { require(issuedBonds[_user].isActive); _; }
+
     // PositionMetaData holds meta data received from Uniswap when adding a liquidity position
     // tokenId = NFT handle
     // liquidity = New liquidity (geometric average) at moment of transaction
@@ -158,11 +160,11 @@ contract BondStorage is AccessControl {
     }
 
     // Claims the payout in TST tokens by sending it to the user's wallet and resetting the claim to zero.
-    function claimReward(address _user) external {
+    function claimReward(address _user) external ifActive(_user) {
         uint256 reward = getClaimAmount(_user);
+        require(reward > 0, "err-no-reward");
         tapUntappedBonds(_user);
         if (!active(_user)) setInactive(_user);
-        require(reward > 0, "err-no-reward");
         tokenGateway.transferReward(_user, reward);
     }
 }
