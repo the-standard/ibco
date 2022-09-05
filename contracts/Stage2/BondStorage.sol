@@ -111,6 +111,13 @@ contract BondStorage is AccessControl {
         }
     }
 
+    function tapAllBonds(address _user) private {
+        Bond[] memory bonds = getUserBonds(_user);
+        for (uint256 i = 0; i < bonds.length; i++) {
+            if (!bonds[i].tapped) { tapBond(_user, i); decrementActiveBonds(_user); }
+        }
+    }
+
     // Returns the total payout and the accrued interest ("profit") component separately.
     // Both the payout and the profit is in sEURO.
     function calculateBond(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate) private pure returns (uint256 seuroPayout, uint256 seuroProfit, uint256 otherPayout, uint256 otherProfit) {
@@ -190,17 +197,30 @@ contract BondStorage is AccessControl {
 
     //  =============== CATASTROPHE ===============
 
+    function getActiveUserPrincipals(address _user) private view returns (uint256 seuroActive, uint256 otherActive) {
+        Bond[] memory bonds = getUserBonds(_user);
+        for (uint256 i = 0; i < bonds.length; i++) {
+            Bond memory bond = bonds[i];
+            if (!bond.tapped) { seuroActive += bond.principalSeuro; otherActive += bond.principalOther; }
+        }
+    }
+
     function catastropheFundsRequired() public view returns (uint256 seuroRequired, uint256 otherRequired) {
         for (uint256 i = 0; i < users.length; i++) {
-            Bond[] memory bonds = getUserBonds(users[i]);
-            for (uint256 j = 0; j < bonds.length; j++) {
-                Bond memory bond = bonds[j];
-                if (!bond.tapped) { seuroRequired += bond.principalSeuro; otherRequired += bond.principalOther; }
-            }
+            (uint256 seuroActive, uint256 otherActive) = getActiveUserPrincipals(users[i]);
+            seuroRequired += seuroActive; otherRequired += otherActive;
         }
     }
 
     function enableCatastropheMode() external onlyWhitelisted notInCatastrophe sufficientCatastropheBalance { isCatastrophe = true; }
 
     function disableCatastropheMode() external onlyWhitelisted inCatastrophe { isCatastrophe = false; }
+
+    function catastropheWithdraw() external inCatastrophe ifActive(msg.sender) {
+        (uint256 seuroActive, uint256 otherActive) = getActiveUserPrincipals(msg.sender);
+        tapAllBonds(msg.sender);
+        if (!active(msg.sender)) setInactive(msg.sender);
+        IERC20(seuro).transfer(msg.sender, seuroActive);
+        IERC20(other).transfer(msg.sender, otherActive);
+    }
 }

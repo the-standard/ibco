@@ -72,11 +72,11 @@ describe('BondStorage', async () => {
 
     it('only enable catastrophe mode if: admin user, enough balance, not already catastrophe mode', async () => {
       expect(await BondStorage.isCatastrophe()).to.eq(false);
-      const { seuroRequired, otherRequired } = await BondStorage.catastropheFundsRequired();
-
+      
       let catastrophe = BondStorage.enableCatastropheMode();
       await expect(catastrophe).to.be.revertedWith('err-insuff-bal');
-
+      
+      const { seuroRequired, otherRequired } = await BondStorage.catastropheFundsRequired();
       await Seuro.mint(BondStorage.address, seuroRequired);
       await Other.mint(BondStorage.address, otherRequired);
 
@@ -96,6 +96,31 @@ describe('BondStorage', async () => {
       catastrophe = BondStorage.disableCatastropheMode();
       await expect(catastrophe).not.to.be.reverted;
       expect(await BondStorage.isCatastrophe()).to.eq(false);
+    });
+
+    it('allows catastrophe withdraw if catastrophe mode and user is active', async () => {
+      let withdraw = BondStorage.connect(user2).catastropheWithdraw();
+      await expect(withdraw).to.be.revertedWith('err-not-catastrophe');
+
+      const { seuroRequired, otherRequired } = await BondStorage.catastropheFundsRequired();
+      await Seuro.mint(BondStorage.address, seuroRequired);
+      await Other.mint(BondStorage.address, otherRequired);
+      await BondStorage.enableCatastropheMode();
+
+      withdraw = BondStorage.catastropheWithdraw();
+      await expect(withdraw).to.be.revertedWith('err-user-inactive');
+
+      withdraw = BondStorage.connect(user2).catastropheWithdraw();
+      await expect(withdraw).not.to.be.reverted;
+
+      expect(await Seuro.balanceOf(user2.address)).to.equal(amountSeuro.mul(2));
+      expect(await Other.balanceOf(user2.address)).to.equal(amountOther.mul(2));
+
+      const bonds = await BondStorage.getUserBonds(user2.address);
+      expect(bonds.length).to.equal(2);
+      expect(bonds[0].tapped).to.equal(true);
+      expect(bonds[1].tapped).to.equal(true);
+      expect(await BondStorage.getActiveBonds(user2.address)).to.equal(0);
     });
   });
 });
