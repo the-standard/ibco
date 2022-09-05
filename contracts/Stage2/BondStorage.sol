@@ -3,6 +3,7 @@ pragma solidity ^0.8.15;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "contracts/Stage2/StandardTokenGateway.sol";
 import "contracts/Rates.sol";
 
@@ -20,7 +21,7 @@ contract BondStorage is AccessControl {
     uint8 public eurOtherDec;
     address public seuro;
     address public other;
-
+    bool public isCatastrophe;
     mapping(address => BondRecord) issuedBonds;
     address[] public users;
 
@@ -38,6 +39,17 @@ contract BondStorage is AccessControl {
     modifier onlyWhitelisted() { require(hasRole(WHITELIST_BOND_STORAGE, msg.sender), "invalid-storage-operator"); _; }
 
     modifier ifActive(address _user) { require(issuedBonds[_user].isActive, "err-user-inactive"); _; }
+
+    modifier notInCatastrophe() { require(!isCatastrophe, "err-catastrophe"); _; }
+
+    modifier inCatastrophe() { require(isCatastrophe, "err-not-catastrophe"); _; }
+
+    modifier sufficientCatastropheBalance() {
+        (uint256 seuroRequired, uint256 otherRequired) = catastropheFundsRequired();
+        uint256 seuroBalance = IERC20(seuro).balanceOf(address(this));
+        uint256 otherBalance = IERC20(other).balanceOf(address(this));
+        require(seuroBalance >= seuroRequired && otherBalance >= otherRequired, "err-insuff-bal"); _;
+    }
 
     // PositionMetaData holds meta data received from Uniswap when adding a liquidity position
     // tokenId = NFT handle
@@ -178,7 +190,7 @@ contract BondStorage is AccessControl {
 
     //  =============== CATASTROPHE ===============
 
-    function catastropheFundsRequired() external view returns (uint256 seuroRequired, uint256 otherRequired) {
+    function catastropheFundsRequired() public view returns (uint256 seuroRequired, uint256 otherRequired) {
         for (uint256 i = 0; i < users.length; i++) {
             Bond[] memory bonds = getUserBonds(users[i]);
             for (uint256 j = 0; j < bonds.length; j++) {
@@ -187,4 +199,8 @@ contract BondStorage is AccessControl {
             }
         }
     }
+
+    function enableCatastropheMode() external onlyWhitelisted notInCatastrophe sufficientCatastropheBalance { isCatastrophe = true; }
+
+    function disableCatastropheMode() external onlyWhitelisted inCatastrophe { isCatastrophe = false; }
 }

@@ -69,5 +69,33 @@ describe('BondStorage', async () => {
       expect(seuroRequired).to.eq(expectedRequiredSeuro);
       expect(otherRequired).to.eq(expectedRequiredOther);
     });
+
+    it('only enable catastrophe mode if: admin user, enough balance, not already catastrophe mode', async () => {
+      expect(await BondStorage.isCatastrophe()).to.eq(false);
+      const { seuroRequired, otherRequired } = await BondStorage.catastropheFundsRequired();
+
+      let catastrophe = BondStorage.enableCatastropheMode();
+      await expect(catastrophe).to.be.revertedWith('err-insuff-bal');
+
+      await Seuro.mint(BondStorage.address, seuroRequired);
+      await Other.mint(BondStorage.address, otherRequired);
+
+      catastrophe = BondStorage.connect(user1).enableCatastropheMode();
+      await expect(catastrophe).to.be.revertedWith('invalid-storage-operator');
+
+      catastrophe = BondStorage.enableCatastropheMode();
+      await expect(catastrophe).not.to.be.reverted;
+      expect(await BondStorage.isCatastrophe()).to.eq(true);
+
+      catastrophe = BondStorage.enableCatastropheMode();
+      await expect(catastrophe).to.be.revertedWith('err-catastrophe');
+
+      catastrophe = BondStorage.connect(user1).disableCatastropheMode();
+      await expect(catastrophe).to.be.revertedWith('invalid-storage-operator');
+
+      catastrophe = BondStorage.disableCatastropheMode();
+      await expect(catastrophe).not.to.be.reverted;
+      expect(await BondStorage.isCatastrophe()).to.eq(false);
+    });
   });
 });
