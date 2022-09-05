@@ -1,4 +1,4 @@
-# The Standard: Initial Bond Curve Offering
+# The Standard: Initial Bonding Curve Offering
 
 ![Main CI](https://github.com/the-standard/ibco/actions/workflows/.github/workflows/main.yml/badge.svg?branch=master)
 
