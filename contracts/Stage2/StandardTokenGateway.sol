@@ -10,11 +10,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // - price per token in EUR;
 // - amount of obtainable tokens as bonding rewards left
 contract StandardTokenGateway is AccessControl {
-    // Deployed TST contract on mainnet with a maximum supply of 1 billion tokens
-    address public constant TST_ADDRESS = 0xa0b93B9e90aB887E53F9FB8728c009746e989B53;
 
     // Reward token (TST)
-    IERC20 private immutable TOKEN;
+    IERC20 public immutable TOKEN;
 
     uint256 public priceTstEur = 5500000;
     uint8 public priceDec = 8;
