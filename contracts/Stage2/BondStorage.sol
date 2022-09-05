@@ -18,14 +18,21 @@ contract BondStorage is AccessControl {
     // dec should be 20 when other asset is a 6 dec token
     address public chainlinkEurOther;
     uint8 public eurOtherDec;
+    address public seuro;
+    address public other;
 
-    constructor(address _gatewayAddress, address _chainlinkEurOther, uint8 _eurOtherDec) {
+    mapping(address => BondRecord) issuedBonds;
+    address[] public users;
+
+    constructor(address _gatewayAddress, address _chainlinkEurOther, uint8 _eurOtherDec, address _seuro, address _other) {
         _grantRole(WHITELIST_ADMIN, msg.sender);
         _setRoleAdmin(WHITELIST_BOND_STORAGE, WHITELIST_ADMIN);
         grantRole(WHITELIST_BOND_STORAGE, msg.sender);
         tokenGateway = StandardTokenGateway(_gatewayAddress);
         chainlinkEurOther = _chainlinkEurOther;
         eurOtherDec = _eurOtherDec;
+        seuro = _seuro;
+        other = _other;
     }
 
     modifier onlyWhitelisted() { require(hasRole(WHITELIST_BOND_STORAGE, msg.sender), "invalid-storage-operator"); _; }
@@ -57,8 +64,6 @@ contract BondStorage is AccessControl {
     // claimAmount = total claim from expired bonds (in TST)
     struct BondRecord { bool isInitialised; bool isActive; uint256 amountBondsActive; Bond[] bonds; }
 
-    mapping(address => BondRecord) issuedBonds;
-
     function setBondingEvent(address _address) external onlyWhitelisted { grantRole(WHITELIST_BOND_STORAGE, _address); }
 
     function setTokenGateway(address _newAddress) external onlyWhitelisted {
@@ -89,7 +94,9 @@ contract BondStorage is AccessControl {
 
     function tapUntappedBonds(address _user) private {
         Bond[] memory bonds = getUserBonds(_user);
-        for (uint256 i = 0; i < bonds.length; i++) if (claimable(bonds[i])) { tapBond(_user, i); decrementActiveBonds(_user); }
+        for (uint256 i = 0; i < bonds.length; i++) {
+            if (claimable(bonds[i])) { tapBond(_user, i); decrementActiveBonds(_user); }
+        }
     }
 
     // Returns the total payout and the accrued interest ("profit") component separately.
@@ -136,6 +143,7 @@ contract BondStorage is AccessControl {
         if (!issuedBonds[_user].isInitialised) {
             setActive(_user);
             setInitialised(_user);
+            users.push(_user);
         }
 
         // finalise record of bond
@@ -166,5 +174,17 @@ contract BondStorage is AccessControl {
         tapUntappedBonds(_user);
         if (!active(_user)) setInactive(_user);
         tokenGateway.transferReward(_user, reward);
+    }
+
+    //  =============== CATASTROPHE ===============
+
+    function catastropheFundsRequired() external view returns (uint256 seuroRequired, uint256 otherRequired) {
+        for (uint256 i = 0; i < users.length; i++) {
+            Bond[] memory bonds = getUserBonds(users[i]);
+            for (uint256 j = 0; j < bonds.length; j++) {
+                Bond memory bond = bonds[j];
+                if (!bond.tapped) { seuroRequired += bond.principalSeuro; otherRequired += bond.principalOther; }
+            }
+        }
     }
 }
