@@ -3,6 +3,7 @@ pragma solidity ^0.8.15;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "contracts/Stage2/StandardTokenGateway.sol";
 import "contracts/Rates.sol";
 
@@ -18,19 +19,37 @@ contract BondStorage is AccessControl {
     // dec should be 20 when other asset is a 6 dec token
     address public chainlinkEurOther;
     uint8 public eurOtherDec;
+    address public seuro;
+    address public other;
+    bool public isCatastrophe;
+    mapping(address => BondRecord) issuedBonds;
+    address[] public users;
 
-    constructor(address _gatewayAddress, address _chainlinkEurOther, uint8 _eurOtherDec) {
+    constructor(address _gatewayAddress, address _chainlinkEurOther, uint8 _eurOtherDec, address _seuro, address _other) {
         _grantRole(WHITELIST_ADMIN, msg.sender);
         _setRoleAdmin(WHITELIST_BOND_STORAGE, WHITELIST_ADMIN);
         grantRole(WHITELIST_BOND_STORAGE, msg.sender);
         tokenGateway = StandardTokenGateway(_gatewayAddress);
         chainlinkEurOther = _chainlinkEurOther;
         eurOtherDec = _eurOtherDec;
+        seuro = _seuro;
+        other = _other;
     }
 
     modifier onlyWhitelisted() { require(hasRole(WHITELIST_BOND_STORAGE, msg.sender), "invalid-storage-operator"); _; }
 
     modifier ifActive(address _user) { require(issuedBonds[_user].isActive, "err-user-inactive"); _; }
+
+    modifier notInCatastrophe() { require(!isCatastrophe, "err-catastrophe"); _; }
+
+    modifier inCatastrophe() { require(isCatastrophe, "err-not-catastrophe"); _; }
+
+    modifier sufficientCatastropheBalance() {
+        (uint256 seuroRequired, uint256 otherRequired) = catastropheFundsRequired();
+        uint256 seuroBalance = IERC20(seuro).balanceOf(address(this));
+        uint256 otherBalance = IERC20(other).balanceOf(address(this));
+        require(seuroBalance >= seuroRequired && otherBalance >= otherRequired, "err-insuff-bal"); _;
+    }
 
     // PositionMetaData holds meta data received from Uniswap when adding a liquidity position
     // tokenId = NFT handle
@@ -56,8 +75,6 @@ contract BondStorage is AccessControl {
     // profitAmount = profit amount from bond (in TST)
     // claimAmount = total claim from expired bonds (in TST)
     struct BondRecord { bool isInitialised; bool isActive; uint256 amountBondsActive; Bond[] bonds; }
-
-    mapping(address => BondRecord) issuedBonds;
 
     function setBondingEvent(address _address) external onlyWhitelisted { grantRole(WHITELIST_BOND_STORAGE, _address); }
 
@@ -89,7 +106,16 @@ contract BondStorage is AccessControl {
 
     function tapUntappedBonds(address _user) private {
         Bond[] memory bonds = getUserBonds(_user);
-        for (uint256 i = 0; i < bonds.length; i++) if (claimable(bonds[i])) { tapBond(_user, i); decrementActiveBonds(_user); }
+        for (uint256 i = 0; i < bonds.length; i++) {
+            if (claimable(bonds[i])) { tapBond(_user, i); decrementActiveBonds(_user); }
+        }
+    }
+
+    function tapAllBonds(address _user) private {
+        Bond[] memory bonds = getUserBonds(_user);
+        for (uint256 i = 0; i < bonds.length; i++) {
+            if (!bonds[i].tapped) { tapBond(_user, i); decrementActiveBonds(_user); }
+        }
     }
 
     // Returns the total payout and the accrued interest ("profit") component separately.
@@ -128,7 +154,7 @@ contract BondStorage is AccessControl {
 
     /// ================ BondStorage public APIs ==============
 
-    function startBond(address _user, uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturity, uint256 _tokenId, uint128 _liquidity) external onlyWhitelisted {
+    function startBond(address _user, uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturity, uint256 _tokenId, uint128 _liquidity) external onlyWhitelisted notInCatastrophe {
         // reduce the amount of available bonding reward TSTs
         (uint256 reward, uint256 profit) = potentialReward(_principalSeuro, _principalOther, _rate);
         tokenGateway.decreaseRewardSupply(reward);
@@ -136,6 +162,7 @@ contract BondStorage is AccessControl {
         if (!issuedBonds[_user].isInitialised) {
             setActive(_user);
             setInitialised(_user);
+            users.push(_user);
         }
 
         // finalise record of bond
@@ -160,11 +187,40 @@ contract BondStorage is AccessControl {
     }
 
     // Claims the payout in TST tokens by sending it to the user's wallet and resetting the claim to zero.
-    function claimReward(address _user) external ifActive(_user) {
+    function claimReward(address _user) external notInCatastrophe ifActive(_user) {
         uint256 reward = getClaimAmount(_user);
         require(reward > 0, "err-no-reward");
         tapUntappedBonds(_user);
         if (!active(_user)) setInactive(_user);
         tokenGateway.transferReward(_user, reward);
+    }
+
+    //  =============== CATASTROPHE ===============
+
+    function getActiveUserPrincipals(address _user) private view returns (uint256 seuroActive, uint256 otherActive) {
+        Bond[] memory bonds = getUserBonds(_user);
+        for (uint256 i = 0; i < bonds.length; i++) {
+            Bond memory bond = bonds[i];
+            if (!bond.tapped) { seuroActive += bond.principalSeuro; otherActive += bond.principalOther; }
+        }
+    }
+
+    function catastropheFundsRequired() public view returns (uint256 seuroRequired, uint256 otherRequired) {
+        for (uint256 i = 0; i < users.length; i++) {
+            (uint256 seuroActive, uint256 otherActive) = getActiveUserPrincipals(users[i]);
+            seuroRequired += seuroActive; otherRequired += otherActive;
+        }
+    }
+
+    function enableCatastropheMode() external onlyWhitelisted notInCatastrophe sufficientCatastropheBalance { isCatastrophe = true; }
+
+    function disableCatastropheMode() external onlyWhitelisted inCatastrophe { isCatastrophe = false; }
+
+    function catastropheWithdraw() external inCatastrophe ifActive(msg.sender) {
+        (uint256 seuroActive, uint256 otherActive) = getActiveUserPrincipals(msg.sender);
+        tapAllBonds(msg.sender);
+        if (!active(msg.sender)) setInactive(msg.sender);
+        IERC20(seuro).transfer(msg.sender, seuroActive);
+        IERC20(other).transfer(msg.sender, otherActive);
     }
 }

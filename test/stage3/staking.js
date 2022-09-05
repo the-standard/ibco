@@ -395,7 +395,7 @@ describe('Staking', async () => {
   });
 
   describe('catastrophic events', async () => {
-    it('checks that the catastrophy event reverts in various situations', async () => {
+    it('checks that the catastrophe event reverts in various situations', async () => {
       let blockNum = await ethers.provider.getBlock();
       const then = blockNum.timestamp;
       const Staking = await StakingContract.deploy("Staking", "STS", then, then + 600, then + 5000, TGateway.address, TST_ADDRESS, SEUR_ADDRESS, simpleInterestRate);
@@ -404,17 +404,17 @@ describe('Staking', async () => {
       let active = await Staking.active();
       expect(active).to.eq(true);
 
-      cat = Staking.connect(user1).enableCatastrophy();
+      cat = Staking.connect(user1).enableCatastrophe();
       await expect(cat).to.be.revertedWith('Ownable: caller is not the owner');
 
-      cat = await Staking.enableCatastrophy();
-      let isCat = await Staking.isCatastrophy();
+      cat = await Staking.enableCatastrophe();
+      let isCat = await Staking.isCatastrophe();
       expect(isCat).to.eq(true);
 
       active = await Staking.active();
       expect(active).to.eq(false);
 
-      cat = Staking.connect(owner).enableCatastrophy();
+      cat = Staking.connect(owner).enableCatastrophe();
       await expect(cat).to.be.revertedWith('err-already-active');
     });
 
@@ -428,7 +428,7 @@ describe('Staking', async () => {
 
       // cannot withdraw cos we're not suspended
       let cat = Staking.connect(owner).emergencyWithdraw();
-      await expect(cat).to.be.revertedWith('err-not-catastrophy');
+      await expect(cat).to.be.revertedWith('err-not-catastrophe');
 
       const standardBalance = etherBalances["8K"];
       await TST.connect(owner).mint(user1.address, standardBalance);
@@ -437,8 +437,8 @@ describe('Staking', async () => {
       balance = await TST.balanceOf(user1.address);
       expect(balance).to.eq(0);
 
-      await Staking.connect(owner).enableCatastrophy();
-      let isCat = await Staking.isCatastrophy();
+      await Staking.connect(owner).enableCatastrophe();
+      let isCat = await Staking.isCatastrophe();
       expect(isCat).to.eq(true);
 
       // close
@@ -466,13 +466,13 @@ describe('Staking', async () => {
 
       // cannot withdraw cos we're not suspended
       let cat = Staking.connect(user1).emergencyWithdraw();
-      await expect(cat).to.be.revertedWith('err-not-catastrophy');
+      await expect(cat).to.be.revertedWith('err-not-catastrophe');
 
       balance = await TST.balanceOf(user1.address);
       expect(balance).to.eq(0);
 
-      await Staking.connect(owner).enableCatastrophy();
-      let isCat = await Staking.isCatastrophy();
+      await Staking.connect(owner).enableCatastrophe();
+      let isCat = await Staking.isCatastrophe();
       expect(isCat).to.eq(true);
 
       // close

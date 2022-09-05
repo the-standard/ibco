@@ -38,7 +38,7 @@ describe('BondingReward', async () => {
 
   describe('bonding', async () => {
     it('will not bond if no TST in gateway', async () => {
-      BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, CHAINLINK_DEC);
+      BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, CHAINLINK_DEC, SEuro.address, USDC.address);
       BondingEvent = await BondingEventContract.deploy(
         SEuro.address, USDC.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
         RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
@@ -65,7 +65,7 @@ describe('BondingReward', async () => {
 
       context('other asset is 18 dec token', async () => {
         beforeEach(async () => {
-          BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, CHAINLINK_DEC);
+          BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, CHAINLINK_DEC, SEuro.address, USDC.address);
           BondingEvent = await BondingEventContract.deploy(
             SEuro.address, USDC.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
             RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
@@ -128,7 +128,7 @@ describe('BondingReward', async () => {
   
         beforeEach(async () => {
           // storage chainlink decimals need to be scaled up to match seuro
-          BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, EUR_USD_CONVERSION_SCALE);
+          BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, EUR_USD_CONVERSION_SCALE, SEuro.address, USDT.address);
           const sixDecPrice = sortedPrice(scaleUpForDecDiff(100, 12), 105);
           BondingEvent = await BondingEventContract.deploy(
             SEuro.address, USDT.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,

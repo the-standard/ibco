@@ -35,7 +35,7 @@ describe('Stage 2', async () => {
       RatioCalculator = await RatioCalculatorContract.deploy();
       const ChainlinkEurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
       TGateway = await TokenGatewayContract.deploy(TST.address);
-      BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, CHAINLINK_DEC);
+      BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, CHAINLINK_DEC, SEuro.address, USDT.address);
       BondingEvent = await BondingEventContract.deploy(
         SEuro.address, USDT.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
         RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
