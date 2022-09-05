@@ -154,7 +154,7 @@ contract BondStorage is AccessControl {
 
     /// ================ BondStorage public APIs ==============
 
-    function startBond(address _user, uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturity, uint256 _tokenId, uint128 _liquidity) external onlyWhitelisted {
+    function startBond(address _user, uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturity, uint256 _tokenId, uint128 _liquidity) external onlyWhitelisted notInCatastrophe {
         // reduce the amount of available bonding reward TSTs
         (uint256 reward, uint256 profit) = potentialReward(_principalSeuro, _principalOther, _rate);
         tokenGateway.decreaseRewardSupply(reward);
@@ -187,7 +187,7 @@ contract BondStorage is AccessControl {
     }
 
     // Claims the payout in TST tokens by sending it to the user's wallet and resetting the claim to zero.
-    function claimReward(address _user) external ifActive(_user) {
+    function claimReward(address _user) external notInCatastrophe ifActive(_user) {
         uint256 reward = getClaimAmount(_user);
         require(reward > 0, "err-no-reward");
         tapUntappedBonds(_user);

@@ -35,7 +35,7 @@ describe('BondStorage', async () => {
   });
 
   describe('catastrophe', async () => {
-    let amountSeuro, amountOther;
+    let amountSeuro, amountOther, rate, day, week, tokenId, liquidity;
 
     const startBonds = async () => {
       // start some bonds for two users
@@ -43,11 +43,11 @@ describe('BondStorage', async () => {
       // catastrophe should therefore only be active for three
       amountSeuro = etherBalances['10K'];
       amountOther = parse6Dec(5000);
-      const rate = 1000;
-      const day = 60 * 60 * 24;
-      const week = 7 * day;
+      rate = 1000;
+      day = 60 * 60 * 24;
+      week = 7 * day;
       // doesn't matter here:
-      const tokenId = 1; const liquidity = 100
+      tokenId = 1; liquidity = 100
       await BondStorage.startBond(user1.address, amountSeuro, amountOther, rate, day, tokenId, liquidity);
       await BondStorage.startBond(user2.address, amountSeuro, amountOther, rate, day, tokenId, liquidity);
       await BondStorage.startBond(user1.address, amountSeuro, amountOther, rate, week, tokenId, liquidity);
@@ -121,6 +121,19 @@ describe('BondStorage', async () => {
       expect(bonds[0].tapped).to.equal(true);
       expect(bonds[1].tapped).to.equal(true);
       expect(await BondStorage.getActiveBonds(user2.address)).to.equal(0);
+    });
+
+    it('does not start a new bond / claim rewards when catastrophe', async () => {
+      const { seuroRequired, otherRequired } = await BondStorage.catastropheFundsRequired();
+      await Seuro.mint(BondStorage.address, seuroRequired);
+      await Other.mint(BondStorage.address, otherRequired);
+      await BondStorage.enableCatastropheMode();
+
+      const bond = BondStorage.startBond(user2.address, amountSeuro, amountOther, rate, week, tokenId, liquidity);
+      await expect(bond).to.be.revertedWith('err-catastrophe');
+
+      const reward = BondStorage.claimReward(user2.address);
+      await expect(reward).to.be.revertedWith('err-catastrophe');
     });
   });
 });
