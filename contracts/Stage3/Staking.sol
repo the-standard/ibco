@@ -18,7 +18,7 @@ contract Staking is ERC721, Ownable, Pausable, Drainable {
     StandardTokenGateway public tokenGateway;
 
     bool public active;                 // active or not, needs to be set manually
-    bool public isCatastrophy;          // in the event of a catastrophy, let users withdraw
+    bool public isCatastrophe;          // in the event of a catastrophe, let users withdraw
 
     uint256 public windowStart;         // the start time for the 'stake'
     uint256 public windowEnd;           // the end time for the 'stake'
@@ -134,22 +134,22 @@ contract Staking is ERC721, Ownable, Pausable, Drainable {
 
     function position(address owner) external view returns (Position memory) { return _positions[owner]; }
 
-    function enableCatastrophy() external onlyOwner {
+    function enableCatastrophe() external onlyOwner {
         require(active == true, "err-already-active");
-        require(isCatastrophy == false, "err-already-isCatastrophy");
-        isCatastrophy = true;
+        require(isCatastrophe == false, "err-already-isCatastrophe");
+        isCatastrophe = true;
         active = false;
     }
 
-    function disableCatastrophy() external onlyOwner {
+    function disableCatastrophe() external onlyOwner {
         require(active == false, "err-already-active");
-        require(isCatastrophy == true, "err-already-isCatastrophy-false");
-        isCatastrophy = false;
+        require(isCatastrophe == true, "err-already-isCatastrophe-false");
+        isCatastrophe = false;
         active = true;
     }
 
     function emergencyWithdraw() external {
-        require(isCatastrophy == true, "err-not-catastrophy");
+        require(isCatastrophe == true, "err-not-catastrophe");
 
         Position memory pos = _positions[msg.sender];
         require(pos.nonce > 0, "err-no-position");
