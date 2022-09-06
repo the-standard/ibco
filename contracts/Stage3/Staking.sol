@@ -82,12 +82,10 @@ contract Staking is ERC721, Ownable, Pausable, Drainable {
         Position memory pos = _positions[msg.sender];
 
         if (pos.nonce == 0) {
-            _mint(msg.sender, _tokenId);
+            _mint(msg.sender, ++_tokenId);
 
             pos.open = true;
             pos.tokenId = _tokenId;
-
-            _tokenId++;
         }
 
         // update the position
