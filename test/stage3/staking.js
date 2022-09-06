@@ -113,12 +113,12 @@ describe('Staking', async () => {
       // 5% interest = 50_000 tst
       // 50_000 * 0.055 = 2750 seuro
       expectedReward = ethers.utils.parseEther('2750');
-
+      
       expect(await Staking.balance(SEuro.address)).to.eq(value);
       remaining = await Staking.remaining(SEuro.address);
       let expectedRemaining = value.sub(expectedReward);
       expect(remaining).to.equal(expectedRemaining);
-
+      
       await Staking.connect(user1).burn();
 
       expect(await Staking.balance(SEuro.address)).to.eq(value.sub(expectedReward));
@@ -159,7 +159,7 @@ describe('Staking', async () => {
 
       // check the NFT mint
       expect(await Staking.balanceOf(user1.address)).to.eq(1);
-      expect(await Staking.ownerOf(0)).to.eq(user1.address);
+      expect(await Staking.ownerOf(1)).to.eq(user1.address);
 
       // the reward should be 5% of 8000 TSTs but in SEUR:
       // 5% of 8000 = 400 TST = 20 sEURO
@@ -170,7 +170,7 @@ describe('Staking', async () => {
       // test positions
       let p = await Staking.position(user1.address);
       expect(p.nonce).to.eq(1);
-      expect(p.tokenId).to.eq(0);
+      expect(p.tokenId).to.eq(1);
       expect(p.open).to.eq(true);
       expect(p.stake).to.eq(standardBalance);
       expect(p.reward).to.eq(rewardInSeuro1);
@@ -184,7 +184,7 @@ describe('Staking', async () => {
 
       p = await Staking.position(user1.address);
       expect(p.nonce).to.eq(2);
-      expect(p.tokenId).to.eq(0);
+      expect(p.tokenId).to.eq(1);
       expect(p.open).to.eq(true);
       expect(p.stake).to.eq(standardBalance.mul(2));
 
@@ -212,7 +212,7 @@ describe('Staking', async () => {
 
       // check the 721 mint stuff
       expect(await Staking.balanceOf(user2.address)).to.eq(1);
-      expect(await Staking.ownerOf(1)).to.eq(user2.address);
+      expect(await Staking.ownerOf(2)).to.eq(user2.address);
 
       // the reward should be 5% of 10000 TSTs but in SEUR:
       // 5% of 10000 = 500 TST = 25 sEURO
@@ -223,7 +223,7 @@ describe('Staking', async () => {
       // test positions
       p = await Staking.position(user2.address);
       expect(p.nonce).to.eq(1);
-      expect(p.tokenId).to.eq(1);
+      expect(p.tokenId).to.eq(2);
       expect(p.open).to.eq(true);
       expect(p.stake).to.eq(otherStandardBal);
       expect(p.reward).to.eq(rewardInSeuro2);
