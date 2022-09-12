@@ -1,9 +1,8 @@
 {
     "localhost": {
-        "externalContracts": {
+        "externalAddresses": {
             "uniswapLiquidityManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
             "weth": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-            "seuro": "0x4A8D1B11A6F431b8eBa69E617282aF1849F63052",
             "chainlink": {
                 "eurUsd": {
                     "address": "0xb49f677943BC038e9857d61E7d053CaA2C1734C1",
@@ -16,28 +15,10 @@
             }
         }
     },
-    "rinkeby": {
-        "externalContracts": {
-            "uniswapLiquidityManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
-            "weth": "0xc778417E063141139Fce010982780140Aa0cD5Ab",
-            "seuro": "0xfd5a6111409086a00f81Bcb84758DCC4C9859Bf9",
-            "chainlink": {
-                "eurUsd": {
-                    "address": "0x78F9e60608bF48a1155b4B2A5e31F32318a1d85F",
-                    "dec": 8
-                },
-                "ethUsd": {
-                    "address": "0x8A753747A1Fa494EC906cE90E9f37563A8AF630e",
-                    "dec": 8
-                }
-            }
-        }
-    },
     "goerli": {
-        "externalContracts": {
+        "externalAddresses": {
             "uniswapLiquidityManager": "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
-            "weth": "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
-            "seuro": "0x9f9A51FAFc309E53d0D30170F13C589B07699C69"
+            "weth": "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6"
         }
     }
 }

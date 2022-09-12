@@ -61,8 +61,8 @@ const createChainlinkMocks = async () => {
 
 const deployContracts = async () => {
   const [owner] = await ethers.getSigners();
-  const { externalContracts } = JSON.parse(fs.readFileSync('scripts/deploymentConfig.json'))[network.name];
-  SEuroAddress = externalContracts.seuro;
+  const { externalAddresses } = JSON.parse(fs.readFileSync('scripts/deploymentConfig.json'))[network.name];
+  SEuroAddress = externalAddresses.seuro;
 
   DummyTST = await (await ethers.getContractFactory('DUMMY')).deploy('Standard Token', 'TST', 18);
   await completed(DummyTST, 'TST');
@@ -70,15 +70,15 @@ const deployContracts = async () => {
   await completed(DummyUSDC, 'USDC');
   BondingCurve = await (await getLibraryFactory(owner, 'BondingCurve')).deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   await completed(BondingCurve, 'BondingCurve');
-  const chainlink = !!externalContracts.chainlink ?
-    externalContracts.chainlink :
+  const chainlink = !!externalAddresses.chainlink ?
+    externalAddresses.chainlink :
     await createChainlinkMocks();
   SEuroCalculator = await (await getLibraryFactory(owner, 'SEuroCalculator')).deploy(
     BondingCurve.address, chainlink.eurUsd.address, chainlink.eurUsd.dec
   );
   await completed(SEuroCalculator, 'SEuroCalculator');
   const TokenManager = await (await ethers.getContractFactory('TokenManager')).deploy(
-    externalContracts.weth, chainlink.ethUsd.address, chainlink.ethUsd.dec
+    externalAddresses.weth, chainlink.ethUsd.address, chainlink.ethUsd.dec
   );
   await completed(TokenManager, 'TokenManager');
   SEuroOffering = await (await ethers.getContractFactory('SEuroOffering')).deploy(
@@ -96,7 +96,7 @@ const deployContracts = async () => {
   const pricing = getPricing();
   OperatorStage2 = await (await ethers.getContractFactory('OperatorStage2')).deploy();
   BondingEvent = await (await ethers.getContractFactory('BondingEvent')).deploy(
-    SEuroAddress, DummyUSDC.address, externalContracts.uniswapLiquidityManager, BondStorage.address, OperatorStage2.address,
+    SEuroAddress, DummyUSDC.address, externalAddresses.uniswapLiquidityManager, BondStorage.address, OperatorStage2.address,
     RatioCalculator.address, pricing.initial, pricing.lowerTick, pricing.upperTick, MOST_STABLE_FEE
   );
   await completed(BondingEvent, 'BondingEvent');
