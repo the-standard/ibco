@@ -2,30 +2,13 @@ const { network, ethers } = require('hardhat');
 const https = require('https');
 const fs = require('fs');
 const { CHAINLINK_DEC, DEFAULT_CHAINLINK_ETH_USD_PRICE, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, MOST_STABLE_FEE, encodePriceSqrt, scaleUpForDecDiff } = require('../test/common');
+const { getDeployedAddresses } = require('./common');
 
 const INITIAL_PRICE = ethers.utils.parseEther('0.8');
 const MAX_SUPPLY = ethers.utils.parseEther((85_000_000).toString());
 const BUCKET_SIZE = ethers.utils.parseEther((100_000).toString());
 
 let owner;
-
-const getDeployedAddresses = async network => {
-  const url = 'https://raw.githubusercontent.com/the-standard/ibco-addresses/main/addresses.json';
-
-  return new Promise(resolve => {
-    https.get(url, res => {
-      let json = '';
-  
-      res.on('data', data => {
-        json += data;
-      });
-
-      res.on('end', _ => {
-        resolve(JSON.parse(json)[network]);
-      });
-    });
-  });
-}
 
 const mockChainlink = async _ => {
   const EthUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_ETH_USD_PRICE);
