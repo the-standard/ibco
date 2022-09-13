@@ -183,12 +183,19 @@ const getAddresses = async _ => {
   return addresses;
 }
 
+const deployStakingDirectory = async _ => {
+  const directory = await (await ethers.getContractFactory('StakingDirectory')).deploy();
+  await directory.deployed();
+  return directory.address;
+}
+
 const main = async _ => {
   [ owner ] = await ethers.getSigners();
   const addresses = await getAddresses();
   const stage1Addresses = await prepareStage1(addresses);
   const stage2Addresses = await prepareStage2(addresses);
-  console.log({ ...stage1Addresses, ...stage2Addresses });
+  const StakingDirectory = await deployStakingDirectory();
+  console.log({ ...stage1Addresses, ...stage2Addresses, StakingDirectory });
 }
 
 main()
