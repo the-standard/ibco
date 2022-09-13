@@ -1,6 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const { POSITION_MANAGER_ADDRESS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, eurToTST, defaultConvertUsdToEur } = require('../common.js');
+const { BigNumber } = require('ethers');
 
 let owner, customer, wallet, SEuro, TST, USDC, BondingEvent, BondStorage, TokenGateway, BondingEventContract, BondStorageContract, RatioCalculatorContract, RatioCalculator, pricing, SwapManager;
 
@@ -27,6 +28,10 @@ describe('BondingEvent', async () => {
   const isSEuroToken0 = () => {
     return SEuro.address.toLowerCase() < USDC.address.toLowerCase();
   };
+
+  const usdcToSeuro = amount => {
+    return defaultConvertUsdToEur(scaleUpForDecDiff(amount, 12));
+  }
 
   const deployBondingEvent = async (reserveSEuro, reserveOther) => {
     // note: ticks represent that sEURO is 18dec and USDC is 6dec
@@ -150,10 +155,6 @@ describe('BondingEvent', async () => {
     const verifyExpectedProfit = async (seuroProfit, otherProfit) => {
       const expectedProfit = eurToTST(seuroProfit).add(eurToTST(usdcToSeuro(otherProfit)));
       expect(await helperGetProfit()).to.eq(expectedProfit);
-    }
-
-    const usdcToSeuro = amount => {
-      return defaultConvertUsdToEur(scaleUpForDecDiff(amount, 12));
     }
 
     describe('bond', async () => {
@@ -494,6 +495,28 @@ describe('BondingEvent', async () => {
       expect(collectedData.feesCollected1).to.be.gt(0);
       expect(collectedData.collectedTotal0).to.eq(collectedData.retractedAmount0.add(collectedData.feesCollected0));
       expect(collectedData.collectedTotal1).to.eq(collectedData.retractedAmount1.add(collectedData.feesCollected1));
+    });
+  });
+
+  describe('yield', async () => {
+    const addInterest = (amount, rate) => {
+      const hundredPC = BigNumber.from(100000);
+      return amount.mul(hundredPC.add(rate)).div(hundredPC);
+    }
+
+    it('calculates the tst yield based on amount of seuro, other asset and the interest rate', async () => {
+      const interestRate = 2500;
+      const amountSeuro = etherBalances['100K'];
+      const seuroWithInterest = addInterest(amountSeuro, interestRate);
+      const seuroWithInterestToTst = eurToTST(seuroWithInterest);
+      const amountOther = etherBalances['80K'];
+      const otherWithInterest = addInterest(amountOther, interestRate);
+      const otherWithInterestToSeuro = usdcToSeuro(otherWithInterest);
+      const otherWithInterestToTst = eurToTST(otherWithInterestToSeuro);
+
+      const expectedYield = seuroWithInterestToTst.add(otherWithInterestToTst);
+      const actualYield = (await BondStorage.calculateBondYield(amountSeuro, amountOther, interestRate)).payout;
+      expect(actualYield).to.eq(expectedYield);
     });
   });
 
