@@ -1,7 +1,7 @@
 const { network, ethers } = require('hardhat');
 const https = require('https');
 const fs = require('fs');
-const { CHAINLINK_DEC, DEFAULT_CHAINLINK_ETH_USD_PRICE, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory } = require('../test/common');
+const { CHAINLINK_DEC, DEFAULT_CHAINLINK_ETH_USD_PRICE, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, MOST_STABLE_FEE, encodePriceSqrt, scaleUpForDecDiff } = require('../test/common');
 
 const INITIAL_PRICE = ethers.utils.parseEther('0.8');
 const MAX_SUPPLY = ethers.utils.parseEther((85_000_000).toString());
@@ -91,6 +91,90 @@ const prepareStage1 = async addresses => {
   }
 }
 
+const calculatePricing = tokenAddresses => {
+  // prices and ticks scaled up because USDC is 6 dec
+  //
+  // USDC / sEURO price of 1.23 reflects:
+  // eur / usd 1.017 (17th aug);
+  // seuro / euro 0.8 (ibco initial price).
+  // 
+  // 1.23 price is tick ~278394
+  // tick 275300 approx. 1 USDC = 0.903 sEURO
+  // tick 279000 approx. 1 USDC = 1.307 sEURO
+  // -279000 and -275300 are the inverse of these prices
+  return tokenAddresses.SEURO.toLowerCase() < tokenAddresses.FUSDT.toLowerCase() ?
+    {
+      initial: encodePriceSqrt(100, scaleUpForDecDiff(123, 12)),
+      lowerTick: -279000,
+      upperTick: -275300
+    } :
+    {
+      initial: encodePriceSqrt(scaleUpForDecDiff(123, 12), 100),
+      lowerTick: 275300,
+      upperTick: 279000
+    };
+};
+
+const deployStage2Contracts = async addresses => {
+  const pricing = calculatePricing(addresses.TOKEN_ADDRESSES);
+  const calculator = await (await ethers.getContractFactory('RatioCalculator')).deploy();
+  await calculator.deployed();
+  const gateway = await (await ethers.getContractFactory('StandardTokenGateway')).deploy(
+    addresses.TOKEN_ADDRESSES.FTST
+  );
+  await gateway.deployed();
+  const storage = await (await getLibraryFactory(owner, 'BondStorage')).deploy(
+    gateway.address, addresses.EXTERNAL_ADDRESSES.chainlink.eurUsd, CHAINLINK_DEC,
+    addresses.TOKEN_ADDRESSES.SEURO, addresses.TOKEN_ADDRESSES.FUSDT
+  );
+  await storage.deployed();
+  const operator = await (await ethers.getContractFactory('OperatorStage2')).deploy();
+  await operator.deployed();
+  const event = await (await ethers.getContractFactory('BondingEvent')).deploy(
+    addresses.TOKEN_ADDRESSES.SEURO, addresses.TOKEN_ADDRESSES.FUSDT,
+    addresses.EXTERNAL_ADDRESSES.uniswapLiquidityManager, storage.address, operator.address,
+    calculator.address, pricing.initial, pricing.lowerTick, pricing.upperTick, MOST_STABLE_FEE
+  );
+  await event.deployed();
+
+  return {
+    RatioCalculator: calculator,
+    StandardTokenGateway: gateway,
+    BondStorage: storage,
+    BondingEvent: event,
+    OperatorStage2: operator
+  }
+}
+
+const prepareStage2 = async addresses => {
+  const FTSTOwnable = await ethers.getContractAt('Ownable', addresses.TOKEN_ADDRESSES.FTST);
+  if (await FTSTOwnable.owner() != owner.address) throw new Error('Signer must have TST minter role');
+
+  const { RatioCalculator, StandardTokenGateway, BondStorage, BondingEvent, OperatorStage2 } = await deployStage2Contracts(addresses);
+  // give bond storage access to update reward supply and transfer rewards
+  const gatewayStorage = await StandardTokenGateway.setStorageAddress(BondStorage.address);
+  await gatewayStorage.wait();
+  // give bonding event access to create bonds in bond storage
+  const storageEvent = await BondStorage.setBondingEvent(BondingEvent.address);
+  await storageEvent.wait();
+  // set bonding event dependency in operator
+  const operatorEvent = await OperatorStage2.setBonding(BondingEvent.address);
+  await operatorEvent.wait();
+  // mint gateway with tst and update reward supply
+  const FTST = await ethers.getContractAt('MintableERC20', addresses.TOKEN_ADDRESSES.FTST)
+  const mint = await FTST.mint(StandardTokenGateway.address, ethers.utils.parseEther((1_000_000_000).toString()));
+  await mint.wait();
+  const updateSupply = await StandardTokenGateway.updateRewardSupply();
+  await updateSupply.wait();
+  return {
+    RatioCalculator: RatioCalculator.address,
+    StandardTokenGateway: StandardTokenGateway.address,
+    BondStorage: BondStorage.address,
+    BondingEvent: BondingEvent.address,
+    OperatorStage2: OperatorStage2.address
+  }
+}
+
 const getAddresses = async _ => {
   const addresses = await getDeployedAddresses(network.name);
   const externalAddresses = JSON.parse(fs.readFileSync('scripts/deploymentConfig.json'))[network.name].externalAddresses;
@@ -103,7 +187,8 @@ const main = async _ => {
   [ owner ] = await ethers.getSigners();
   const addresses = await getAddresses();
   const stage1Addresses = await prepareStage1(addresses);
-  console.log({ ...stage1Addresses });
+  const stage2Addresses = await prepareStage2(addresses);
+  console.log({ ...stage1Addresses, ...stage2Addresses });
 }
 
 main()
