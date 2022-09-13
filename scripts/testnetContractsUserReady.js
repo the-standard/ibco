@@ -8,13 +8,13 @@ async function main() {
   const SEuroOffering = await ethers.getContractAt('SEuroOffering', addresses.SEuroOffering);
   const BondingCurve = await ethers.getContractAt('BondingCurve', addresses.BondingCurve);
   const SEuroCalculator = await ethers.getContractAt('SEuroCalculator', addresses.SEuroCalculator);
-  const USDT = await ethers.getContractAt('DUMMY', addresses.USDT);
+  const USDT = await ethers.getContractAt('MintableERC20', addresses.USDT);
   const TokenManager = await ethers.getContractAt('TokenManager', addresses.TokenManager);
   const OperatorStage2 = await ethers.getContractAt('OperatorStage2', addresses.OperatorStage2);
   const BondStorage = await ethers.getContractAt('BondStorage', addresses.BondStorage);
   const BondingEvent = await ethers.getContractAt('BondingEvent', addresses.BondingEvent);
   const StandardTokenGateway = await ethers.getContractAt('StandardTokenGateway', addresses.StandardTokenGateway);
-  const TST = await ethers.getContractAt('DUMMY', addresses.TST);
+  const TST = await ethers.getContractAt('MintableERC20', addresses.TST);
   const USDTUSDChainlink = await (await ethers.getContractFactory('Chainlink')).deploy(100000000);
 
   await SEuroOffering.activate();

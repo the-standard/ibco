@@ -64,9 +64,9 @@ const deployContracts = async () => {
   const { externalAddresses } = JSON.parse(fs.readFileSync('scripts/deploymentConfig.json'))[network.name];
   SEuroAddress = externalAddresses.seuro;
 
-  DummyTST = await (await ethers.getContractFactory('DUMMY')).deploy('Standard Token', 'TST', 18);
+  DummyTST = await (await ethers.getContractFactory('MintableERC20')).deploy('Standard Token', 'TST', 18);
   await completed(DummyTST, 'TST');
-  DummyUSDC = await (await ethers.getContractFactory('DUMMY')).deploy('USD Coin', 'USDC', 6);
+  DummyUSDC = await (await ethers.getContractFactory('MintableERC20')).deploy('USD Coin', 'USDC', 6);
   await completed(DummyUSDC, 'USDC');
   BondingCurve = await (await getLibraryFactory(owner, 'BondingCurve')).deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
   await completed(BondingCurve, 'BondingCurve');

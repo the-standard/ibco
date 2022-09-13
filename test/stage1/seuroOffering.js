@@ -51,7 +51,7 @@ describe('SEuroOffering', async () => {
   beforeEach(async () => {
     [owner, user, collateralWallet] = await ethers.getSigners();
 
-    const ERC20Contract = await ethers.getContractFactory('DUMMY');
+    const ERC20Contract = await ethers.getContractFactory('MintableERC20');
     const SEuroOfferingContract = await ethers.getContractFactory('SEuroOffering');
     BondingCurveContract = await getLibraryFactory(owner, 'BondingCurve');
     SEuroCalculatorContract = await getLibraryFactory(owner, 'SEuroCalculator');

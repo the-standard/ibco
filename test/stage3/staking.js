@@ -6,7 +6,7 @@ const { etherBalances, getLibraryFactory } = require('../common.js');
 
 beforeEach(async () => {
   [owner, user1, user2] = await ethers.getSigners();
-  const ERC20Contract = await ethers.getContractFactory('DUMMY');
+  const ERC20Contract = await ethers.getContractFactory('MintableERC20');
   const GatewayContract = await ethers.getContractFactory('StandardTokenGateway');
   StakingContract = await getLibraryFactory(owner, 'Staking');
   SEuro = await ERC20Contract.deploy('sEURO', 'SEUR', 18);
