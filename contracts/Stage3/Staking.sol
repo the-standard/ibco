@@ -103,12 +103,9 @@ contract Staking is ERC721, Ownable, Pausable, Drainable {
     function burn() external ifNotPaused {
         require(block.timestamp >= maturity, "err-maturity");
 
-        Position memory pos = _positions[msg.sender];
+        Position storage pos = _positions[msg.sender];
         require(pos.nonce > 0, "err-not-valid");
         require(pos.open == true, "err-closed");
-
-        // update position
-        pos.open = false;
 
         // burn the token
         _burn(pos.tokenId);
@@ -118,7 +115,9 @@ contract Staking is ERC721, Ownable, Pausable, Drainable {
         // transfer reward
         IERC20(SEURO_ADDRESS).transfer(msg.sender, pos.reward);
 
-        _positions[msg.sender] = pos;
+        // update position
+        pos.open = false;
+
         allocatedSeuro -= pos.reward;
     }
 
