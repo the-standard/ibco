@@ -63,7 +63,8 @@ describe('SEuroOffering', async () => {
     SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, CHAINLINK_EUR_USD, CHAINLINK_DEC);
     TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC);
     SEuroOffering = await SEuroOfferingContract.deploy(SEuro.address, SEuroCalculator.address, TokenManager.address, BondingCurve.address);
-
+    
+    await SEuroOffering.setCollateralWallet(collateralWallet.address);
     await SEuroCalculator.grantRole(await SEuroCalculator.OFFERING(), SEuroOffering.address);
     await BondingCurve.grantRole(await BondingCurve.UPDATER(), SEuroOffering.address);
     await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), SEuroCalculator.address);
@@ -137,6 +138,7 @@ describe('SEuroOffering', async () => {
         await expect(swap).to.be.revertedWith('err-tok-bal');
         const userSEuroBalance = await SEuro.balanceOf(user.address);
         expect(userSEuroBalance.toString()).to.equal('0');
+        expect(await WETH.balanceOf(collateralWallet.address)).to.equal(toSwap);
       });
 
       it('will swap for any accepted token', async () => {
@@ -170,12 +172,14 @@ describe('SEuroOffering', async () => {
       describe('swapETH', async () => {
         it('swaps for eth', async () => {
           const toSwap = ethers.utils.parseEther('1');
-
+          const collateralWethBalance = await WETH.balanceOf(collateralWallet.address); 
           const expectedEuros = await getEthToSEuro(toSwap);
           const swap = SEuroOffering.connect(user).swapETH({ value: toSwap });
           await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs('ETH', toSwap, expectedEuros);
           const userSEuroBalance = await SEuro.balanceOf(user.address);
           expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
+
+          expect(await WETH.balanceOf(collateralWallet.address)).to.equal(collateralWethBalance.add(toSwap));
         });
 
         it('updates the price in bonding curve when bucket is crossed', async () => {
@@ -215,22 +219,6 @@ describe('SEuroOffering', async () => {
           await expect(swapETH).not.to.be.revertedWith('err-paused');
         });
       });
-    });
-  });
-
-  describe('transferring collateral', async () => {
-    it('transfers deposited collateral to designated wallet', async () => {
-      await SEuroOffering.activate();
-      await SEuroOffering.setCollateralWallet(collateralWallet.address);
-
-      const toSwap = ethers.utils.parseEther('1');
-      await buyWETH(user, toSwap);
-      await WETH.connect(user).approve(SEuroOffering.address, toSwap);
-      await SEuroOffering.connect(user).swap('WETH', toSwap);
-      expect(await WETH.balanceOf(collateralWallet.address)).to.equal(toSwap);
-
-      await SEuroOffering.connect(user).swapETH({ value: toSwap });
-      expect(await WETH.balanceOf(collateralWallet.address)).to.equal(toSwap.mul(2));
     });
   });
 

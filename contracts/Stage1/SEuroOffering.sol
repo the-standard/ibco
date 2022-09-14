@@ -59,7 +59,8 @@ contract SEuroOffering is Ownable, Pausable, Drainable {
     function notEnded() private view returns (bool) { return status.stop == 0 || status.stop > block.timestamp; }
 
     function transferCollateral(IERC20 _token, uint256 _amount) private {
-        if (collateralWallet != address(0)) _token.transfer(collateralWallet, _amount);
+        require(collateralWallet != address(0), "err-no-collat-wallet");
+        _token.transfer(collateralWallet, _amount);
     }
 
     // A read-only function to estimate how much sEURO would be received for the given amount of token
