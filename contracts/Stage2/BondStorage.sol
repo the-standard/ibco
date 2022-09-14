@@ -120,12 +120,14 @@ contract BondStorage is AccessControl {
 
     // Returns the total payout and the accrued interest ("profit") component separately.
     // Both the payout and the profit is in sEURO.
-    function calculateBond(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate) private pure returns (uint256 seuroPayout, uint256 seuroProfit, uint256 otherPayout, uint256 otherProfit) {
+    function calculateBondYield(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate) public view returns (uint256 payout, uint256 profit) {
         // rates are stored as 5 dec in operator
-        seuroProfit = Rates.convertDefault(_principalSeuro, _rate, 5);
-        seuroPayout = _principalSeuro + seuroProfit;
-        otherProfit = Rates.convertDefault(_principalOther, _rate, 5);
-        otherPayout = _principalOther + otherProfit;
+        uint256 seuroProfit = Rates.convertDefault(_principalSeuro, _rate, 5);
+        uint256 seuroPayout = _principalSeuro + seuroProfit;
+        uint256 otherProfit = Rates.convertDefault(_principalOther, _rate, 5);
+        uint256 otherPayout = _principalOther + otherProfit;
+        payout = seuroToStandardToken(seuroPayout) + otherTokenToStandardToken(otherPayout);
+        profit = seuroToStandardToken(seuroProfit) + otherTokenToStandardToken(otherProfit);
     }
 
     function incrementActiveBonds(address _user) private { issuedBonds[_user].amountBondsActive++ ; }
@@ -145,9 +147,7 @@ contract BondStorage is AccessControl {
     function seuroToStandardToken(uint256 _amount) private view returns (uint256) { return Rates.convertInverse(_amount, tokenGateway.priceTstEur(), tokenGateway.priceDec()); }
 
     function potentialReward(uint256 _principalSeuro, uint256 _principalOther, uint256 _rate) private view returns (uint256 tokenPayout, uint256 tokenProfit) {
-        (uint256 seuroPayout, uint256 seuroProfit, uint256 otherPayout, uint256 otherProfit) = calculateBond(_principalSeuro, _principalOther, _rate);
-        tokenPayout = seuroToStandardToken(seuroPayout) + otherTokenToStandardToken(otherPayout);
-        tokenProfit = seuroToStandardToken(seuroProfit) + otherTokenToStandardToken(otherProfit);
+        (tokenPayout, tokenProfit) = calculateBondYield(_principalSeuro, _principalOther, _rate);
         // if we are able to payout this bond in TST
         require(tokenPayout < tokenGateway.bondRewardPoolSupply() == true, "err-insuff-tst-supply");
     }
