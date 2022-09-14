@@ -4,8 +4,8 @@ const { getDeployedAddresses } = require('./common');
 
 const main = async _ => {
   [ owner ] = await ethers.getSigners();
-  const TST = network.name == 'goerli' ? TOKEN_ADDRESSES.FTST : TOKEN_ADDRESSES.TST;
   const { TOKEN_ADDRESSES, CONTRACT_ADDRESSES } = await getDeployedAddresses(network.name);
+  const TST = network.name == 'goerli' ? TOKEN_ADDRESSES.FTST : TOKEN_ADDRESSES.TST;
   const directory = await ethers.getContractAt('StakingDirectory', CONTRACT_ADDRESSES.StakingDirectory);
 
   if (!await directory.hasRole(await directory.DEFAULT_ADMIN_ROLE(), owner.address)) {
@@ -31,6 +31,15 @@ const main = async _ => {
   const add = await directory.add(stakingContract.address);
   await add.wait();
   console.log(`Staking contract ${stakingContract.address} added to Directory`);
+
+
+
+
+
+
+
+  const del = await directory.del(stakingContract.address);
+  await del.wait();
 }
 
 main()
