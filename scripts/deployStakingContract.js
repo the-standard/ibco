@@ -31,15 +31,6 @@ const main = async _ => {
   const add = await directory.add(stakingContract.address);
   await add.wait();
   console.log(`Staking contract ${stakingContract.address} added to Directory`);
-
-
-
-
-
-
-
-  const del = await directory.del(stakingContract.address);
-  await del.wait();
 }
 
 main()
