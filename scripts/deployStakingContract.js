@@ -7,10 +7,10 @@ const main = async _ => {
   const TST = network.name == 'goerli' ? TOKEN_ADDRESSES.FTST : TOKEN_ADDRESSES.TST;
   const { TOKEN_ADDRESSES, CONTRACT_ADDRESSES } = await getDeployedAddresses(network.name);
   const directory = await ethers.getContractAt('StakingDirectory', CONTRACT_ADDRESSES.StakingDirectory);
+
   if (!await directory.hasRole(await directory.DEFAULT_ADMIN_ROLE(), owner.address)) {
     throw new Error('Signer is not Staking Directory admin');
   }
-
 
   const day = 60 * 60 * 24;
   const week = 7 * day;

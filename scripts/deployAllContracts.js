@@ -1,5 +1,4 @@
 const { network, ethers } = require('hardhat');
-const https = require('https');
 const fs = require('fs');
 const { CHAINLINK_DEC, DEFAULT_CHAINLINK_ETH_USD_PRICE, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, MOST_STABLE_FEE, encodePriceSqrt, scaleUpForDecDiff } = require('../test/common');
 const { getDeployedAddresses } = require('./common');
@@ -8,7 +7,11 @@ const INITIAL_PRICE = ethers.utils.parseEther('0.8');
 const MAX_SUPPLY = ethers.utils.parseEther((85_000_000).toString());
 const BUCKET_SIZE = ethers.utils.parseEther((100_000).toString());
 
-let owner;
+let owner, TST_ADDRESS;
+
+const getTstAddress = async addresses => {
+  return network.name == 'goerli' ? addresses.TOKEN_ADDRESSES.FTST : addresses.TOKEN_ADDRESSES.TST;
+}
 
 const mockChainlink = async _ => {
   const EthUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_ETH_USD_PRICE);
@@ -102,9 +105,7 @@ const deployStage2Contracts = async addresses => {
   const pricing = calculatePricing(addresses.TOKEN_ADDRESSES);
   const calculator = await (await ethers.getContractFactory('RatioCalculator')).deploy();
   await calculator.deployed();
-  const gateway = await (await ethers.getContractFactory('StandardTokenGateway')).deploy(
-    addresses.TOKEN_ADDRESSES.FTST
-  );
+  const gateway = await (await ethers.getContractFactory('StandardTokenGateway')).deploy(TST_ADDRESS);
   await gateway.deployed();
   const storage = await (await getLibraryFactory(owner, 'BondStorage')).deploy(
     gateway.address, addresses.EXTERNAL_ADDRESSES.chainlink.eurUsd, CHAINLINK_DEC,
@@ -130,8 +131,8 @@ const deployStage2Contracts = async addresses => {
 }
 
 const prepareStage2 = async addresses => {
-  const FTSTOwnable = await ethers.getContractAt('Ownable', addresses.TOKEN_ADDRESSES.FTST);
-  if (await FTSTOwnable.owner() != owner.address) throw new Error('Signer must have TST minter role');
+  const TSTOwnable = await ethers.getContractAt('Ownable', TST_ADDRESS);
+  if (await TSTOwnable.owner() != owner.address) throw new Error('Signer must have TST minter role');
 
   const { RatioCalculator, StandardTokenGateway, BondStorage, BondingEvent, OperatorStage2 } = await deployStage2Contracts(addresses);
   // give bond storage access to update reward supply and transfer rewards
@@ -144,8 +145,8 @@ const prepareStage2 = async addresses => {
   const operatorEvent = await OperatorStage2.setBonding(BondingEvent.address);
   await operatorEvent.wait();
   // mint gateway with tst and update reward supply
-  const FTST = await ethers.getContractAt('MintableERC20', addresses.TOKEN_ADDRESSES.FTST)
-  const mint = await FTST.mint(StandardTokenGateway.address, ethers.utils.parseEther((1_000_000_000).toString()));
+  const TST = await ethers.getContractAt('MintableERC20', TST_ADDRESS)
+  const mint = await TST.mint(StandardTokenGateway.address, ethers.utils.parseEther((1_000_000_000).toString()));
   await mint.wait();
   const updateSupply = await StandardTokenGateway.updateRewardSupply();
   await updateSupply.wait();
@@ -175,6 +176,7 @@ const deployStakingDirectory = async _ => {
 const main = async _ => {
   [ owner ] = await ethers.getSigners();
   const addresses = await getAddresses();
+  TST_ADDRESS = getTstAddress(addresses);
   const stage1Addresses = await prepareStage1(addresses);
   const stage2Addresses = await prepareStage2(addresses);
   const StakingDirectory = await deployStakingDirectory();
