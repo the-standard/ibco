@@ -14,7 +14,7 @@ describe('BondStorage', async () => {
   beforeEach(async () => {
     [owner, customer, gateway2, user1, user2] = await ethers.getSigners();
     contractFactory = await getLibraryFactory(owner, 'BondStorage');
-    erc20Contract = await ethers.getContractFactory('DUMMY');
+    erc20Contract = await ethers.getContractFactory('MintableERC20');
     Seuro = await erc20Contract.deploy('sEURO', 'SEUR', 18);
     Other = await erc20Contract.deploy('USD Coin', 'USDC', 6);
     await deployAndMintGateway();

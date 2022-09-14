@@ -3,9 +3,10 @@ require('dotenv').config();
 require('solidity-coverage')
 require('hardhat-contract-sizer');
 
-const { INFURA_API_KEY, TEST_ACCOUNT_PRIVATE_KEY } = process.env;
+const { INFURA_API_KEY, TEST_ACCOUNT_PRIVATE_KEY, MAIN_ACCOUNT_PRIVATE_KEY } = process.env;
 
 let testAccounts = TEST_ACCOUNT_PRIVATE_KEY ? [TEST_ACCOUNT_PRIVATE_KEY] : [];
+let mainAccounts = MAIN_ACCOUNT_PRIVATE_KEY ? [MAIN_ACCOUNT_PRIVATE_KEY] : [];
 
 module.exports = {
   solidity: {
@@ -30,6 +31,10 @@ module.exports = {
         url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
       },
       chainId: 31337
+    },
+    mainnet: {
+      url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
+      accounts: mainAccounts
     },
     rinkeby: {
       url: `https://rinkeby.infura.io/v3/${INFURA_API_KEY}`,

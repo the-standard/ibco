@@ -7,7 +7,7 @@ let DrainableTest, ERC20, owner, wallet1, wallet2;
 beforeEach(async () => {
   [ owner, user, wallet1, wallet2 ] = await ethers.getSigners();
   DrainableTest = await (await ethers.getContractFactory('DrainableTest')).deploy();
-  ERC20 = await (await ethers.getContractFactory('DUMMY')).deploy('USDC', 'USD Coin', 6);
+  ERC20 = await (await ethers.getContractFactory('MintableERC20')).deploy('USDC', 'USD Coin', 6);
 });
 
 describe('Drainable contracts', async () => {
