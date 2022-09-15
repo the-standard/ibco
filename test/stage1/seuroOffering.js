@@ -109,6 +109,8 @@ describe('SEuroOffering', async () => {
         await buyWETH(user, toSwap);
         await WETH.connect(user).approve(SEuroOffering.address, toSwap);
 
+        const voidSwap = SEuroOffering.connect(user).swap('WETH', 0);
+        await expect(voidSwap).to.be.revertedWith('err-invalid-value');
 
         const expectedEuros = await getEthToSEuro(toSwap);
         const swap = SEuroOffering.connect(user).swap('WETH', toSwap);
@@ -171,6 +173,9 @@ describe('SEuroOffering', async () => {
 
       describe('swapETH', async () => {
         it('swaps for eth', async () => {
+          const voidSwap = SEuroOffering.connect(user).swapETH({ value: 0 });
+          await expect(voidSwap).to.be.revertedWith('err-invalid-value');
+
           const toSwap = ethers.utils.parseEther('1');
           const collateralWethBalance = await WETH.balanceOf(collateralWallet.address); 
           const expectedEuros = await getEthToSEuro(toSwap);
