@@ -71,6 +71,24 @@ describe('Staking', async () => {
     await expect(pa).to.eq(false);
   });
 
+  it('refuses to mint after a user already claimed a reward', async () => {
+    const b = await ethers.provider.getBlock();
+    const start = b.timestamp;
+    const Staking = await StakingContract.deploy("Staking", "STS", start, 2000000000000, start, TGateway.address, TST_ADDRESS, SEUR_ADDRESS, simpleInterestRate);
+    await Staking.activate();
+    const value = etherBalances.ONE_MILLION;
+
+    await TST.connect(owner).mint(user1.address, value);
+    await TST.connect(user1).approve(Staking.address, value);
+    await SEuro.mint(Staking.address, value);
+    await Staking.connect(user1).mint(value);
+    await Staking.connect(user1).burn();
+    await TST.connect(user1).approve(Staking.address, value);
+    let st = Staking.connect(user1).mint(value);
+
+    await expect(st).to.be.revertedWith('err-already-claimed');
+  });
+
   describe('SEURO balance', async () => {
     it('tests for the seuro balance', async () => {
       const Staking = await StakingContract.deploy("Staking", "STS", 1000, 200000000000000, 5000, TGateway.address, TST_ADDRESS, SEUR_ADDRESS, simpleInterestRate);
@@ -113,12 +131,12 @@ describe('Staking', async () => {
       // 5% interest = 50_000 tst
       // 50_000 * 0.055 = 2750 seuro
       expectedReward = ethers.utils.parseEther('2750');
-      
+
       expect(await Staking.balance(SEuro.address)).to.eq(value);
       remaining = await Staking.remaining(SEuro.address);
       let expectedRemaining = value.sub(expectedReward);
       expect(remaining).to.equal(expectedRemaining);
-      
+
       await Staking.connect(user1).burn();
 
       expect(await Staking.balance(SEuro.address)).to.eq(value.sub(expectedReward));

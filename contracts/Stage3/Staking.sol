@@ -33,7 +33,7 @@ contract Staking is ERC721, Ownable, Pausable, Drainable {
 
     mapping(address => Position) private _positions;
 
-    struct Position { uint96 nonce; uint256 tokenId; bool open; uint256 stake; uint256 reward; }
+    struct Position { uint96 nonce; uint256 tokenId; bool open; uint256 stake; uint256 reward; bool burned; }
 
     constructor(string memory _name, string memory _symbol, uint256 _start, uint256 _end, uint256 _maturity, address _gatewayAddress, address _standardAddress, address _seuroAddress, uint256 _si) ERC721(_name, _symbol) {
         tokenGateway = StandardTokenGateway(_gatewayAddress);
@@ -80,6 +80,7 @@ contract Staking is ERC721, Ownable, Pausable, Drainable {
         IERC20(TST_ADDRESS).transferFrom(msg.sender, address(this), _amount);
 
         Position memory pos = _positions[msg.sender];
+        require(pos.burned == false, "err-already-claimed");
 
         if (pos.nonce == 0) {
             _mint(msg.sender, ++_tokenId);
@@ -103,12 +104,9 @@ contract Staking is ERC721, Ownable, Pausable, Drainable {
     function burn() external ifNotPaused {
         require(block.timestamp >= maturity, "err-maturity");
 
-        Position memory pos = _positions[msg.sender];
+        Position storage pos = _positions[msg.sender];
         require(pos.nonce > 0, "err-not-valid");
         require(pos.open == true, "err-closed");
-
-        // update position
-        pos.open = false;
 
         // burn the token
         _burn(pos.tokenId);
@@ -118,7 +116,10 @@ contract Staking is ERC721, Ownable, Pausable, Drainable {
         // transfer reward
         IERC20(SEURO_ADDRESS).transfer(msg.sender, pos.reward);
 
-        _positions[msg.sender] = pos;
+        // update position states
+        pos.open = false;
+        pos.burned = true;
+
         allocatedSeuro -= pos.reward;
     }
 
