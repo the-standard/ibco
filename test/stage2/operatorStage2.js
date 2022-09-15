@@ -116,6 +116,9 @@ describe('Stage 2', async () => {
           await OP2.connect(owner).addRate(rates.TEN_PC, weeks(20));
           await OP2.connect(owner).addRate(rates.TWENTY_PC, weeks(40));
 
+          const duplicate = OP2.connect(owner).addRate(rates.TWENTY_PC, weeks(30));
+          await expect(duplicate).to.be.revertedWith('err-rate-exists');
+
           expectedRates = 3;
           actualRates = (await OP2.showRates()).length;
           expect(actualRates).to.equal(expectedRates);
@@ -127,9 +130,6 @@ describe('Stage 2', async () => {
           expectedRates = 1;
           actualRates = (await OP2.showRates()).length;
           expect(actualRates).to.equal(expectedRates);
-
-          const duplicate = OP2.connect(owner).addRate(rates.TWENTY_PC, weeks(30));
-          await expect(duplicate).not.to.be.reverted;
         });
 
         it('adds a rate and bonds successfully, then removes it such that following bonding fails', async () => {

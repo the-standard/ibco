@@ -25,6 +25,8 @@ describe('StakingDirectory', async () => {
 
     await Directory.add(addr1);
     await Directory.add(addr2);
+    const duplicate = await Directory.add(addr1);
+    await expect(duplicate).to.be.revertedWith('err-contract-added');
 
     let list = await Directory.list();
     await expect(list[0]).to.eq(addr1);

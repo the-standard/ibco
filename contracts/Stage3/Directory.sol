@@ -16,8 +16,13 @@ contract StakingDirectory is AccessControl {
         _;
     }
 
+    function addUniqueStakingContract(address _contract) private {
+        for (uint256 i = 0; i < entries.length; i++) if (entries[i] == _contract) revert("err-contract-added");
+        entries.push(_contract);
+    }
+
     function add(address _address) external onlyAdmin {
-        entries.push(_address);
+        addUniqueStakingContract(_address);
     }
 
     function deleteEntry(uint256 index) private {
