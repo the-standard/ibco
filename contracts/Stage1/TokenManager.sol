@@ -44,8 +44,11 @@ contract TokenManager is Ownable {
         return tokenMetaData[_symbol].chainlinkAddr;
     }
 
-    function symbolExists(string memory _symbol) private view returns (bool exists) {
-        for (uint256 i = 0; i < tokenSymbols.length; i++) if (cmpString(tokenSymbols[i], _symbol)) exists = true;
+    function addUnique(string memory _symbol) private {
+        for (uint256 i = 0; i < tokenSymbols.length; i++) {
+            if (cmpString(tokenSymbols[i], _symbol)) revert("err-token-exists");
+        }
+        tokenSymbols.push(_symbol);
     }
 
 
@@ -55,8 +58,7 @@ contract TokenManager is Ownable {
     /// @param _chainlinkDec the number of decimals the Chainlink data feed uses
     function addAcceptedToken(address _addr, address _chainlinkAddr, uint8 _chainlinkDec) public onlyOwner {
         (string memory symbol, uint8 decimals) = getTokenMetaData(_addr);
-        require(!symbolExists(symbol), "err-token-exists");
-        tokenSymbols.push(symbol);
+        addUnique(symbol);
         tokenMetaData[symbol] = TokenData(_addr, decimals, _chainlinkAddr, _chainlinkDec);
     }
 
