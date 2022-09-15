@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.15;
+pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -38,6 +38,8 @@ contract SEuroOffering is Ownable, Pausable, Drainable {
 
     modifier validAddress(address _newAddress) { require(_newAddress != address(0), "err-addr-invalid"); _; }
 
+    modifier valueNotZero(uint256 _value) { require(_value > 0, "err-invalid-value"); _; }
+
     function setCalculator(address _newAddress) external onlyOwner validAddress(_newAddress) {
         sEuroRateCalculator = SEuroCalculator(_newAddress);
     }
@@ -59,7 +61,8 @@ contract SEuroOffering is Ownable, Pausable, Drainable {
     function notEnded() private view returns (bool) { return status.stop == 0 || status.stop > block.timestamp; }
 
     function transferCollateral(IERC20 _token, uint256 _amount) private {
-        if (collateralWallet != address(0)) _token.transfer(collateralWallet, _amount);
+        require(collateralWallet != address(0), "err-no-collat-wallet");
+        _token.transfer(collateralWallet, _amount);
     }
 
     // A read-only function to estimate how much sEURO would be received for the given amount of token
@@ -74,7 +77,7 @@ contract SEuroOffering is Ownable, Pausable, Drainable {
     // Swap any accepted ERC20 token for an equivalent amount of sEURO
     // Accepted tokens and their byte array values are dictated by the TokenManager contract
     /// @param _amount the amount of the given token that you'd like to exchange for sEURO
-    function swap(string memory _symbol, uint256 _amount) external ifActive ifNotPaused {
+    function swap(string memory _symbol, uint256 _amount) external ifActive ifNotPaused valueNotZero(_amount) {
         TokenManager.TokenData memory token = tokenManager.get(_symbol);
         IERC20 erc20Token = IERC20(token.addr);
         require(erc20Token.balanceOf(msg.sender) >= _amount, "err-tok-bal");
@@ -88,7 +91,7 @@ contract SEuroOffering is Ownable, Pausable, Drainable {
     }
 
     // Payable function that exchanges the ETH value of the transaction for an equivalent amount of sEURO
-    function swapETH() external payable ifActive ifNotPaused {
+    function swapETH() external payable ifActive ifNotPaused valueNotZero(msg.value) {
         TokenManager.TokenData memory token = tokenManager.get("WETH");
         WETH(token.addr).deposit{value: msg.value}();
         uint256 seuros = getSeuros(msg.value, token);

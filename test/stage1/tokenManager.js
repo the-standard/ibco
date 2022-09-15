@@ -42,6 +42,9 @@ describe('TokenManager', async () => {
 
       expect(acceptedTokens[0]).to.equal("WETH");
       expect(acceptedTokens[1]).to.equal("DAI");
+
+      const addDuplicate = TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD, CHAINLINK_DEC);
+      await expect(addDuplicate).to.be.revertedWith('err-token-exists');
     });
 
     it('does not allow non-owner to add token', async () => {

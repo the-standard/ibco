@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.15;
+pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "contracts/Stage2/BondingEvent.sol";
@@ -30,9 +30,14 @@ contract OperatorStage2 is AccessControl, Pausable, Drainable {
         bondingEvent = BondingEvent(_newAddress);
     }
 
+    function addUniqueRate(BondRate memory _bondRate) private {
+        for (uint256 i = 0; i < ratesAvailable.length; i++) if (ratesAvailable[i].rate == _bondRate.rate) revert("err-rate-exists");
+        ratesAvailable.push(_bondRate);
+    }
+
     // Adds a new rate that allows a user to bond with
     function addRate(uint256 _rate, uint256 duration) public onlyOperatorStage2 {
-        ratesAvailable.push(BondRate(_rate, duration));
+        addUniqueRate(BondRate(_rate, duration));
         emit Yield(_rate, duration);
     }
 

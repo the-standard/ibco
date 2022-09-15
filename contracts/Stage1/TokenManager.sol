@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^0.8.15;
+pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -44,6 +44,10 @@ contract TokenManager is Ownable {
         return tokenMetaData[_symbol].chainlinkAddr;
     }
 
+    function addUniqueSymbol(string memory _symbol) private {
+        for (uint256 i = 0; i < tokenSymbols.length; i++) if (cmpString(tokenSymbols[i], _symbol)) revert("err-token-exists");
+        tokenSymbols.push(_symbol);
+    }
 
     // Add a token to the accepted list of tokens
     /// @param _addr the address of the token
@@ -51,7 +55,7 @@ contract TokenManager is Ownable {
     /// @param _chainlinkDec the number of decimals the Chainlink data feed uses
     function addAcceptedToken(address _addr, address _chainlinkAddr, uint8 _chainlinkDec) public onlyOwner {
         (string memory symbol, uint8 decimals) = getTokenMetaData(_addr);
-        tokenSymbols.push(symbol);
+        addUniqueSymbol(symbol);
         tokenMetaData[symbol] = TokenData(_addr, decimals, _chainlinkAddr, _chainlinkDec);
     }
 
