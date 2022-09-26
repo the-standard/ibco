@@ -37,7 +37,6 @@ contract Staking is ERC721, Ownable, Pausable, Drainable {
 
     event Mint(address indexed user, uint256 stake, uint256 allocatedSeuro);
     event Burn(address indexed user, uint256 stake, uint256 reward, uint256 allocatedSeuro);
-    event Reward(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
 
     constructor(string memory _name, string memory _symbol, uint256 _start, uint256 _end, uint256 _maturity, address _gatewayAddress, address _standardAddress, address _seuroAddress, uint256 _si) ERC721(_name, _symbol) {
