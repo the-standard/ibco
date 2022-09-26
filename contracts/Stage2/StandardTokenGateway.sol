@@ -29,6 +29,9 @@ contract StandardTokenGateway is AccessControl {
 
     bytes32 public constant TST_TOKEN_GATEWAY = keccak256("TST_TOKEN_GATEWAY");
 
+    event Reward(address indexed user, uint256 amount);
+    event RewardSupply(uint256 amount);
+
     constructor(address _tokenAddress) {
         _setupRole(TST_TOKEN_GATEWAY, msg.sender);
         TOKEN = IERC20(_tokenAddress);
@@ -64,6 +67,8 @@ contract StandardTokenGateway is AccessControl {
 
     function updateRewardSupply() external {
         bondRewardPoolSupply = TOKEN.balanceOf(address(this));
+
+        emit RewardSupply(bondRewardPoolSupply);
     }
 
     modifier enoughBalance(uint256 _toSend) {
@@ -80,9 +85,13 @@ contract StandardTokenGateway is AccessControl {
     function decreaseRewardSupply(uint256 _amount) external onlyStorageOwner enoughBalance(_amount) {
         require(bondRewardPoolSupply - _amount > 0, "dec-supply-uf");
         bondRewardPoolSupply -= _amount;
+
+        emit RewardSupply(bondRewardPoolSupply);
     }
 
     function transferReward(address _toUser, uint256 _amount) external onlyStorageOwner isActivated enoughBalance(_amount) {
         TOKEN.transfer(_toUser, _amount);
+
+        emit Reward(_toUser, _amount);
     }
 }

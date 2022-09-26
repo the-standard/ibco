@@ -25,6 +25,8 @@ contract BondStorage is AccessControl {
     mapping(address => BondRecord) issuedBonds;
     address[] public users;
 
+    event NewBond(address user, uint256 principalSeuro, uint256 principalOther, uint256 rate, uint256 maturityDate, uint256 reward, uint256 profit);
+
     constructor(address _gatewayAddress, address _chainlinkEurOther, uint8 _eurOtherDec, address _seuro, address _other) {
         _grantRole(WHITELIST_ADMIN, msg.sender);
         _setRoleAdmin(WHITELIST_BOND_STORAGE, WHITELIST_ADMIN);
@@ -96,6 +98,8 @@ contract BondStorage is AccessControl {
 
     function addBond(address _user, uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturityDate, uint256 _reward, uint256 _profit, PositionMetaData memory _data) private {
         issuedBonds[_user].bonds.push(Bond(_principalSeuro, _principalOther, _rate, _maturityDate, _reward, _profit, false, _data));
+
+        emit NewBond(_user, _principalSeuro, _principalOther, _rate, _maturityDate, _reward, _profit);
     }
 
     function tapBond(address _user, uint256 _index) private { issuedBonds[_user].bonds[_index].tapped = true; }
@@ -158,7 +162,7 @@ contract BondStorage is AccessControl {
         // reduce the amount of available bonding reward TSTs
         (uint256 reward, uint256 profit) = potentialReward(_principalSeuro, _principalOther, _rate);
         tokenGateway.decreaseRewardSupply(reward);
-        
+
         if (!issuedBonds[_user].isInitialised) {
             setActive(_user);
             setInitialised(_user);

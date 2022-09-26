@@ -43,6 +43,8 @@ contract BondingEvent is AccessControl {
 
     event LiquidityCollected(uint256 tokenId, uint256 retractedAmount0, uint256 retractedAmount1, uint256 feesCollected0, uint256 feesCollected1, uint256 collectedTotal0, uint256 collectedTotal1);
 
+    event BondingEvent(address indexed user, uint256 amountSeuro, uint256 maturity, uint256 rate);
+
     struct Position { uint256 tokenId; int24 lowerTick; int24 upperTick; uint128 liquidity; }
 
     struct Pair { address token0; address token1; }
@@ -83,7 +85,7 @@ contract BondingEvent is AccessControl {
     modifier onlyOperator() { require(msg.sender == operatorAddress, "err-not-operator"); _; }
 
     modifier validAddress(address _newAddress) { require(_newAddress != address(0), "err-invalid-addr"); _; }
-    
+
     modifier validTicks(int24 _newLower, int24 _newHigher) {
         require(_newLower % tickSpacing == 0 && _newHigher % tickSpacing == 0, "tick-mod-spacing-nonzero");
         require(_newHigher <= MAX_TICK, "tick-max-exceeded");
@@ -134,7 +136,7 @@ contract BondingEvent is AccessControl {
         // provide liquidity to the pool
         (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = manager.mint(INonfungiblePositionManager.MintParams(
             params.token0, params.token1, FEE, params.lowerTick, params.upperTick, params.amount0Desired, params.amount1Desired, params.amount0Min, params.amount1Min, address(this), block.timestamp));
-        
+
         positions.push(Position(tokenId, params.lowerTick, params.upperTick, liquidity));
 
         return params.token0 == SEURO_ADDRESS ? AddedLiquidityResponse(tokenId, liquidity, amount0, amount1) : AddedLiquidityResponse(tokenId, liquidity, amount1, amount0);
@@ -148,7 +150,7 @@ contract BondingEvent is AccessControl {
     function increaseExistingLiquidity(AddLiquidityParams memory params, uint256 tokenId) private returns (AddedLiquidityResponse memory) {
         (uint128 liquidity, uint256 amount0, uint256 amount1) = manager.increaseLiquidity(INonfungiblePositionManager.IncreaseLiquidityParams(
                     tokenId, params.amount0Desired, params.amount1Desired, params.amount0Min, params.amount1Min, block.timestamp));
-        
+
         increasePositionLiquidity(tokenId, liquidity);
 
         return params.token0 == SEURO_ADDRESS ? AddedLiquidityResponse(tokenId, liquidity, amount0, amount1) : AddedLiquidityResponse(tokenId, liquidity, amount1, amount0);
@@ -204,6 +206,9 @@ contract BondingEvent is AccessControl {
     function _bond(address _user, uint256 _amountSeuro, uint256 _maturity, uint256 _rate) private onlyOperator {
         // information about the liquidity position after it has been successfully added
         AddedLiquidityResponse memory added = addLiquidity(_user, _amountSeuro);
+
+        emit BondingEvent(address user, uint256 amountSeuro, uint256 maturity, uint256 rate);
+
         // begin bonding event
         IBondStorage(bondStorageAddress).startBond(_user, _amountSeuro, added.otherAmount, _rate, _maturity, added.tokenId, added.liquidity);
     }
