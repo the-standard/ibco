@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { CHAINLINK_DEC, getLibraryFactory, etherBalances, parse6Dec, helperFastForwardTime, CHAINLINK_EUR_USD } = require('../common.js');
+const { getLibraryFactory, etherBalances, parse6Dec, helperFastForwardTime, CHAINLINK_EUR_USD } = require('../common.js');
 
 describe('BondStorage', async () => {
   const deployAndMintGateway = async () => {
