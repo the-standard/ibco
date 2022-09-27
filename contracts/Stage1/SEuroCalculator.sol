@@ -18,15 +18,14 @@ contract SEuroCalculator is AccessControl {
 
     /// @param _bondingCurve address of Bonding Curve contract
     /// @param _eurUsdCl address of Chainlink data feed for EUR / USD
-    /// @param _eurUsdDec number of decimals that EUR / USD data feed uses
-    constructor(address _bondingCurve, address _eurUsdCl, uint8 _eurUsdDec) {
+    constructor(address _bondingCurve, address _eurUsdCl) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setRoleAdmin(OFFERING, DEFAULT_ADMIN_ROLE);
         grantRole(OFFERING, msg.sender);
 
         bondingCurve = BondingCurve(_bondingCurve);
         EUR_USD_CL = _eurUsdCl;
-        EUR_USD_CL_DEC = _eurUsdDec;
+        EUR_USD_CL_DEC = IChainlink(_eurUsdCl).decimals();
     }
 
     modifier onlyAdmin() { require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "invalid-admin"); _; }

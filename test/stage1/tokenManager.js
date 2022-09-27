@@ -9,11 +9,11 @@ describe('TokenManager', async () => {
   beforeEach(async () => {
     [owner, user] = await ethers.getSigners();
     const TokenManagerContract = await ethers.getContractFactory('TokenManager');
-    TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC);
+    TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD);
   });
 
   it('gets list of accepted tokens', async () => {
-    await TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD, CHAINLINK_DEC);
+    await TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD);
     const acceptedTokens = await TokenManager.getAcceptedTokens();
     expect(acceptedTokens[0]).to.equal("WETH");
     expect(acceptedTokens[1]).to.equal("DAI");
@@ -37,18 +37,18 @@ describe('TokenManager', async () => {
   describe('adding tokens', async () => {
 
     it('allows owner to add new token', async () => {
-      await TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD, CHAINLINK_DEC);
+      await TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD);
       const acceptedTokens = await TokenManager.getAcceptedTokens();
 
       expect(acceptedTokens[0]).to.equal("WETH");
       expect(acceptedTokens[1]).to.equal("DAI");
 
-      const addDuplicate = TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD, CHAINLINK_DEC);
+      const addDuplicate = TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD);
       await expect(addDuplicate).to.be.revertedWith('err-token-exists');
     });
 
     it('does not allow non-owner to add token', async () => {
-      const addAcceptedToken = TokenManager.connect(user).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD, CHAINLINK_DEC);
+      const addAcceptedToken = TokenManager.connect(user).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD);
       await expect(addAcceptedToken).to.be.revertedWith('Ownable: caller is not the owner');
 
       const acceptedTokens = await TokenManager.getAcceptedTokens();
@@ -59,7 +59,7 @@ describe('TokenManager', async () => {
   describe('removing tokens', async () => {
 
     it('allows owner to remove new token', async () => {
-      await TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD, CHAINLINK_DEC);
+      await TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD);
       let acceptedTokens = await TokenManager.getAcceptedTokens();
       expect(acceptedTokens[0]).to.equal("WETH");
       expect(acceptedTokens[1]).to.equal("DAI");
@@ -71,7 +71,7 @@ describe('TokenManager', async () => {
     });
 
     it('does not allow non-owner to remove token', async () => {
-      await TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD, CHAINLINK_DEC);
+      await TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD);
       let acceptedTokens = await TokenManager.getAcceptedTokens();
       expect(acceptedTokens[0]).to.equal("WETH");
       expect(acceptedTokens[1]).to.equal("DAI");

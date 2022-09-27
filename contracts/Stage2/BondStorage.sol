@@ -3,7 +3,8 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "contracts/interfaces/IChainlink.sol";
 import "contracts/Stage2/StandardTokenGateway.sol";
 import "contracts/Rates.sol";
 
@@ -25,13 +26,13 @@ contract BondStorage is AccessControl {
     mapping(address => BondRecord) issuedBonds;
     address[] public users;
 
-    constructor(address _gatewayAddress, address _chainlinkEurOther, uint8 _eurOtherDec, address _seuro, address _other) {
+    constructor(address _gatewayAddress, address _chainlinkEurOther, address _seuro, address _other) {
         _grantRole(WHITELIST_ADMIN, msg.sender);
         _setRoleAdmin(WHITELIST_BOND_STORAGE, WHITELIST_ADMIN);
         grantRole(WHITELIST_BOND_STORAGE, msg.sender);
         tokenGateway = StandardTokenGateway(_gatewayAddress);
         chainlinkEurOther = _chainlinkEurOther;
-        eurOtherDec = _eurOtherDec;
+        eurOtherDec = IChainlink(_chainlinkEurOther).decimals();
         seuro = _seuro;
         other = _other;
     }
@@ -46,8 +47,8 @@ contract BondStorage is AccessControl {
 
     modifier sufficientCatastropheBalance() {
         (uint256 seuroRequired, uint256 otherRequired) = catastropheFundsRequired();
-        uint256 seuroBalance = IERC20(seuro).balanceOf(address(this));
-        uint256 otherBalance = IERC20(other).balanceOf(address(this));
+        uint256 seuroBalance = ERC20(seuro).balanceOf(address(this));
+        uint256 otherBalance = ERC20(other).balanceOf(address(this));
         require(seuroBalance >= seuroRequired && otherBalance >= otherRequired, "err-insuff-bal"); _;
     }
 
@@ -140,7 +141,8 @@ contract BondStorage is AccessControl {
 
     function otherTokenToStandardToken(uint256 _amount) private view returns (uint256) {
         (, int256 eurOtherRate, , , ) = IChainlink(chainlinkEurOther).latestRoundData();
-        uint256 eur = Rates.convertInverse(_amount, uint256(eurOtherRate), eurOtherDec);
+        uint8 tokenDiffScale = 18 - ERC20(other).decimals();
+        uint256 eur = Rates.convertInverse(_amount, uint256(eurOtherRate), eurOtherDec + tokenDiffScale);
         return seuroToStandardToken(eur);
     }
 
@@ -220,7 +222,7 @@ contract BondStorage is AccessControl {
         (uint256 seuroActive, uint256 otherActive) = getActiveUserPrincipals(msg.sender);
         tapAllBonds(msg.sender);
         if (!active(msg.sender)) setInactive(msg.sender);
-        IERC20(seuro).transfer(msg.sender, seuroActive);
-        IERC20(other).transfer(msg.sender, otherActive);
+        ERC20(seuro).transfer(msg.sender, seuroActive);
+        ERC20(other).transfer(msg.sender, otherActive);
     }
 }

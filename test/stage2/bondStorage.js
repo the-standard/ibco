@@ -18,7 +18,7 @@ describe('BondStorage', async () => {
     Seuro = await erc20Contract.deploy('sEURO', 'SEUR', 18);
     Other = await erc20Contract.deploy('USD Coin', 'USDC', 6);
     await deployAndMintGateway();
-    BondStorage = await contractFactory.deploy(gateway.address, CHAINLINK_EUR_USD, CHAINLINK_DEC, Seuro.address, Other.address);
+    BondStorage = await contractFactory.deploy(gateway.address, CHAINLINK_EUR_USD, Seuro.address, Other.address);
     await gateway.setStorageAddress(BondStorage.address);
   });
 

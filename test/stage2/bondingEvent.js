@@ -3,7 +3,7 @@ const { expect } = require('chai');
 const { POSITION_MANAGER_ADDRESS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff, CHAINLINK_DEC, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, eurToTST, defaultConvertUsdToEur } = require('../common.js');
 const { BigNumber } = require('ethers');
 
-let owner, customer, wallet, SEuro, TST, USDC, BondingEvent, BondStorage, TokenGateway, BondingEventContract, BondStorageContract, RatioCalculatorContract, RatioCalculator, pricing, SwapManager;
+let owner, customer, wallet, SEuro, TST, USDC, BondingEvent, BondStorage, TokenGateway, ChainlinkEurUsd, BondingEventContract, BondStorageContract, RatioCalculatorContract, RatioCalculator, pricing, SwapManager;
 
 describe('BondingEvent', async () => {
 
@@ -19,9 +19,9 @@ describe('BondingEvent', async () => {
     SEuro = await ERC20Contract.deploy('sEURO', 'SEUR', 18);
     TST = await ERC20Contract.deploy('TST', 'TST', 18);
     USDC = await ERC20Contract.deploy('USDC', 'USDC', 6);
-    const ChainlinkEurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
+    ChainlinkEurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
     TokenGateway = await TokenGatewayContract.deploy(TST.address);
-    BondStorage = await BondStorageContract.deploy(TokenGateway.address, ChainlinkEurUsd.address, SCALED_UP_CHAINLINK_DEC, SEuro.address, USDC.address);
+    BondStorage = await BondStorageContract.deploy(TokenGateway.address, ChainlinkEurUsd.address, SEuro.address, USDC.address);
     RatioCalculator = await RatioCalculatorContract.deploy();
   });
 
@@ -523,7 +523,7 @@ describe('BondingEvent', async () => {
   describe('dependencies', async () => {
     it('allows the owner to update the dependencies', async () => {
       await deployBondingEventWithDefaultPrices();
-      const newStorage = await BondStorageContract.deploy(ethers.constants.AddressZero, ethers.constants.AddressZero, 0, SEuro.address, USDC.address);
+      const newStorage = await BondStorageContract.deploy(ethers.constants.AddressZero, ChainlinkEurUsd.address, SEuro.address, USDC.address);
       const newOperator = await (await ethers.getContractFactory('OperatorStage2')).deploy();
       const newCalculator = await (await ethers.getContractFactory('RatioCalculator')).deploy();
 

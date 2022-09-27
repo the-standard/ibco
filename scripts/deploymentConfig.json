@@ -5,12 +5,10 @@
             "weth": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
             "chainlink": {
                 "eurUsd": {
-                    "address": "0xb49f677943BC038e9857d61E7d053CaA2C1734C1",
-                    "dec": 8
+                    "address": "0xb49f677943BC038e9857d61E7d053CaA2C1734C1"
                 },
                 "ethUsd": {
-                    "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
-                    "dec": 8
+                    "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
                 }
             }
         }

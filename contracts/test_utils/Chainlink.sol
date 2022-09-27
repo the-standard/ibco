@@ -10,6 +10,8 @@ contract Chainlink is IChainlink {
         price = _price;
     }
 
+    function decimals() external pure returns (uint8) { return 8; }
+
     function latestRoundData()
         external
         view
