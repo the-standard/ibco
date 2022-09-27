@@ -3,6 +3,7 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "contracts/interfaces/IChainlink.sol";
 
 contract TokenManager is Ownable {
     string[] public tokenSymbols;
@@ -12,9 +13,8 @@ contract TokenManager is Ownable {
 
     /// @param _wethAddress address of WETH token
     /// @param _ethUsdCL address of Chainlink data feed for ETH / USD
-    /// @param _ethUsdCLDec number of decimals that ETH / USD data feed uses
-    constructor(address _wethAddress, address _ethUsdCL, uint8 _ethUsdCLDec) {
-        addAcceptedToken(_wethAddress, _ethUsdCL, _ethUsdCLDec);
+    constructor(address _wethAddress, address _ethUsdCL) {
+        addAcceptedToken(_wethAddress, _ethUsdCL);
     }
 
     // Gets the details for the given token, if it is accepted
@@ -52,11 +52,10 @@ contract TokenManager is Ownable {
     // Add a token to the accepted list of tokens
     /// @param _addr the address of the token
     /// @param _chainlinkAddr the address of the token / USD Chainlink data feed
-    /// @param _chainlinkDec the number of decimals the Chainlink data feed uses
-    function addAcceptedToken(address _addr, address _chainlinkAddr, uint8 _chainlinkDec) public onlyOwner {
+    function addAcceptedToken(address _addr, address _chainlinkAddr) public onlyOwner {
         (string memory symbol, uint8 decimals) = getTokenMetaData(_addr);
         addUniqueSymbol(symbol);
-        tokenMetaData[symbol] = TokenData(_addr, decimals, _chainlinkAddr, _chainlinkDec);
+        tokenMetaData[symbol] = TokenData(_addr, decimals, _chainlinkAddr, IChainlink(_chainlinkAddr).decimals());
     }
 
     function deleteToken(uint256 index) private {

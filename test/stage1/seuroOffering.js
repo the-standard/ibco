@@ -60,8 +60,8 @@ describe('SEuroOffering', async () => {
     WETH = await ethers.getContractAt('WETH', WETH_ADDRESS);
     SEuro = await ERC20Contract.deploy('SEuro', 'SEUR', 18);
     BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
-    SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, CHAINLINK_EUR_USD, CHAINLINK_DEC);
-    TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC);
+    SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, CHAINLINK_EUR_USD);
+    TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD);
     SEuroOffering = await SEuroOfferingContract.deploy(SEuro.address, SEuroCalculator.address, TokenManager.address, BondingCurve.address);
     
     await SEuroOffering.setCollateralWallet(collateralWallet.address);
@@ -145,7 +145,7 @@ describe('SEuroOffering', async () => {
 
       it('will swap for any accepted token', async () => {
         const toSwap = ethers.utils.parseEther('1');
-        await TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD, CHAINLINK_DEC);
+        await TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD);
 
         await buyToken(user, DAI_ADDRESS, toSwap);
         const Dai = await ethers.getContractAt('IERC20', DAI_ADDRESS);
@@ -291,9 +291,9 @@ describe('SEuroOffering', async () => {
 
   describe('dependencies', async () => {
     it('updates the dependencies if contract owner', async () => {
-      const newTokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD, CHAINLINK_DEC);
+      const newTokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD);
       const newBondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
-      const newCalculator = await SEuroCalculatorContract.deploy(newBondingCurve.address, CHAINLINK_EUR_USD, CHAINLINK_DEC);
+      const newCalculator = await SEuroCalculatorContract.deploy(newBondingCurve.address, CHAINLINK_EUR_USD);
 
       let updateTokenManager = SEuroOffering.connect(user).setTokenManager(newTokenManager.address);
       let updateBondingCurve = SEuroOffering.connect(user).setBondingCurve(newBondingCurve.address);

@@ -27,7 +27,7 @@ describe('SEuroCalculator', async () => {
     BondingCurveContract = await getLibraryFactory(owner, 'BondingCurve');
     BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
     const SEuroCalculatorContract = await getLibraryFactory(owner, 'SEuroCalculator');
-    SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, CHAINLINK_EUR_USD, CHAINLINK_DEC);
+    SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, CHAINLINK_EUR_USD);
     await BondingCurve.grantRole(await BondingCurve.CALCULATOR(), SEuroCalculator.address);
   });
 

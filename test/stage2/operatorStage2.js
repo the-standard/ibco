@@ -1,16 +1,16 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, etherBalances, rates, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, DEFAULT_CHAINLINK_EUR_USD_PRICE, CHAINLINK_DEC, defaultConvertUsdToEur, getLibraryFactory, eurToTST } = require('../common.js');
+const { POSITION_MANAGER_ADDRESS, etherBalances, rates, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, DEFAULT_CHAINLINK_EUR_USD_PRICE, defaultConvertUsdToEur, getLibraryFactory, eurToTST } = require('../common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 
-let owner, customer, SEuro, TST, USDT;
+let owner, customer, SEuro, TST, Other;
 
 beforeEach(async () => {
   [owner, customer] = await ethers.getSigners();
   const ERC20Contract = await ethers.getContractFactory('MintableERC20');
   SEuro = await ERC20Contract.deploy('sEURO', 'sEUR', 18);
-  USDT = await ERC20Contract.deploy('USDT', 'USDT', 6);
+  Other = await ERC20Contract.deploy('Other', 'Other', 18);
   TST = await ERC20Contract.deploy('TST', 'TST', 18);
 });
 
@@ -33,11 +33,11 @@ describe('Stage 2', async () => {
   context('operator contract deployed and connected', async () => {
     beforeEach(async () => {
       RatioCalculator = await RatioCalculatorContract.deploy();
-      const ChainlinkEurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
+      const ChainlinkEurUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
       TGateway = await TokenGatewayContract.deploy(TST.address);
-      BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, CHAINLINK_DEC, SEuro.address, USDT.address);
+      BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, SEuro.address, Other.address);
       BondingEvent = await BondingEventContract.deploy(
-        SEuro.address, USDT.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
+        SEuro.address, Other.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
         RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
       );
       OP2 = await OperatorStage2.deploy();
@@ -49,13 +49,13 @@ describe('Stage 2', async () => {
       context('all stage 2 contracts deployed with an existing balance', async () => {
         beforeEach(async () => {
           await SEuro.connect(owner).mint(owner.address, etherBalances.ONE_BILLION);
-          await USDT.connect(owner).mint(owner.address, etherBalances.ONE_BILLION);
+          await Other.connect(owner).mint(owner.address, etherBalances.ONE_BILLION);
           await SEuro.connect(owner).mint(customer.address, etherBalances.TWO_MILLION);
-          await USDT.connect(owner).mint(customer.address, etherBalances.TWO_MILLION);
+          await Other.connect(owner).mint(customer.address, etherBalances.TWO_MILLION);
           await TST.connect(owner).mint(TGateway.address, etherBalances.FIVE_HUNDRED_MILLION);
           await TGateway.connect(owner).updateRewardSupply();
           await SEuro.connect(customer).approve(BondingEvent.address, etherBalances.TWO_MILLION);
-          await USDT.connect(customer).approve(BondingEvent.address, etherBalances.TWO_MILLION);
+          await Other.connect(customer).approve(BondingEvent.address, etherBalances.TWO_MILLION);
 
           await TGateway.connect(owner).setStorageAddress(BStorage.address);
           await BondingEvent.connect(owner).setOperator(OP2.address);

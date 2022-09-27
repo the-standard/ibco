@@ -1,6 +1,6 @@
 const { network, ethers } = require('hardhat');
 const fs = require('fs');
-const { CHAINLINK_DEC, DEFAULT_CHAINLINK_ETH_USD_PRICE, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, MOST_STABLE_FEE, encodePriceSqrt, scaleUpForDecDiff } = require('../test/common');
+const { DEFAULT_CHAINLINK_ETH_USD_PRICE, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, MOST_STABLE_FEE, encodePriceSqrt, scaleUpForDecDiff } = require('../test/common');
 const { getDeployedAddresses } = require('./common');
 
 const INITIAL_PRICE = ethers.utils.parseEther('0.8');
@@ -14,9 +14,9 @@ const getTstAddress = async addresses => {
 }
 
 const mockChainlink = async _ => {
-  const EthUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_ETH_USD_PRICE);
+  const EthUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(DEFAULT_CHAINLINK_ETH_USD_PRICE);
   await EthUsd.deployed();
-  const EurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
+  const EurUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
   await EurUsd.deployed();
   return { ethUsd: EthUsd.address, eurUsd: EurUsd.address };
 }
@@ -27,11 +27,11 @@ const deployStage1Contracts = async addresses => {
   );
   await curve.deployed();
   const calculator = await (await getLibraryFactory(owner, 'SEuroCalculator')).deploy(
-    curve.address, addresses.EXTERNAL_ADDRESSES.chainlink.eurUsd, CHAINLINK_DEC
+    curve.address, addresses.EXTERNAL_ADDRESSES.chainlink.eurUsd
   );
   await calculator.deployed();
   const manager = await (await ethers.getContractFactory('TokenManager')).deploy(
-    addresses.EXTERNAL_ADDRESSES.weth, addresses.EXTERNAL_ADDRESSES.chainlink.ethUsd, CHAINLINK_DEC
+    addresses.EXTERNAL_ADDRESSES.weth, addresses.EXTERNAL_ADDRESSES.chainlink.ethUsd
   );
   await manager.deployed();
   const offering = await (await ethers.getContractFactory('SEuroOffering')).deploy(
@@ -108,7 +108,7 @@ const deployStage2Contracts = async addresses => {
   const gateway = await (await ethers.getContractFactory('StandardTokenGateway')).deploy(TST_ADDRESS);
   await gateway.deployed();
   const storage = await (await getLibraryFactory(owner, 'BondStorage')).deploy(
-    gateway.address, addresses.EXTERNAL_ADDRESSES.chainlink.eurUsd, CHAINLINK_DEC,
+    gateway.address, addresses.EXTERNAL_ADDRESSES.chainlink.eurUsd,
     addresses.TOKEN_ADDRESSES.SEURO, addresses.TOKEN_ADDRESSES.FUSDT
   );
   await storage.deployed();
