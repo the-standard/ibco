@@ -22,7 +22,7 @@ describe('BondingReward', async () => {
     const TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
     const RatioCalculatorContract = await ethers.getContractFactory('RatioCalculator');
 
-    ChainlinkEurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(eurUsdPrice);
+    ChainlinkEurUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(eurUsdPrice);
     TGateway = await TokenGatewayContract.deploy(TST.address);
     RatioCalculator = await RatioCalculatorContract.deploy();
 

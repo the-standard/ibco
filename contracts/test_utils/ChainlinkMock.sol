@@ -3,7 +3,7 @@ pragma solidity ^0.8.14;
 
 import "contracts/interfaces/IChainlink.sol";
 
-contract Chainlink is IChainlink {
+contract ChainlinkMock is IChainlink {
     int256 private immutable price;
 
     constructor(int256 _price) {

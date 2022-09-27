@@ -14,9 +14,9 @@ const getTstAddress = async addresses => {
 }
 
 const mockChainlink = async _ => {
-  const EthUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_ETH_USD_PRICE);
+  const EthUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(DEFAULT_CHAINLINK_ETH_USD_PRICE);
   await EthUsd.deployed();
-  const EurUsd = await (await ethers.getContractFactory('Chainlink')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
+  const EurUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
   await EurUsd.deployed();
   return { ethUsd: EthUsd.address, eurUsd: EurUsd.address };
 }
