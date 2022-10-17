@@ -20,7 +20,7 @@ contract SEuroOffering is Ownable, Pausable, Drainable {
     TokenManager public tokenManager;
     BondingCurve public bondingCurve;
 
-    event Swap(string _token, uint256 amountIn, uint256 amountOut);
+    event Swap(address _user, string _token, uint256 amountIn, uint256 amountOut);
     struct Status { bool active; uint256 start; uint256 stop; }
 
     /// @param _seuroAddr address of sEURO token
@@ -87,7 +87,7 @@ contract SEuroOffering is Ownable, Pausable, Drainable {
         Seuro.mint(msg.sender, seuros);
         bondingCurve.updateCurrentBucket(seuros);
         transferCollateral(erc20Token, _amount);
-        emit Swap(_symbol, _amount, seuros);
+        emit Swap(msg.sender, _symbol, _amount, seuros);
     }
 
     // Payable function that exchanges the ETH value of the transaction for an equivalent amount of sEURO
@@ -98,7 +98,7 @@ contract SEuroOffering is Ownable, Pausable, Drainable {
         Seuro.mint(msg.sender, seuros);
         bondingCurve.updateCurrentBucket(seuros);
         transferCollateral(IERC20(token.addr), msg.value);
-        emit Swap("ETH", msg.value, seuros);
+        emit Swap(msg.sender, "ETH", msg.value, seuros);
     }
 
     // Restricted function to activate the sEURO Offering
