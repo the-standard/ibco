@@ -20,7 +20,7 @@ contract SEuroOffering is Ownable, Pausable, Drainable {
     TokenManager public tokenManager;
     BondingCurve public bondingCurve;
 
-    event Swap(address _user, string _token, uint256 amountIn, uint256 amountOut);
+    event Swap(address indexed _user, string _token, uint256 amountIn, uint256 amountOut);
     struct Status { bool active; uint256 start; uint256 stop; }
 
     /// @param _seuroAddr address of sEURO token
