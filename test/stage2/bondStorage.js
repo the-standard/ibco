@@ -107,9 +107,6 @@ describe('BondStorage', async () => {
       await Other.mint(BondStorage.address, otherRequired);
       await BondStorage.enableCatastropheMode();
 
-      withdraw = BondStorage.catastropheWithdraw();
-      await expect(withdraw).to.be.revertedWith('err-user-inactive');
-
       withdraw = BondStorage.connect(user2).catastropheWithdraw();
       await expect(withdraw).not.to.be.reverted;
 

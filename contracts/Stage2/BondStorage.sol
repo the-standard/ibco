@@ -41,8 +41,6 @@ contract BondStorage is AccessControl {
 
     modifier onlyWhitelisted() { require(hasRole(WHITELIST_BOND_STORAGE, msg.sender), "invalid-storage-operator"); _; }
 
-    modifier ifActive(address _user) { require(issuedBonds[_user].isActive, "err-user-inactive"); _; }
-
     modifier notInCatastrophe() { require(!isCatastrophe, "err-catastrophe"); _; }
 
     modifier inCatastrophe() { require(isCatastrophe, "err-not-catastrophe"); _; }
@@ -72,12 +70,9 @@ contract BondStorage is AccessControl {
 
     // BondRecord holds the main data
     // isInitialised = if the user has bonded before
-    // isActive = if the user has an active bond
     // amountBondsActive = amount of bonds in play
     // bonds = all the bonds in play
-    // profitAmount = profit amount from bond (in TST)
-    // claimAmount = total claim from expired bonds (in TST)
-    struct BondRecord { bool isInitialised; bool isActive; uint256 amountBondsActive; Bond[] bonds; }
+    struct BondRecord { bool isInitialised; uint256 amountBondsActive; Bond[] bonds; }
 
     function setBondingEvent(address _address) external onlyWhitelisted { grantRole(WHITELIST_BOND_STORAGE, _address); }
 
@@ -87,15 +82,6 @@ contract BondStorage is AccessControl {
     }
 
     function setInitialised(address _user) private { issuedBonds[_user].isInitialised = true; }
-
-    function setActive(address _user) private { issuedBonds[_user].isActive = true; }
-
-    function setInactive(address _user) private { issuedBonds[_user].isActive = false; }
-
-    function active(address _user) private view returns (bool _active) {
-        Bond[] memory bonds = getUserBonds(_user);
-        for (uint256 i = 0; i < bonds.length; i++) if (!bonds[i].tapped) _active = true;
-    }
 
     function addBond(address _user, uint256 _principalSeuro, uint256 _principalOther, uint256 _rate, uint256 _maturityDate, uint256 _reward, uint256 _profit, PositionMetaData memory _data) private {
         issuedBonds[_user].bonds.push(Bond(_principalSeuro, _principalOther, _rate, _maturityDate, _reward, _profit, false, _data));
@@ -166,7 +152,6 @@ contract BondStorage is AccessControl {
         tokenGateway.decreaseRewardSupply(reward);
 
         if (!issuedBonds[_user].isInitialised) {
-            setActive(_user);
             setInitialised(_user);
             users.push(_user);
         }
@@ -193,11 +178,10 @@ contract BondStorage is AccessControl {
     }
 
     // Claims the payout in TST tokens by sending it to the user's wallet and resetting the claim to zero.
-    function claimReward(address _user) external notInCatastrophe ifActive(_user) {
+    function claimReward(address _user) external notInCatastrophe {
         uint256 reward = getClaimAmount(_user);
         require(reward > 0, "err-no-reward");
         tapUntappedBonds(_user);
-        if (!active(_user)) setInactive(_user);
         tokenGateway.transferReward(_user, reward);
     }
 
@@ -222,11 +206,10 @@ contract BondStorage is AccessControl {
 
     function disableCatastropheMode() external onlyWhitelisted inCatastrophe { isCatastrophe = false; }
 
-    function catastropheWithdraw() external inCatastrophe ifActive(msg.sender) {
+    function catastropheWithdraw() external inCatastrophe {
         (uint256 seuroActive, uint256 otherActive) = getActiveUserPrincipals(msg.sender);
         tapAllBonds(msg.sender);
-        if (!active(msg.sender)) setInactive(msg.sender);
-        ERC20(seuro).transfer(msg.sender, seuroActive);
-        ERC20(other).transfer(msg.sender, otherActive);
+        if (seuroActive > 0) ERC20(seuro).transfer(msg.sender, seuroActive);
+        if (otherActive > 0) ERC20(other).transfer(msg.sender, otherActive);
     }
 }
