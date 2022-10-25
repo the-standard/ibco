@@ -6,7 +6,7 @@ import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // StandardTokenGateway holds TSTs and acts as a standard token data feed with:
-// - price per token in EUR;
+// - price per token in sEURO;
 // - amount of obtainable tokens as bonding rewards left
 contract StandardTokenGateway is AccessControl {
 
