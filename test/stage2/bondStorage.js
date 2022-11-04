@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { getLibraryFactory, etherBalances, parse6Dec, helperFastForwardTime, CHAINLINK_EUR_USD } = require('../common.js');
+const { getLibraryFactory, etherBalances, parse6Dec, helperFastForwardTime, DEFAULT_CHAINLINK_EUR_USD_PRICE } = require('../common.js');
 
 describe('BondStorage', async () => {
   const deployAndMintGateway = async () => {
@@ -18,7 +18,8 @@ describe('BondStorage', async () => {
     Seuro = await erc20Contract.deploy('sEURO', 'SEUR', 18);
     Other = await erc20Contract.deploy('USD Coin', 'USDC', 6);
     await deployAndMintGateway();
-    BondStorage = await contractFactory.deploy(gateway.address, CHAINLINK_EUR_USD, Seuro.address, Other.address);
+    const ChainlinkEurUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
+    BondStorage = await contractFactory.deploy(gateway.address, ChainlinkEurUsd.address, Seuro.address, Other.address);
     await gateway.setStorageAddress(BondStorage.address);
   });
 
