@@ -8,7 +8,7 @@ const eurUsdPrice = DEFAULT_CHAINLINK_EUR_USD_PRICE;
 
 describe('BondingReward', async () => {
   let owner, customer, SEuro, TST, USDC, USDT, BondingEventContract, BondingEvent,
-  StorageContract, BStorage, TGateway, RatioCalculator, ChainlinkEurUsd, UniswapPositionManagerMock;
+    StorageContract, BStorage, TGateway, RatioCalculator, ChainlinkEurUsd, UniswapPositionManagerMock;
 
   beforeEach(async () => {
     [owner, customer] = await ethers.getSigners();

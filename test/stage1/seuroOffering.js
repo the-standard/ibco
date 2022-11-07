@@ -1,5 +1,5 @@
 const { ethers } = require('hardhat');
-const { expect, use } = require('chai');
+const { expect } = require('chai');
 const { etherBalances, getLibraryFactory, DEFAULT_CHAINLINK_EUR_USD_PRICE, DEFAULT_CHAINLINK_ETH_USD_PRICE } = require('../common.js');
 
 describe('SEuroOffering', async () => {

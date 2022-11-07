@@ -8,8 +8,8 @@ const {
 const { BigNumber } = require('ethers');
 
 let owner, customer, wallet, SEuro, TST, USDC, BondingEvent, BondStorage, TokenGateway,
-ChainlinkEurUsd, BondingEventContract, BondStorageContract, RatioCalculatorContract,
-RatioCalculator, pricing, UniswapPositionManagerMock, UniswapPoolMock;
+  ChainlinkEurUsd, BondingEventContract, BondStorageContract, RatioCalculatorContract,
+  RatioCalculator, pricing, UniswapPositionManagerMock, UniswapPoolMock;
 
 describe('BondingEvent', async () => {
 
