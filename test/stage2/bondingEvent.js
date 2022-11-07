@@ -1,9 +1,15 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { POSITION_MANAGER_ADDRESS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, eurToTST, defaultConvertUsdToEur } = require('../common.js');
+const { 
+  etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING,
+  encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff,
+  DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, eurToTST, defaultConvertUsdToEur
+} = require('../common.js');
 const { BigNumber } = require('ethers');
 
-let owner, customer, wallet, SEuro, TST, USDC, BondingEvent, BondStorage, TokenGateway, ChainlinkEurUsd, BondingEventContract, BondStorageContract, RatioCalculatorContract, RatioCalculator, pricing, SwapManager;
+let owner, customer, wallet, SEuro, TST, USDC, BondingEvent, BondStorage, TokenGateway,
+ChainlinkEurUsd, BondingEventContract, BondStorageContract, RatioCalculatorContract,
+RatioCalculator, pricing, SwapManager, UniswapPositionManagerMock;
 
 describe('BondingEvent', async () => {
 
@@ -49,8 +55,10 @@ describe('BondingEvent', async () => {
         upperTick: 279000
       };
 
+    const UniswapPoolMock = await (await ethers.getContractFactory('UniswapPoolMock')).deploy();
+    UniswapPositionManagerMock = await (await ethers.getContractFactory('UniswapPositionManagerMock')).deploy(UniswapPoolMock.address);
     BondingEvent = await BondingEventContract.deploy(
-      SEuro.address, USDC.address, POSITION_MANAGER_ADDRESS, BondStorage.address,
+      SEuro.address, USDC.address, UniswapPositionManagerMock.address, BondStorage.address,
       owner.address, RatioCalculator.address, pricing.initial, pricing.lowerTick,
       pricing.upperTick, MOST_STABLE_FEE
     );
@@ -265,6 +273,7 @@ describe('BondingEvent', async () => {
 
     describe('excess seuro', async () => {
       it('will transfer the excess sEURO if there is a designated wallet', async () => {
+        await UniswapPositionManagerMock.stubExcess(1000);
         // difficult to test transfer of excess USDC, because it would require a mid-transaction price slip
         await BondingEvent.setExcessCollateralWallet(wallet.address);
         expect(await SEuro.balanceOf(wallet.address)).to.equal(0);

@@ -36,10 +36,10 @@ describe('Stage 2', async () => {
       const ChainlinkEurUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
       TGateway = await TokenGatewayContract.deploy(TST.address);
       BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, SEuro.address, Other.address);
-      const UniswapPool = await (await ethers.getContractFactory('UniswapPoolMock')).deploy();
-      const UniswapPositionManager = await (await ethers.getContractFactory('UniswapPositionManagerMock')).deploy(UniswapPool.address);
+      const UniswapPoolMock = await (await ethers.getContractFactory('UniswapPoolMock')).deploy();
+      const UniswapPositionManagerMock = await (await ethers.getContractFactory('UniswapPositionManagerMock')).deploy(UniswapPoolMock.address);
       BondingEvent = await BondingEventContract.deploy(
-        SEuro.address, Other.address, UniswapPositionManager.address, BStorage.address, owner.address,
+        SEuro.address, Other.address, UniswapPositionManagerMock.address, BStorage.address, owner.address,
         RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
       );
       OP2 = await OperatorStage2.deploy();

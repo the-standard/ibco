@@ -5,12 +5,20 @@ import "contracts/uniswap/INonfungiblePositionManager.sol";
 import "contracts/test_utils/UniswapPoolMock.sol";
 
 contract UniswapPositionManagerMock {
+    uint128 public constant LIQUIDITY = 100;
 
-    uint256 currentTokenId;
-    UniswapPoolMock pool;
+    uint256 public currentTokenId;
+    UniswapPoolMock public pool;
+    uint256 public excess;
+    uint256 public amount0;
+    uint256 public amount1;
 
     constructor(address _pool) {
         pool = UniswapPoolMock(_pool);
+    }
+
+    function stubExcess(uint256 _excess) external {
+        excess = _excess;
     }
 
     function createAndInitializePoolIfNecessary(address, address, uint24, uint160 _price) external returns (address) {
@@ -18,36 +26,31 @@ contract UniswapPositionManagerMock {
         return address(pool);
     }
 
-    function mint(INonfungiblePositionManager.MintParams memory _params) external payable returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) {
-        tokenId = ++currentTokenId;
-        liquidity = 100;
-        amount0 = _params.amount0Desired;
-        amount1 = _params.amount1Desired;
+    function mint(INonfungiblePositionManager.MintParams memory _params) external payable returns (uint256 _tokenId, uint128 _liquidity, uint256 _amount0, uint256 _amount1) {
+        _tokenId = ++currentTokenId;
+        _liquidity = LIQUIDITY;
+        amount0 = _params.amount0Desired - excess;
+        amount1 = _params.amount1Desired - excess;
+        _amount0 = amount0;
+        _amount1 = amount1;
     }
 
-    function increaseLiquidity(INonfungiblePositionManager.IncreaseLiquidityParams memory _params) external payable returns (uint128 liquidity, uint256 amount0, uint256 amount1) {
-        liquidity = 200;
-        amount0 = _params.amount0Desired;
-        amount1 = _params.amount1Desired;
+    function increaseLiquidity(INonfungiblePositionManager.IncreaseLiquidityParams memory _params) external payable returns (uint128 _liquidity, uint256 _amount0, uint256 _amount1) {
+        _liquidity = LIQUIDITY;
+        _amount0 = _params.amount0Desired - excess;
+        _amount1 = _params.amount1Desired - excess;
+        amount0 += _amount0;
+        amount1 += _amount1;
     }
 
-    function decreaseLiquidity(INonfungiblePositionManager.DecreaseLiquidityParams memory _params) external payable returns (uint256 amount0, uint256 amount1) {
-        amount0 = _params.amount0Min;
-        amount1 = _params.amount1Min;
+    function decreaseLiquidity(INonfungiblePositionManager.DecreaseLiquidityParams memory) external payable returns (uint256 _amount0, uint256 _amount1) {
+        _amount0 = amount0;
+        _amount1 = amount1;
     }
 
-    function collect(INonfungiblePositionManager.CollectParams memory _params) external payable returns (uint256 amount0, uint256 amount1) {
-        amount0 = 50;
-        amount1 = 55;
-    }
+    function collect(INonfungiblePositionManager.CollectParams memory) external payable returns (uint256, uint256) {}
 
-    function burn(uint256 tokenId) external payable {}
+    function burn(uint256) external payable {}
 
-    function positions(uint256 tokenId) external view returns (
-        uint96 nonce, address operator, address token0, address token1, uint24 fee,
-        int24 tickLower, int24 tickUpper, uint128 liquidity, uint256 feeGrowthInside0LastX128,
-        uint256 feeGrowthInside1LastX128, uint128 tokensOwed0, uint128 tokensOwed1
-    ) {
-        liquidity = 5;
-    }
+    function positions(uint256 tokenId) external view returns (uint96, address, address, address, uint24, int24, int24, uint128, uint256, uint256, uint128, uint128) {}
 }
