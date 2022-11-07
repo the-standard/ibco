@@ -449,7 +449,7 @@ describe('BondingEvent', async () => {
       await readyDependencies();
     });
 
-    it.only('sends all liquidity - plus fees - to designated collateral wallet, given a token ID', async () => {
+    it('sends all liquidity - plus fees - to designated collateral wallet, given a token ID', async () => {
       // create the first position
       let amountSEuro = etherBalances.TWO_MILLION;
       let { amountOther } = await BondingEvent.getOtherAmount(amountSEuro);
