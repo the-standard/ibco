@@ -1,7 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, etherBalances, rates, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, DEFAULT_CHAINLINK_EUR_USD_PRICE, defaultConvertUsdToEur, getLibraryFactory, eurToTST } = require('../common.js');
+const { etherBalances, rates, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, DEFAULT_CHAINLINK_EUR_USD_PRICE, defaultConvertUsdToEur, getLibraryFactory, eurToTST } = require('../common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 
 let owner, customer, SEuro, TST, Other;
@@ -36,8 +36,10 @@ describe('Stage 2', async () => {
       const ChainlinkEurUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
       TGateway = await TokenGatewayContract.deploy(TST.address);
       BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, SEuro.address, Other.address);
+      const UniswapPoolMock = await (await ethers.getContractFactory('UniswapPoolMock')).deploy();
+      const UniswapPositionManagerMock = await (await ethers.getContractFactory('UniswapPositionManagerMock')).deploy(UniswapPoolMock.address);
       BondingEvent = await BondingEventContract.deploy(
-        SEuro.address, Other.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
+        SEuro.address, Other.address, UniswapPositionManagerMock.address, BStorage.address, owner.address,
         RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
       );
       OP2 = await OperatorStage2.deploy();

@@ -2,12 +2,13 @@ const { ethers } = require('hardhat');
 const { BigNumber } = ethers;
 const { expect } = require('chai');
 const bn = require('bignumber.js');
-const { POSITION_MANAGER_ADDRESS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, DEFAULT_CHAINLINK_EUR_USD_PRICE, defaultConvertUsdToEur, encodePriceSqrt, scaleUpForDecDiff, parse6Dec, getLibraryFactory, eurToTST } = require('../common.js');
+const { etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, helperFastForwardTime, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, DEFAULT_CHAINLINK_EUR_USD_PRICE, defaultConvertUsdToEur, encodePriceSqrt, scaleUpForDecDiff, parse6Dec, getLibraryFactory, eurToTST } = require('../common.js');
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 });
 const eurUsdPrice = DEFAULT_CHAINLINK_EUR_USD_PRICE;
 
 describe('BondingReward', async () => {
-  let owner, customer, SEuro, TST, USDC, USDT, BondingEventContract, BondingEvent, StorageContract, BStorage, TGateway, RatioCalculator, ChainlinkEurUsd;
+  let owner, customer, SEuro, TST, USDC, USDT, BondingEventContract, BondingEvent,
+    StorageContract, BStorage, TGateway, RatioCalculator, ChainlinkEurUsd, UniswapPositionManagerMock;
 
   beforeEach(async () => {
     [owner, customer] = await ethers.getSigners();
@@ -22,6 +23,8 @@ describe('BondingReward', async () => {
     const TokenGatewayContract = await ethers.getContractFactory('StandardTokenGateway');
     const RatioCalculatorContract = await ethers.getContractFactory('RatioCalculator');
 
+    const UniswapPoolMock = await (await ethers.getContractFactory('UniswapPoolMock')).deploy();
+    UniswapPositionManagerMock = await (await ethers.getContractFactory('UniswapPositionManagerMock')).deploy(UniswapPoolMock.address);
     ChainlinkEurUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(eurUsdPrice);
     TGateway = await TokenGatewayContract.deploy(TST.address);
     RatioCalculator = await RatioCalculatorContract.deploy();
@@ -40,7 +43,7 @@ describe('BondingReward', async () => {
     it('will not bond if no TST in gateway', async () => {
       BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, SEuro.address, USDC.address);
       BondingEvent = await BondingEventContract.deploy(
-        SEuro.address, USDC.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
+        SEuro.address, USDC.address, UniswapPositionManagerMock.address, BStorage.address, owner.address,
         RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
       );
       await BStorage.grantRole(await BStorage.WHITELIST_BOND_STORAGE(), BondingEvent.address);
@@ -67,7 +70,7 @@ describe('BondingReward', async () => {
         beforeEach(async () => {
           BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, SEuro.address, USDC.address);
           BondingEvent = await BondingEventContract.deploy(
-            SEuro.address, USDC.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
+            SEuro.address, USDC.address, UniswapPositionManagerMock.address, BStorage.address, owner.address,
             RatioCalculator.address, DEFAULT_SQRT_PRICE, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
           );
           await BStorage.grantRole(await BStorage.WHITELIST_BOND_STORAGE(), BondingEvent.address);
@@ -131,7 +134,7 @@ describe('BondingReward', async () => {
           BStorage = await StorageContract.deploy(TGateway.address, ChainlinkEurUsd.address, SEuro.address, USDT.address);
           const sixDecPrice = sortedPrice(scaleUpForDecDiff(100, 12), 105);
           BondingEvent = await BondingEventContract.deploy(
-            SEuro.address, USDT.address, POSITION_MANAGER_ADDRESS, BStorage.address, owner.address,
+            SEuro.address, USDT.address, UniswapPositionManagerMock.address, BStorage.address, owner.address,
             RatioCalculator.address, sixDecPrice, MIN_TICK, MAX_TICK, MOST_STABLE_FEE
           );
           await BStorage.grantRole(await BStorage.WHITELIST_BOND_STORAGE(), BondingEvent.address);

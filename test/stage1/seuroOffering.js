@@ -1,42 +1,33 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { WETH_ADDRESS, CHAINLINK_DEC, CHAINLINK_ETH_USD, CHAINLINK_DAI_USD, CHAINLINK_EUR_USD, DAI_ADDRESS, etherBalances, getLibraryFactory } = require('../common.js');
+const { etherBalances, getLibraryFactory, DEFAULT_CHAINLINK_EUR_USD_PRICE, DEFAULT_CHAINLINK_ETH_USD_PRICE } = require('../common.js');
 
 describe('SEuroOffering', async () => {
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
-  let SEuroOffering, SEuro, BondingCurve, SEuroCalculator, TokenManager, WETH,
-    owner, user, collateralWallet, BondingCurveContract, SEuroCalculatorContract, TokenManagerContract;
-
-  async function buyWETH(signer, amount) {
-    await WETH.connect(signer).deposit({ value: amount });
-  }
-
-  async function buyToken(signer, token, amount) {
-    const SwapManagerContract = await ethers.getContractFactory('SwapManager');
-    const SwapManager = await SwapManagerContract.deploy();
-    await SwapManager.connect(signer).swapEthForToken(token, { value: amount });
-  }
+  let SEuroOffering, SEuro, BondingCurve, SEuroCalculator, TokenManager, WETH, DAI,
+    owner, user, collateralWallet, BondingCurveContract, SEuroCalculatorContract,
+    TokenManagerContract, ChainlinkEthUsd, ChainlinkDaiUsd, ChainlinkEurUsd;
 
   async function getEthToSEuro(amount) {
     const token = {
-      name: 'WETH',
-      addr: WETH_ADDRESS,
+      name: await WETH.symbol(),
+      addr: WETH.address,
       dec: 18,
-      chainlinkAddr: CHAINLINK_ETH_USD,
-      chainlinkDec: CHAINLINK_DEC
+      chainlinkAddr: ChainlinkEthUsd.address,
+      chainlinkDec: await ChainlinkEthUsd.decimals()
     };
     return await SEuroCalculator.callStatic.calculate(amount, token);
   }
 
   async function getDaiToSEuro(amount) {
     const token = {
-      name: 'DAI',
-      addr: DAI_ADDRESS,
+      name: await DAI.symbol(),
+      addr: DAI.address,
       dec: 18,
-      chainlinkAddr: CHAINLINK_DAI_USD,
-      chainlinkDec: CHAINLINK_DEC
+      chainlinkAddr: ChainlinkDaiUsd.address,
+      chainlinkDec: await ChainlinkDaiUsd.decimals()
     };
     return await SEuroCalculator.callStatic.calculate(amount, token);
   }
@@ -57,11 +48,15 @@ describe('SEuroOffering', async () => {
     SEuroCalculatorContract = await getLibraryFactory(owner, 'SEuroCalculator');
     TokenManagerContract = await ethers.getContractFactory('TokenManager');
 
-    WETH = await ethers.getContractAt('WETH', WETH_ADDRESS);
+    WETH = await (await ethers.getContractFactory('WETHMock')).deploy();
+    DAI = await (await ethers.getContractFactory('MintableERC20')).deploy('Dai Stablecoin', 'DAI', 18);
     SEuro = await ERC20Contract.deploy('SEuro', 'SEUR', 18);
+    ChainlinkEurUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
+    ChainlinkEthUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(DEFAULT_CHAINLINK_ETH_USD_PRICE);
+    ChainlinkDaiUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(100000000);
     BondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
-    SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, CHAINLINK_EUR_USD);
-    TokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD);
+    SEuroCalculator = await SEuroCalculatorContract.deploy(BondingCurve.address, ChainlinkEurUsd.address);
+    TokenManager = await TokenManagerContract.deploy(WETH.address, ChainlinkEthUsd.address);
     SEuroOffering = await SEuroOfferingContract.deploy(SEuro.address, SEuroCalculator.address, TokenManager.address, BondingCurve.address);
     
     await SEuroOffering.setCollateralWallet(collateralWallet.address);
@@ -73,8 +68,8 @@ describe('SEuroOffering', async () => {
   describe('swap', async () => {
     let PriceConverter;
 
-    before(async () => {
-      PriceConverter = await (await ethers.getContractFactory('PriceConverter')).deploy();
+    beforeEach(async () => {
+      PriceConverter = await (await ethers.getContractFactory('PriceConverter')).deploy(ChainlinkEurUsd.address, ChainlinkEthUsd.address);
     });
 
     it('will not swap for eth if ibco not active', async () => {
@@ -89,7 +84,7 @@ describe('SEuroOffering', async () => {
 
     it('will not swap for token if ibco not active', async () => {
       const toSwap = ethers.utils.parseEther('1');
-      await buyWETH(user, toSwap);
+      await WETH.mint(user.address, toSwap)
       await WETH.connect(user).approve(SEuroOffering.address, toSwap);
 
       const swap = SEuroOffering.connect(user).swap('WETH', toSwap);
@@ -106,7 +101,7 @@ describe('SEuroOffering', async () => {
 
       it('swaps for given token', async () => {
         const toSwap = ethers.utils.parseEther('1');
-        await buyWETH(user, toSwap);
+        await WETH.mint(user.address, toSwap)
         await WETH.connect(user).approve(SEuroOffering.address, toSwap);
 
         const voidSwap = SEuroOffering.connect(user).swap('WETH', 0);
@@ -121,7 +116,7 @@ describe('SEuroOffering', async () => {
 
       it('will not swap without preapproval', async () => {
         const toSwap = ethers.utils.parseEther('1');
-        await buyWETH(user, toSwap);
+        await WETH.mint(user.address, toSwap)
 
         const swap = SEuroOffering.connect(user).swap('WETH', toSwap);
 
@@ -132,7 +127,7 @@ describe('SEuroOffering', async () => {
 
       it('will not swap without balance of token', async () => {
         const toSwap = ethers.utils.parseEther('1');
-        await WETH.connect(user).withdraw(await WETH.balanceOf(user.address));
+        await WETH.burn(user.address, await WETH.balanceOf(user.address));
         await WETH.connect(user).approve(SEuroOffering.address, toSwap);
 
         const swap = SEuroOffering.connect(user).swap('WETH', toSwap);
@@ -140,15 +135,15 @@ describe('SEuroOffering', async () => {
         await expect(swap).to.be.revertedWith('err-tok-bal');
         const userSEuroBalance = await SEuro.balanceOf(user.address);
         expect(userSEuroBalance.toString()).to.equal('0');
-        expect(await WETH.balanceOf(collateralWallet.address)).to.equal(toSwap);
+        expect(await WETH.balanceOf(collateralWallet.address)).to.equal(0);
       });
 
       it('will swap for any accepted token', async () => {
         const toSwap = ethers.utils.parseEther('1');
-        await TokenManager.connect(owner).addAcceptedToken(DAI_ADDRESS, CHAINLINK_DAI_USD);
+        await TokenManager.connect(owner).addAcceptedToken(DAI.address, ChainlinkDaiUsd.address);
 
-        await buyToken(user, DAI_ADDRESS, toSwap);
-        const Dai = await ethers.getContractAt('IERC20', DAI_ADDRESS);
+        await DAI.mint(user.address, toSwap)
+        const Dai = await ethers.getContractAt('IERC20', DAI.address);
         const userTokens = await Dai.balanceOf(user.address);
         await Dai.connect(user).approve(SEuroOffering.address, userTokens);
 
@@ -161,7 +156,7 @@ describe('SEuroOffering', async () => {
 
       it('updates the price in bonding curve when bucket is crossed', async () => {
         const amount = await PriceConverter.eurosToEth(BUCKET_SIZE);
-        await buyWETH(user, amount);
+        await WETH.mint(user.address, amount)
         await WETH.connect(user).approve(SEuroOffering.address, amount);
 
         await SEuroOffering.connect(user).swap('WETH', amount);
@@ -291,9 +286,9 @@ describe('SEuroOffering', async () => {
 
   describe('dependencies', async () => {
     it('updates the dependencies if contract owner', async () => {
-      const newTokenManager = await TokenManagerContract.deploy(WETH_ADDRESS, CHAINLINK_ETH_USD);
+      const newTokenManager = await TokenManagerContract.deploy(WETH.address, ChainlinkEthUsd.address);
       const newBondingCurve = await BondingCurveContract.deploy(INITIAL_PRICE, MAX_SUPPLY, BUCKET_SIZE);
-      const newCalculator = await SEuroCalculatorContract.deploy(newBondingCurve.address, CHAINLINK_EUR_USD);
+      const newCalculator = await SEuroCalculatorContract.deploy(newBondingCurve.address, ChainlinkEurUsd.address);
 
       let updateTokenManager = SEuroOffering.connect(user).setTokenManager(newTokenManager.address);
       let updateBondingCurve = SEuroOffering.connect(user).setBondingCurve(newBondingCurve.address);

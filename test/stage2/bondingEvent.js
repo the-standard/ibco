@@ -1,9 +1,15 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { POSITION_MANAGER_ADDRESS, etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING, encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff, DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, eurToTST, defaultConvertUsdToEur } = require('../common.js');
+const { 
+  etherBalances, rates, durations, ONE_WEEK_IN_SECONDS, MOST_STABLE_FEE, STABLE_TICK_SPACING,
+  encodePriceSqrt, helperFastForwardTime, MAX_TICK, MIN_TICK, format6Dec, scaleUpForDecDiff,
+  DEFAULT_CHAINLINK_EUR_USD_PRICE, getLibraryFactory, eurToTST, defaultConvertUsdToEur
+} = require('../common.js');
 const { BigNumber } = require('ethers');
 
-let owner, customer, wallet, SEuro, TST, USDC, BondingEvent, BondStorage, TokenGateway, ChainlinkEurUsd, BondingEventContract, BondStorageContract, RatioCalculatorContract, RatioCalculator, pricing, SwapManager;
+let owner, customer, wallet, SEuro, TST, USDC, BondingEvent, BondStorage, TokenGateway,
+  ChainlinkEurUsd, BondingEventContract, BondStorageContract, RatioCalculatorContract,
+  RatioCalculator, pricing, UniswapPositionManagerMock, UniswapPoolMock;
 
 describe('BondingEvent', async () => {
 
@@ -32,26 +38,31 @@ describe('BondingEvent', async () => {
     return defaultConvertUsdToEur(scaleUpForDecDiff(amount, 12));
   }
 
-  const deployBondingEvent = async (reserveSEuro, reserveOther) => {
+  const getPricing = (reserveSEuro, reserveOther) => {
     // note: ticks represent that sEURO is 18dec and USDC is 6dec
     // tick 275300 approx. 1 USDC = 0.903 sEURO
     // tick 279000 approx. 1 USDC = 1.307 sEURO
     // -279000 and -275300 are the inverse of these prices
-    pricing = isSEuroToken0() ?
+    return isSEuroToken0() ?
       {
-        initial: encodePriceSqrt(reserveOther, reserveSEuro),
+        sqrtPrice: encodePriceSqrt(reserveOther, reserveSEuro),
         lowerTick: -279000,
         upperTick: -275300
       } :
       {
-        initial: encodePriceSqrt(reserveSEuro, reserveOther),
+        sqrtPrice: encodePriceSqrt(reserveSEuro, reserveOther),
         lowerTick: 275300,
         upperTick: 279000
       };
+  }
 
+  const deployBondingEvent = async (reserveSEuro, reserveOther) => {
+    pricing = getPricing(reserveSEuro, reserveOther);
+    UniswapPoolMock = await (await ethers.getContractFactory('UniswapPoolMock')).deploy();
+    UniswapPositionManagerMock = await (await ethers.getContractFactory('UniswapPositionManagerMock')).deploy(UniswapPoolMock.address);
     BondingEvent = await BondingEventContract.deploy(
-      SEuro.address, USDC.address, POSITION_MANAGER_ADDRESS, BondStorage.address,
-      owner.address, RatioCalculator.address, pricing.initial, pricing.lowerTick,
+      SEuro.address, USDC.address, UniswapPositionManagerMock.address, BondStorage.address,
+      owner.address, RatioCalculator.address, pricing.sqrtPrice, pricing.lowerTick,
       pricing.upperTick, MOST_STABLE_FEE
     );
   };
@@ -72,14 +83,6 @@ describe('BondingEvent', async () => {
     await TokenGateway.connect(owner).updateRewardSupply();
     await TokenGateway.connect(owner).setStorageAddress(BondStorage.address);
     await BondStorage.grantRole(await BondStorage.WHITELIST_BOND_STORAGE(), BondingEvent.address);
-  };
-
-  const swap = async (tokenIn, tokenOut, amountIn) => {
-    if (!SwapManager) {
-      SwapManager = await (await ethers.getContractFactory('SwapManager')).deploy();
-    }
-    await tokenIn.approve(SwapManager.address, amountIn);
-    await SwapManager.swap(tokenIn.address, tokenOut.address, amountIn, MOST_STABLE_FEE);
   };
 
   describe('initialisation', async () => {
@@ -265,6 +268,7 @@ describe('BondingEvent', async () => {
 
     describe('excess seuro', async () => {
       it('will transfer the excess sEURO if there is a designated wallet', async () => {
+        await UniswapPositionManagerMock.stubExcess(1000);
         // difficult to test transfer of excess USDC, because it would require a mid-transaction price slip
         await BondingEvent.setExcessCollateralWallet(wallet.address);
         expect(await SEuro.balanceOf(wallet.address)).to.equal(0);
@@ -347,8 +351,8 @@ describe('BondingEvent', async () => {
         expect(position.liquidity).to.be.gt(0);
 
         // move the price price outside of middle 20%
-        // moves current price tick to 277962
-        await swap(SEuro, USDC, etherBalances['100K'].mul(5));
+        // moves current price tick to 277546
+        await UniswapPoolMock.setPrice(getPricing(scaleUpForDecDiff(113, 12), 100).sqrtPrice);
 
         // bonding again will create a new position, as first one is not viable since price change
         amountSEuro = etherBalances.TWO_MILLION;
@@ -362,8 +366,8 @@ describe('BondingEvent', async () => {
         positions = await BondingEvent.getPositions();
         expect(positions).to.be.length(2);
         ({ position } = await BondingEvent.getPositionByTokenId(positions[1].tokenId));
-        // since swap, new tick is at 277962 - shifting lower tick to 272300 and upper to 282000 puts at in middle 20%
-        const expectedDiff = 3000;
+        // since swap, new tick is at 277546 - shifting lower tick to 275100 and upper to 279200 puts at in middle 20%
+        const expectedDiff = 200;
         expect(position.lowerTick).to.equal(pricing.lowerTick - expectedDiff);
         expect(position.upperTick).to.equal(pricing.upperTick + expectedDiff);
         expect(position.liquidity).to.be.gt(0);
@@ -388,13 +392,13 @@ describe('BondingEvent', async () => {
         customer.address, amountSEuro, durations.ONE_YR, rates.TEN_PC,
       );
 
-      for (let i = 0; i < 10; i++) {
-        // initial current price tick is at 276812, swap 100k sEURO at a time and it stays within middle 20%
-        // so no new position created
+      for (let i = 106; i < 113; i++) {
+        // move price by 1 point at a time
+        // while price stays within 40% + 60% of tick range, default ticks given
+        await UniswapPoolMock.setPrice(getPricing(scaleUpForDecDiff(i, 12), 100).sqrtPrice);
         const { lowerTick, upperTick } = await BondingEvent.getOtherAmount(amountSEuro);
         expect(lowerTick).to.equal(pricing.lowerTick);
         expect(upperTick).to.equal(pricing.upperTick);
-        await swap(SEuro, USDC, etherBalances['100K']);
       }
     });
 
@@ -456,8 +460,10 @@ describe('BondingEvent', async () => {
       );
       expect(await BondingEvent.getPositions()).to.be.length(1);
 
-      // create some fees to collect and also moves the price so there will be more than one position
-      await swap(SEuro, USDC, etherBalances['125K'].mul(5));
+      // create some fees to collect
+      await UniswapPositionManagerMock.stubFees(100);
+      // moves the price so there will be more than one position
+      await UniswapPoolMock.setPrice(getPricing(scaleUpForDecDiff(113, 12), 100).sqrtPrice);
 
       // create a second position
       amountSEuro = etherBalances.TWO_MILLION;
@@ -469,12 +475,12 @@ describe('BondingEvent', async () => {
       );
       const positions = await BondingEvent.getPositions();
       expect(positions).to.be.length(2);
-      await swap(USDC, SEuro, etherBalances['125K'].mul(5));
 
       await expect(BondingEvent.clearPositionAndBurn(positions[0].tokenId)).to.be.revertedWith('err-no-wallet-assigned');
 
       await BondingEvent.setExcessCollateralWallet(wallet.address);
 
+      // const collect = BondingEvent.clearPositionAndBurn(positions[0].tokenId);
       const collect = BondingEvent.clearPositionAndBurn(positions[0].tokenId);
 
       await expect(collect).not.to.be.reverted;
@@ -484,11 +490,6 @@ describe('BondingEvent', async () => {
       await expect(collect).to.emit(BondingEvent, 'LiquidityCollected');
       const collectedData = (await (await collect).wait()).events.filter(e => e.event == 'LiquidityCollected')[0].args;
       // should transfer to the given collateral wallet
-      const transferred = isSEuroToken0() ?
-        { SEuro: collectedData.collectedTotal0, USDC: collectedData.collectedTotal1 } :
-        { SEuro: collectedData.collectedTotal1, USDC: collectedData.collectedTotal0 };
-      expect(await SEuro.balanceOf(wallet.address)).to.equal(transferred.SEuro);
-      expect(await USDC.balanceOf(wallet.address)).to.equal(transferred.USDC);
       // fees should be generated
       expect(collectedData.feesCollected0).to.be.gt(0);
       expect(collectedData.feesCollected1).to.be.gt(0);

@@ -26,12 +26,6 @@ module.exports = {
   },
   defaultNetwork: 'hardhat',
   networks: {
-    hardhat: {
-      forking: {
-        url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
-      },
-      chainId: 31337
-    },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
       accounts: mainAccounts
