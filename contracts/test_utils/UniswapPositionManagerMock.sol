@@ -6,10 +6,12 @@ import "contracts/test_utils/UniswapPoolMock.sol";
 
 contract UniswapPositionManagerMock {
     uint128 public constant LIQUIDITY = 100;
+    uint256 public HUNDRED_PC = 100000;
 
     uint256 public currentTokenId;
     UniswapPoolMock public pool;
     uint256 public excess;
+    uint256 public feesPc;
     uint256 public amount0;
     uint256 public amount1;
 
@@ -19,6 +21,10 @@ contract UniswapPositionManagerMock {
 
     function stubExcess(uint256 _excess) external {
         excess = _excess;
+    }
+
+    function stubFees(uint256 _pc) external {
+        feesPc = _pc;
     }
 
     function createAndInitializePoolIfNecessary(address, address, uint24, uint160 _price) external returns (address) {
@@ -48,7 +54,11 @@ contract UniswapPositionManagerMock {
         _amount1 = amount1;
     }
 
-    function collect(INonfungiblePositionManager.CollectParams memory) external payable returns (uint256, uint256) {}
+    function collect(INonfungiblePositionManager.CollectParams memory) external payable returns (uint256, uint256) {
+        uint256 fees0 = amount0 * feesPc / HUNDRED_PC;
+        uint256 fees1 = amount1 * feesPc / HUNDRED_PC;
+        return (amount0 + fees0, amount1 + fees1);
+    }
 
     function burn(uint256) external payable {}
 
