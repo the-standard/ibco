@@ -480,7 +480,6 @@ describe('BondingEvent', async () => {
 
       await BondingEvent.setExcessCollateralWallet(wallet.address);
 
-      // const collect = BondingEvent.clearPositionAndBurn(positions[0].tokenId);
       const collect = BondingEvent.clearPositionAndBurn(positions[0].tokenId);
 
       await expect(collect).not.to.be.reverted;
