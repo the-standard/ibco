@@ -14,7 +14,9 @@ const getTstAddress = async addresses => {
 }
 
 const mockChainlink = async _ => {
-  const EthUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(DEFAULT_CHAINLINK_ETH_USD_PRICE);
+  const maticUsdPrice = 112583356;
+  const EthUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(maticUsdPrice);
+  console.log(EthUsd.address)
   await EthUsd.deployed();
   const EurUsd = await (await ethers.getContractFactory('ChainlinkMock')).deploy(DEFAULT_CHAINLINK_EUR_USD_PRICE);
   await EurUsd.deployed();
@@ -31,7 +33,7 @@ const deployStage1Contracts = async addresses => {
   );
   await calculator.deployed();
   const manager = await (await ethers.getContractFactory('TokenManager')).deploy(
-    addresses.EXTERNAL_ADDRESSES.weth, addresses.EXTERNAL_ADDRESSES.chainlink.ethUsd
+    addresses.EXTERNAL_ADDRESSES.wmatic, addresses.EXTERNAL_ADDRESSES.chainlink.maticUsd
   );
   await manager.deployed();
   const offering = await (await ethers.getContractFactory('SEuroOffering')).deploy(
@@ -48,15 +50,15 @@ const deployStage1Contracts = async addresses => {
 }
 
 const prepareStage1 = async addresses => {
-  const Seuro = await ethers.getContractAt('AccessControl', addresses.TOKEN_ADDRESSES.SEURO);
-  if (!await Seuro.hasRole(await Seuro.getRoleAdmin(ethers.utils.formatBytes32String('MINTER_ROLE')), owner.address)) {
-    throw new Error('Signer must have sEURO admin role');
-  }
+  // const Seuro = await ethers.getContractAt('AccessControl', addresses.TOKEN_ADDRESSES.SEURO);
+  // if (!await Seuro.hasRole(await Seuro.getRoleAdmin(ethers.utils.formatBytes32String('MINTER_ROLE')), owner.address)) {
+  //   throw new Error('Signer must have sEURO admin role');
+  // }
 
   const { BondingCurve, SEuroCalculator, TokenManager, SEuroOffering } = await deployStage1Contracts(addresses);
   // give offering minter role for sEURO
-  const minter = await Seuro.grantRole(ethers.utils.formatBytes32String('MINTER_ROLE'), SEuroOffering.address);
-  await minter.wait();
+  // const minter = await Seuro.grantRole(ethers.utils.formatBytes32String('MINTER_ROLE'), SEuroOffering.address);
+  // await minter.wait();
   // give offering OFFERING role in calculator
   const offering = await SEuroCalculator.grantRole(await SEuroCalculator.OFFERING(), SEuroOffering.address);
   await offering.wait();
@@ -131,8 +133,8 @@ const deployStage2Contracts = async addresses => {
 }
 
 const prepareStage2 = async addresses => {
-  const TSTOwnable = await ethers.getContractAt('Ownable', TST_ADDRESS);
-  if (await TSTOwnable.owner() != owner.address) throw new Error('Signer must have TST minter role');
+  // const TSTOwnable = await ethers.getContractAt('Ownable', TST_ADDRESS);
+  // if (await TSTOwnable.owner() != owner.address) throw new Error('Signer must have TST minter role');
 
   const { RatioCalculator, StandardTokenGateway, BondStorage, BondingEvent, OperatorStage2 } = await deployStage2Contracts(addresses);
   // give bond storage access to update reward supply and transfer rewards
@@ -160,11 +162,23 @@ const prepareStage2 = async addresses => {
 }
 
 const getAddresses = async _ => {
-  const addresses = await getDeployedAddresses(network.name);
+  // const addresses = await getDeployedAddresses(network.name);
   const externalAddresses = JSON.parse(fs.readFileSync('scripts/deploymentConfig.json'))[network.name].externalAddresses;
-  if (!externalAddresses.chainlink) externalAddresses.chainlink = await mockChainlink();
-  addresses.EXTERNAL_ADDRESSES = externalAddresses;
-  return addresses;
+  externalAddresses.chainlink = {
+    maticUsd: '0x7b771D9cC25c2A67B64Cc11C2eF7dec1FBC6Dd71',
+    eurUsd: '0xc5E9E8c56090b7193aD7C6AcbaDa7aA0BC6C2cd6'
+  }
+  // if (!externalAddresses.chainlink) externalAddresses.chainlink = await mockChainlink();
+  // addresses.EXTERNAL_ADDRESSES = externalAddresses;
+  // return addresses;
+  return {
+    TOKEN_ADDRESSES: {
+      TST: '0xb22517e1312b508431C7Ce9CB5Bca006137656AF',
+      SEURO: '0x20c5B290055a3E9771a72EE63D28bA8c17Fe459d',
+      USDT: '0x267d22B5104be1983361ED56e00daAb1aC3FD9Bb'
+    },
+    EXTERNAL_ADDRESSES: externalAddresses
+  };
 }
 
 const deployStakingDirectory = async _ => {
