@@ -3,7 +3,7 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "contracts/interfaces/WETH.sol";
+import "contracts/interfaces/WrappedCoin.sol";
 import "contracts/interfaces/ISeuro.sol";
 import "contracts/Stage1/SEuroCalculator.sol";
 import "contracts/Stage1/TokenManager.sol";
@@ -12,7 +12,7 @@ import "contracts/Pausable.sol";
 import "contracts/Drainable.sol";
 
 contract SEuroOffering is Ownable, Pausable, Drainable {
-    // address of the wallet which will receive the collateral provided in swap and swapETH
+    // address of the wallet which will receive the collateral provided in swap and swapMATIC
     address public collateralWallet;
     Status public status;
     ISeuro public immutable Seuro;
@@ -67,10 +67,10 @@ contract SEuroOffering is Ownable, Pausable, Drainable {
 
     // A read-only function to estimate how much sEURO would be received for the given amount of token
     // This function provides a simplified calculation and is therefore just an estimation
-    // Provide a 32-byte array of "WETH" to estimate the exchange for ETH
+    // Provide a 32-byte array of "WMATIC" to estimate the exchange for MATIC
     /// @param _amount the amount of the given token that you'd like to estimate the exchange value for
     function readOnlyCalculateSwap(string memory _symbol, uint256 _amount) external view returns (uint256) {
-        if (cmpString(_symbol, "ETH")) _symbol = "WETH";
+        if (cmpString(_symbol, "MATIC")) _symbol = "WMATIC";
         return sEuroRateCalculator.readOnlyCalculate(_amount, tokenManager.get(_symbol));
     }
 
@@ -90,15 +90,15 @@ contract SEuroOffering is Ownable, Pausable, Drainable {
         emit Swap(msg.sender, _symbol, _amount, seuros);
     }
 
-    // Payable function that exchanges the ETH value of the transaction for an equivalent amount of sEURO
-    function swapETH() external payable ifActive ifNotPaused valueNotZero(msg.value) {
-        TokenManager.TokenData memory token = tokenManager.get("WETH");
-        WETH(token.addr).deposit{value: msg.value}();
+    // Payable function that exchanges the MATIC value of the transaction for an equivalent amount of sEURO
+    function swapMATIC() external payable ifActive ifNotPaused valueNotZero(msg.value) {
+        TokenManager.TokenData memory token = tokenManager.get("WMATIC");
+        WrappedCoin(token.addr).deposit{value: msg.value}();
         uint256 seuros = getSeuros(msg.value, token);
         Seuro.mint(msg.sender, seuros);
         bondingCurve.updateCurrentBucket(seuros);
         transferCollateral(IERC20(token.addr), msg.value);
-        emit Swap(msg.sender, "ETH", msg.value, seuros);
+        emit Swap(msg.sender, "MATIC", msg.value, seuros);
     }
 
     // Restricted function to activate the sEURO Offering
