@@ -11,10 +11,10 @@ contract TokenManager is Ownable {
 
     struct TokenData { address addr; uint8 dec; address chainlinkAddr; uint8 chainlinkDec; }
 
-    /// @param _wethAddress address of WETH token
-    /// @param _ethUsdCL address of Chainlink data feed for ETH / USD
-    constructor(address _wethAddress, address _ethUsdCL) {
-        addAcceptedToken(_wethAddress, _ethUsdCL);
+    /// @param _wmaticAddress address of WMATIC token
+    /// @param _maticUsdCL address of Chainlink data feed for MATIC / USD
+    constructor(address _wmaticAddress, address _maticUsdCL) {
+        addAcceptedToken(_wmaticAddress, _maticUsdCL);
     }
 
     // Gets the details for the given token, if it is accepted
