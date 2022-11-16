@@ -12,7 +12,7 @@ contract PriceConverter {
         chainlinkEthUsd = IChainlink(_chainlinkEthUsd);
     }
 
-    function eurosToEth(uint256 _amount) external view returns (uint256) {
+    function eurosToMatic(uint256 _amount) external view returns (uint256) {
         (,int256 eurUsdRate,,,) = chainlinkEurUsd.latestRoundData();
         (,int256 usdEthRate,,,) = chainlinkEthUsd.latestRoundData();
         return _amount * uint256(eurUsdRate) / uint256(usdEthRate);
