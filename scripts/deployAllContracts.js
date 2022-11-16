@@ -7,6 +7,20 @@ const INITIAL_PRICE = ethers.utils.parseEther('0.8');
 const MAX_SUPPLY = ethers.utils.parseEther((85_000_000).toString());
 const BUCKET_SIZE = ethers.utils.parseEther((100_000).toString());
 
+// mumbai addresses
+// {
+//   BondingCurve: '0x230665fF9668032Ad46705f1D2798D9674F55221',
+//   SEuroCalculator: '0x485c4523DCbC28370F6e25a8Fb36EF57e276Bb75',
+//   TokenManager: '0x4dD39A68fb491f6F093aC4F9E6632a0C36cbcf5b',
+//   SEuroOffering: '0x23161D75F2125573d0A55797bC4cCcCEF204009c',
+//   RatioCalculator: '0xDEC09932949Cd156DDE33c871db3195e611E5C0D',
+//   StandardTokenGateway: '0x9Cc5d10cdB8c6433e51954276A4037a9F739425b',
+//   BondStorage: '0x4E221E5EB64FC73B08660632C107e766dC4db1EE',
+//   BondingEvent: '0x6D54576311a2f99AA07E35435a09092aae28D8c1',
+//   OperatorStage2: '0x19DbaB3Ba210808799c189e6B0f94A168d24Ec3d',
+//   StakingDirectory: '0x394E9517Dd823A96f3f4c5eaD7b060adc64494AA'
+// }
+
 let owner, TST_ADDRESS;
 
 const getTstAddress = async addresses => {
@@ -175,7 +189,7 @@ const getAddresses = async _ => {
     TOKEN_ADDRESSES: {
       TST: '0xb22517e1312b508431C7Ce9CB5Bca006137656AF',
       SEURO: '0x20c5B290055a3E9771a72EE63D28bA8c17Fe459d',
-      USDT: '0x267d22B5104be1983361ED56e00daAb1aC3FD9Bb'
+      FUSDT: '0x267d22B5104be1983361ED56e00daAb1aC3FD9Bb'
     },
     EXTERNAL_ADDRESSES: externalAddresses
   };

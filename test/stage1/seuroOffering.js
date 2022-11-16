@@ -6,14 +6,14 @@ describe('SEuroOffering', async () => {
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
-  let SEuroOffering, SEuro, BondingCurve, SEuroCalculator, TokenManager, WETH, DAI,
+  let SEuroOffering, SEuro, BondingCurve, SEuroCalculator, TokenManager, MATIC, DAI,
     owner, user, collateralWallet, BondingCurveContract, SEuroCalculatorContract,
     TokenManagerContract, ChainlinkEthUsd, ChainlinkDaiUsd, ChainlinkEurUsd;
 
   async function getEthToSEuro(amount) {
     const token = {
-      name: await WETH.symbol(),
-      addr: WETH.address,
+      name: await MATIC.symbol(),
+      addr: MATIC.address,
       dec: 18,
       chainlinkAddr: ChainlinkEthUsd.address,
       chainlinkDec: await ChainlinkEthUsd.decimals()
@@ -75,7 +75,7 @@ describe('SEuroOffering', async () => {
     it('will not swap for eth if ibco not active', async () => {
       const toSwap = ethers.utils.parseEther('1');
 
-      const swap = SEuroOffering.connect(user).swapETH({ value: toSwap });
+      const swap = SEuroOffering.connect(user).swapMATIC({ value: toSwap });
 
       await expect(swap).to.be.revertedWith('err-ibco-inactive');
       const userSEuroBalance = await SEuro.balanceOf(user.address);
@@ -166,15 +166,15 @@ describe('SEuroOffering', async () => {
         expect(bucket.price).to.equal(await getBucketPrice(1));
       });
 
-      describe('swapETH', async () => {
+      describe('swapMATIC', async () => {
         it('swaps for eth', async () => {
-          const voidSwap = SEuroOffering.connect(user).swapETH({ value: 0 });
+          const voidSwap = SEuroOffering.connect(user).swapMATIC({ value: 0 });
           await expect(voidSwap).to.be.revertedWith('err-invalid-value');
 
           const toSwap = ethers.utils.parseEther('1');
           const collateralWethBalance = await WETH.balanceOf(collateralWallet.address); 
           const expectedEuros = await getEthToSEuro(toSwap);
-          const swap = SEuroOffering.connect(user).swapETH({ value: toSwap });
+          const swap = SEuroOffering.connect(user).swapMATIC({ value: toSwap });
           await expect(swap).to.emit(SEuroOffering, 'Swap').withArgs(user.address, 'ETH', toSwap, expectedEuros);
           const userSEuroBalance = await SEuro.balanceOf(user.address);
           expect(userSEuroBalance.toString()).to.equal(expectedEuros.toString());
@@ -184,7 +184,7 @@ describe('SEuroOffering', async () => {
 
         it('updates the price in bonding curve when bucket is crossed', async () => {
           const amount = await PriceConverter.eurosToEth(BUCKET_SIZE);
-          await SEuroOffering.connect(user).swapETH({ value: amount });
+          await SEuroOffering.connect(user).swapMATIC({ value: amount });
 
           const bucket = await BondingCurve.currentBucket();
           expect(bucket.index).to.equal(1);
@@ -203,8 +203,8 @@ describe('SEuroOffering', async () => {
 
           let swap = SEuroOffering.swap('WETH', etherBalances['8K']);
           await expect(swap).to.be.revertedWith('err-paused');
-          let swapETH = SEuroOffering.swapETH({value: etherBalances['8K']});
-          await expect(swapETH).to.be.revertedWith('err-paused');
+          let swapMATIC = SEuroOffering.swapMATIC({value: etherBalances['8K']});
+          await expect(swapMATIC).to.be.revertedWith('err-paused');
 
           let unpause = SEuroOffering.connect(user).unpause();
           await expect(unpause).to.be.revertedWith('Ownable: caller is not the owner');
@@ -215,8 +215,8 @@ describe('SEuroOffering', async () => {
 
           swap = SEuroOffering.swap('WETH', etherBalances['8K']);
           await expect(swap).not.to.be.revertedWith('err-paused');
-          swapETH = SEuroOffering.swapETH({value: etherBalances['8K']});
-          await expect(swapETH).not.to.be.revertedWith('err-paused');
+          swapMATIC = SEuroOffering.swapMATIC({value: etherBalances['8K']});
+          await expect(swapMATIC).not.to.be.revertedWith('err-paused');
         });
       });
     });
