@@ -1,13 +1,13 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
-const { etherBalances, getLibraryFactory, DEFAULT_CHAINLINK_EUR_USD_PRICE, DEFAULT_CHAINLINK_ETH_USD_PRICE } = require('../common.js');
+const { etherBalances, getLibraryFactory, DEFAULT_CHAINLINK_EUR_USD_PRICE } = require('../common.js');
 
 describe('SEuroOffering', async () => {
   const BUCKET_SIZE = ethers.utils.parseEther('100000');
   const INITIAL_PRICE = ethers.utils.parseEther('0.8');
   const MAX_SUPPLY = ethers.utils.parseEther('200000000');
   let SEuroOffering, SEuro, BondingCurve, SEuroCalculator, TokenManager, WMATIC, DAI,
-    owner, user, collateralWallet, extra, BondingCurveContract, SEuroCalculatorContract,
+    owner, user, collateralWallet, BondingCurveContract, SEuroCalculatorContract,
     TokenManagerContract, ChainlinkMaticUsd, ChainlinkDaiUsd, ChainlinkEurUsd;
 
   async function getEthToSEuro(amount) {
@@ -40,7 +40,7 @@ describe('SEuroOffering', async () => {
   }
 
   beforeEach(async () => {
-    [owner, user, collateralWallet, extra] = await ethers.getSigners();
+    [owner, user, collateralWallet] = await ethers.getSigners();
 
     const ERC20Contract = await ethers.getContractFactory('MintableERC20');
     const SEuroOfferingContract = await ethers.getContractFactory('SEuroOffering');
