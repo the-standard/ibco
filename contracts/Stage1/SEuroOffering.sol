@@ -3,6 +3,7 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "contracts/interfaces/WETH.sol";
 import "contracts/interfaces/ISeuro.sol";
 import "contracts/Stage1/SEuroCalculator.sol";
@@ -10,7 +11,6 @@ import "contracts/Stage1/TokenManager.sol";
 import "contracts/Stage1/BondingCurve.sol";
 import "contracts/Pausable.sol";
 import "contracts/Drainable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract SEuroOffering is Ownable, Pausable, Drainable {
     // address of the wallet which will receive the collateral provided in swap and swapETH
