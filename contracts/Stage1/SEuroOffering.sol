@@ -10,6 +10,7 @@ import "contracts/Stage1/TokenManager.sol";
 import "contracts/Stage1/BondingCurve.sol";
 import "contracts/Pausable.sol";
 import "contracts/Drainable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract SEuroOffering is Ownable, Pausable, Drainable {
     // address of the wallet which will receive the collateral provided in swap and swapETH
@@ -62,7 +63,7 @@ contract SEuroOffering is Ownable, Pausable, Drainable {
 
     function transferCollateral(IERC20 _token, uint256 _amount) private {
         require(collateralWallet != address(0), "err-no-collat-wallet");
-        _token.transfer(collateralWallet, _amount);
+        SafeERC20.safeTransfer(_token, collateralWallet, _amount);
     }
 
     // A read-only function to estimate how much sEURO would be received for the given amount of token
@@ -82,7 +83,7 @@ contract SEuroOffering is Ownable, Pausable, Drainable {
         IERC20 erc20Token = IERC20(token.addr);
         require(erc20Token.balanceOf(msg.sender) >= _amount, "err-tok-bal");
         require(erc20Token.allowance(msg.sender, address(this)) >= _amount, "err-tok-allow");
-        erc20Token.transferFrom(msg.sender, address(this), _amount);
+        SafeERC20.safeTransferFrom(erc20Token, msg.sender, address(this), _amount);
         uint256 seuros = getSeuros(_amount, token);
         Seuro.mint(msg.sender, seuros);
         bondingCurve.updateCurrentBucket(seuros);
