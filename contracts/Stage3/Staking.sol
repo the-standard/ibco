@@ -177,6 +177,11 @@ contract Staking is ERC721, Ownable, Pausable, Drainable {
         emit Withdraw(msg.sender, pos.stake);
     }
 
+    function setTokenGateway(address _tokenGateway) external {
+        require(_tokenGateway != address(0), "err-invalid-gateway");
+        tokenGateway = StandardTokenGateway(_tokenGateway);
+    }
+
     // both erc721 and access control include supportsInterface, need to override both
     // explanation here: https://forum.openzeppelin.com/t/derived-contract-must-override-function-supportsinterface/6315/5
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, AccessControl) returns (bool) {
